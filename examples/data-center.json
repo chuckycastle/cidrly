@@ -1,0 +1,115 @@
+{
+  "name": "Data Center Example",
+  "baseIp": "172.16.0.0",
+  "subnets": [
+    {
+      "name": "Web Tier",
+      "vlanId": 100,
+      "expectedDevices": 20,
+      "subnetInfo": {
+        "plannedDevices": 40,
+        "requiredAddresses": 42,
+        "allocatedAddresses": 64,
+        "cidrPrefix": 26,
+        "networkAddress": "172.16.0.0/26",
+        "networkAddressDecimal": 2886729728,
+        "broadcastAddress": "172.16.0.63",
+        "firstHost": "172.16.0.1",
+        "lastHost": "172.16.0.62",
+        "usableHosts": 62
+      }
+    },
+    {
+      "name": "Application Tier",
+      "vlanId": 110,
+      "expectedDevices": 30,
+      "subnetInfo": {
+        "plannedDevices": 60,
+        "requiredAddresses": 62,
+        "allocatedAddresses": 64,
+        "cidrPrefix": 26,
+        "networkAddress": "172.16.0.64/26",
+        "networkAddressDecimal": 2886729792,
+        "broadcastAddress": "172.16.0.127",
+        "firstHost": "172.16.0.65",
+        "lastHost": "172.16.0.126",
+        "usableHosts": 62
+      }
+    },
+    {
+      "name": "Database Tier",
+      "vlanId": 120,
+      "expectedDevices": 10,
+      "subnetInfo": {
+        "plannedDevices": 20,
+        "requiredAddresses": 22,
+        "allocatedAddresses": 32,
+        "cidrPrefix": 27,
+        "networkAddress": "172.16.0.128/27",
+        "networkAddressDecimal": 2886729856,
+        "broadcastAddress": "172.16.0.159",
+        "firstHost": "172.16.0.129",
+        "lastHost": "172.16.0.158",
+        "usableHosts": 30
+      }
+    },
+    {
+      "name": "Storage Network",
+      "vlanId": 130,
+      "expectedDevices": 15,
+      "subnetInfo": {
+        "plannedDevices": 30,
+        "requiredAddresses": 32,
+        "allocatedAddresses": 32,
+        "cidrPrefix": 27,
+        "networkAddress": "172.16.0.160/27",
+        "networkAddressDecimal": 2886729888,
+        "broadcastAddress": "172.16.0.191",
+        "firstHost": "172.16.0.161",
+        "lastHost": "172.16.0.190",
+        "usableHosts": 30
+      }
+    },
+    {
+      "name": "Management",
+      "vlanId": 140,
+      "expectedDevices": 8,
+      "subnetInfo": {
+        "plannedDevices": 16,
+        "requiredAddresses": 18,
+        "allocatedAddresses": 32,
+        "cidrPrefix": 27,
+        "networkAddress": "172.16.0.192/27",
+        "networkAddressDecimal": 2886729920,
+        "broadcastAddress": "172.16.0.223",
+        "firstHost": "172.16.0.193",
+        "lastHost": "172.16.0.222",
+        "usableHosts": 30
+      }
+    },
+    {
+      "name": "Backup Network",
+      "vlanId": 150,
+      "expectedDevices": 5,
+      "subnetInfo": {
+        "plannedDevices": 10,
+        "requiredAddresses": 12,
+        "allocatedAddresses": 16,
+        "cidrPrefix": 28,
+        "networkAddress": "172.16.0.224/28",
+        "networkAddressDecimal": 2886729952,
+        "broadcastAddress": "172.16.0.239",
+        "firstHost": "172.16.0.225",
+        "lastHost": "172.16.0.238",
+        "usableHosts": 14
+      }
+    }
+  ],
+  "supernet": {
+    "networkAddress": "172.16.0.0/24",
+    "totalSubnetAddresses": 240,
+    "supernetAddresses": 256,
+    "efficiency": 93.75,
+    "rangeEfficiency": 100.0
+  }
+}

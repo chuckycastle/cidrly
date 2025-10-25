@@ -1,0 +1,98 @@
+{
+  "name": "Campus Network Example",
+  "baseIp": "10.100.0.0",
+  "subnets": [
+    {
+      "name": "Engineering Building",
+      "vlanId": 10,
+      "expectedDevices": 100,
+      "subnetInfo": {
+        "plannedDevices": 200,
+        "requiredAddresses": 202,
+        "allocatedAddresses": 256,
+        "cidrPrefix": 24,
+        "networkAddress": "10.100.0.0/24",
+        "networkAddressDecimal": 169082880,
+        "broadcastAddress": "10.100.0.255",
+        "firstHost": "10.100.0.1",
+        "lastHost": "10.100.0.254",
+        "usableHosts": 254
+      }
+    },
+    {
+      "name": "Science Lab",
+      "vlanId": 20,
+      "expectedDevices": 75,
+      "subnetInfo": {
+        "plannedDevices": 150,
+        "requiredAddresses": 152,
+        "allocatedAddresses": 256,
+        "cidrPrefix": 24,
+        "networkAddress": "10.100.1.0/24",
+        "networkAddressDecimal": 169083136,
+        "broadcastAddress": "10.100.1.255",
+        "firstHost": "10.100.1.1",
+        "lastHost": "10.100.1.254",
+        "usableHosts": 254
+      }
+    },
+    {
+      "name": "Student WiFi",
+      "vlanId": 30,
+      "expectedDevices": 250,
+      "subnetInfo": {
+        "plannedDevices": 500,
+        "requiredAddresses": 502,
+        "allocatedAddresses": 512,
+        "cidrPrefix": 23,
+        "networkAddress": "10.100.2.0/23",
+        "networkAddressDecimal": 169083392,
+        "broadcastAddress": "10.100.3.255",
+        "firstHost": "10.100.2.1",
+        "lastHost": "10.100.3.254",
+        "usableHosts": 510
+      }
+    },
+    {
+      "name": "Administration",
+      "vlanId": 40,
+      "expectedDevices": 30,
+      "subnetInfo": {
+        "plannedDevices": 60,
+        "requiredAddresses": 62,
+        "allocatedAddresses": 64,
+        "cidrPrefix": 26,
+        "networkAddress": "10.100.4.0/26",
+        "networkAddressDecimal": 169083904,
+        "broadcastAddress": "10.100.4.63",
+        "firstHost": "10.100.4.1",
+        "lastHost": "10.100.4.62",
+        "usableHosts": 62
+      }
+    },
+    {
+      "name": "Guest WiFi",
+      "vlanId": 50,
+      "expectedDevices": 50,
+      "subnetInfo": {
+        "plannedDevices": 100,
+        "requiredAddresses": 102,
+        "allocatedAddresses": 128,
+        "cidrPrefix": 25,
+        "networkAddress": "10.100.4.128/25",
+        "networkAddressDecimal": 169084032,
+        "broadcastAddress": "10.100.4.255",
+        "firstHost": "10.100.4.129",
+        "lastHost": "10.100.4.254",
+        "usableHosts": 126
+      }
+    }
+  ],
+  "supernet": {
+    "networkAddress": "10.100.0.0/21",
+    "totalSubnetAddresses": 1216,
+    "supernetAddresses": 2048,
+    "efficiency": 59.375,
+    "rangeEfficiency": 100.0
+  }
+}
