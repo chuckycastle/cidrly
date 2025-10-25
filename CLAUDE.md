@@ -39,12 +39,14 @@ git push origin main --follow-tags
 ```
 
 **Why this workflow?**
+
 - NPM_TOKEN is stored as GitHub secret (not available locally)
 - Automated CI/CD ensures quality checks before publishing
 - Consistent release process with GitHub Releases
 - Prevents accidental local publishes with wrong credentials
 
 **To verify successful publish:**
+
 ```bash
 npm view cidrly version  # Check latest version on npm
 gh run list --workflow=release.yml --limit 1  # Check workflow status
@@ -54,6 +56,7 @@ gh release view v0.x.x  # View GitHub Release
 ## Project Overview
 
 cidrly is a type-safe CLI tool for network architecture planning built with:
+
 - **Runtime**: Node.js 20+
 - **Language**: TypeScript (strict mode)
 - **UI Framework**: Ink v6 (React for CLI)
@@ -83,6 +86,7 @@ npm run verify       # Format + lint + test + security
 ## Common Tasks
 
 ### Adding New Features
+
 1. Create feature in appropriate directory (src/components/, src/core/, etc.)
 2. Add tests
 3. Update types if needed
@@ -90,12 +94,14 @@ npm run verify       # Format + lint + test + security
 5. Follow publishing workflow above
 
 ### Fixing Bugs
+
 1. Write failing test first
 2. Implement fix
 3. Verify test passes
 4. Follow publishing workflow above
 
 ### Terminal UI Considerations
+
 - No true transparency in Ink - use conditional rendering
 - No z-index layering - content renders sequentially
 - Hide conflicting content instead of trying to layer it
@@ -111,7 +117,9 @@ npm run verify       # Format + lint + test + security
 ## Important Patterns
 
 ### Screen Clearing
+
 Always clear terminal on app launch:
+
 ```tsx
 import { useEffect } from 'react';
 
@@ -124,9 +132,11 @@ export default function Component() {
 ```
 
 ### Global Installation
+
 Package is a CLI tool with `"preferGlobal": true` to warn users who install locally.
 
 Users should install globally:
+
 ```bash
 npm install -g cidrly
 ```
