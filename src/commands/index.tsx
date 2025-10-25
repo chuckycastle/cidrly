@@ -3,6 +3,7 @@
  * Launches the interactive dashboard when no command is specified
  */
 
+import { useEffect } from 'react';
 import { DashboardApp } from '../components/DashboardApp.js';
 import { Footer } from '../components/layout/Footer.js';
 import { Header } from '../components/layout/Header.js';
@@ -15,6 +16,11 @@ import { useNotifications } from '../hooks/useUI.js';
 export const isDefault = true;
 
 export default function Index() {
+  // Clear terminal screen on launch
+  useEffect(() => {
+    process.stdout.write('\x1Bc'); // Full terminal reset (clears screen and scrollback)
+  }, []);
+
   // Initialize with a default plan if none exists
   const plan = usePlan();
   const subnets = useSubnets();
