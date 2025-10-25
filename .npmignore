@@ -1,0 +1,75 @@
+# Source files
+src/
+tests/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Configuration files
+tsconfig.json
+tsconfig.prod.json
+.semgrep.yml
+.prettierrc
+.prettierignore
+.eslintrc.*
+eslint.config.*
+jest.config.*
+
+# Development files
+.gitignore
+CLAUDE.md
+coverage/
+*.log
+.DS_Store
+*.swp
+*.swo
+
+# Build artifacts
+*.tsbuildinfo
+*.map
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-*
+.claude/
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+.travis.yml
+circle.yml
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# Documentation (keep only essential docs)
+docs/
+
+# Node modules (always excluded by npm)
+node_modules/
+
+# Environment files
+.env
+.env.*
+
+# Saved plans (user data - exclude from package)
+saved-plans/
+
+# Test data
+*.test.json
+
+# Git files
+.git/
+.gitattributes
+
+# Deployment scripts
+scripts/
+deploy.sh
+health-check.sh
+
+# Temporary files
+tmp/
+temp/
+.cache/
