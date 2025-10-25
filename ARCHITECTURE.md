@@ -226,6 +226,145 @@ const { selectedIndex, moveUp, moveDown } = useSelection(max);
 - Semgrep security scanning
 - Jest coverage reporting
 
+## Quality Assurance & CI/CD
+
+### Pre-Push Verification (Mandatory)
+
+All developers MUST install the pre-push hook:
+
+```bash
+./scripts/setup-git-hooks.sh
+```
+
+**Automatic Checks on Every Push:**
+
+1. ESLint - Code quality enforcement
+2. Prettier - Formatting validation
+3. TypeScript - Strict compilation
+4. Tests - All 230 tests must pass
+5. Coverage - 69% branches, 64% functions, 71% lines/statements
+6. Semgrep - Security vulnerability scanning
+7. NPM audit - Dependency vulnerability check
+8. Production build - Verify dist/ artifacts
+9. Build verification - Confirm all artifacts created
+
+**Manual Verification:**
+
+```bash
+./scripts/verify-pre-push.sh  # Run all checks locally
+```
+
+**Why Mandatory:**
+
+- Prevents CI failures by catching issues locally
+- Faster feedback (seconds vs. minutes)
+- Saves GitHub Actions CI minutes
+- Maintains consistent code quality
+- Real incidents: CI failed due to skipped formatting checks (2025-10-25)
+
+### GitHub Actions CI Pipeline
+
+**Triggered on:** Every push to main/develop, all pull requests
+
+**Jobs:**
+
+1. **Test** (Matrix: Node 20.x, 22.x)
+   - Checkout code
+   - Install dependencies
+   - ESLint check
+   - Prettier check
+   - Run all tests with coverage
+   - Upload coverage to Codecov
+
+2. **Security**
+   - Semgrep security scan (continue-on-error)
+   - NPM audit for high severity vulnerabilities (continue-on-error)
+
+3. **Build**
+   - Production build
+   - Verify dist/ artifacts (cli.js, commands/, components/)
+   - Upload build artifacts (7-day retention)
+
+**Status:** All jobs must pass for merge approval
+
+### Release Workflow
+
+**Version Strategy:** Semantic Versioning 2.0.0
+
+- v0.x.x - Initial development (current)
+  - 0.1.x - Bug fixes (`npm version patch`)
+  - 0.x.0 - New features (`npm version minor`)
+- v1.0.0 - First stable release (when production-ready)
+
+**Publishing Process:**
+
+```bash
+# 1. Ensure all changes are pushed and CI is green
+git push origin main
+
+# 2. Bump version and tag
+npm version patch -m "chore: bump version to %s"
+
+# 3. Push tag to trigger release
+git push origin main --follow-tags
+```
+
+**GitHub Actions automatically:**
+
+- Runs full CI suite
+- Builds production artifacts
+- Publishes to npm (using NPM_TOKEN secret)
+- Creates GitHub Release with changelog
+
+**No local `npm publish` allowed** - all publishing via CI/CD
+
+### Coverage Requirements
+
+**Current Thresholds:** (jest.config.mjs)
+
+- Branches: 69%
+- Functions: 64%
+- Lines: 71%
+- Statements: 71%
+
+**Coverage Goals:**
+
+- Never lower thresholds without justification
+- New code should maintain or improve coverage
+- Security-critical code requires >90% coverage
+
+### Development Workflow
+
+**Standard Development Cycle:**
+
+```bash
+# 1. Make changes
+npm run dev  # Test interactively
+
+# 2. Auto-fix common issues
+npm run format      # Fix formatting
+npm run lint:fix    # Fix lint issues
+
+# 3. Verify tests
+npm test
+
+# 4. Commit
+git add .
+git commit -m "feat: your feature"
+
+# 5. Push (pre-push hook runs automatically)
+git push origin main
+```
+
+**Pre-Push Hook prevents push if:**
+
+- Formatting is incorrect
+- Linting fails
+- Tests fail
+- TypeScript doesn't compile
+- Security issues detected
+- Build fails
+
 ## Build & Deployment
 
 **Production Build:**
@@ -234,11 +373,23 @@ const { selectedIndex, moveUp, moveDown } = useSelection(max);
 npm run build:prod  # Clean + compile with production tsconfig
 ```
 
-**Distribution:**
+**Build Outputs:**
 
-- NPM: Published as `cidrly@beta`
-- Homebrew: `chuckycastle/cidrly` tap
-- Binary: `dist/cli.js` with shebang
+```
+dist/
+├── cli.js              # Entry point with shebang
+├── commands/           # CLI command modules
+├── components/         # React UI components
+├── core/              # Domain logic
+├── services/          # Business services
+└── infrastructure/    # Security, config
+```
+
+**Distribution Channels:**
+
+1. **NPM:** `npm install -g cidrly` (v0.x.x)
+2. **Homebrew:** `brew install chuckycastle/cidrly/cidrly`
+3. **GitHub Releases:** Automatic with each version tag
 
 **Requirements:**
 
