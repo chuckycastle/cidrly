@@ -3,6 +3,7 @@
   "version": "1.0.0-beta.1",
   "description": "Network architecture and design planning CLI tool",
   "type": "module",
+  "preferGlobal": true,
   "main": "dist/cli.js",
   "bin": {
     "cidrly": "./dist/cli.js"
