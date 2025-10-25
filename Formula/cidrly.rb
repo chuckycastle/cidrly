@@ -5,7 +5,7 @@ class Cidrly < Formula
   sha256 "" # TODO: Update this after creating the GitHub release
   license "ISC"
 
-  depends_on "node@18"
+  depends_on "node@20"
 
   def install
     system "npm", "install", *std_npm_args(prefix: false)
@@ -16,9 +16,9 @@ class Cidrly < Formula
 
     # Create a wrapper script to run cidrly
     (bin/"cidrly").write_env_script(
-      "#{Formula["node@18"].opt_bin}/node",
+      "#{Formula["node@20"].opt_bin}/node",
       "#{libexec}/dist/cli.js",
-      PATH: "#{Formula["node@18"].opt_bin}:$PATH"
+      PATH: "#{Formula["node@20"].opt_bin}:$PATH"
     )
   end
 

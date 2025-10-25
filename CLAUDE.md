@@ -23,7 +23,7 @@ This document contains critical lessons learned from real development challenges
 
 ### Technology Stack
 
-- **Runtime**: Node.js 18+
+- **Runtime**: Node.js 20+
 - **Language**: TypeScript (strict mode)
 - **UI Framework**: Ink v6 (React for CLI)
 - **State Management**: Zustand with Immer

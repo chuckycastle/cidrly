@@ -20,7 +20,7 @@ A modern, type-safe command-line tool for network engineers to plan and design n
 
 ### Prerequisites
 
-- Node.js 18 or higher
+- Node.js 20 or higher
 - npm
 
 ### Installation

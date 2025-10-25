@@ -170,7 +170,7 @@ brew install --build-from-source Formula/cidrly.rb
 ### Common Issues
 
 - **SHA256 mismatch**: Download the exact tarball from GitHub releases and regenerate
-- **Node version conflicts**: Ensure node@18 is available in Homebrew
+- **Node version conflicts**: Ensure node@20 is available in Homebrew
 - **Build failures**: Check that `npm run build:prod` works in the cidrly project
 
 ## Resources
