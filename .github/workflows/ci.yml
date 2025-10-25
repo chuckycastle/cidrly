@@ -23,15 +23,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
-
-      - name: Configure npm cache
-        run: |
-          npm config set cache .npm-cache --global
-          npm config set logs-dir .npm-logs --global
 
       - name: Install dependencies
-        run: npm install --frozen-lockfile
+        run: npm ci
 
       - name: Run linter
         run: npm run lint
@@ -63,15 +57,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
-          cache: 'npm'
-
-      - name: Configure npm cache
-        run: |
-          npm config set cache .npm-cache --global
-          npm config set logs-dir .npm-logs --global
 
       - name: Install dependencies
-        run: npm install --frozen-lockfile
+        run: npm ci
 
       - name: Run Semgrep security scan
         run: npm run security
@@ -94,15 +82,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
-          cache: 'npm'
-
-      - name: Configure npm cache
-        run: |
-          npm config set cache .npm-cache --global
-          npm config set logs-dir .npm-logs --global
 
       - name: Install dependencies
-        run: npm install --frozen-lockfile
+        run: npm ci
 
       - name: Build production
         run: npm run build:prod
