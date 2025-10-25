@@ -6,6 +6,16 @@
 
 All publishing is handled automatically via GitHub Actions. Always follow this workflow:
 
+### Versioning Strategy
+
+cidrly follows [Semantic Versioning 2.0.0](https://semver.org):
+
+- **v0.x.x** = Initial development (current phase)
+  - `0.1.1`, `0.1.2` = Bug fixes → `npm version patch`
+  - `0.2.0`, `0.3.0` = New features → `npm version minor`
+  - `0.4.0+` = Breaking changes → `npm version minor` (treated as minor in 0.x)
+- **v1.0.0** = First stable release (manual decision when production-ready)
+
 ### Publishing Updates to NPM
 
 ```bash
@@ -15,7 +25,8 @@ git commit -m "fix: your changes here"
 git push origin main
 
 # 2. Bump version and create tag
-npm version prerelease --preid=beta -m "chore: bump version to %s"
+npm version patch -m "chore: bump version to %s"     # For bug fixes (0.1.x)
+npm version minor -m "chore: bump version to %s"     # For features/breaking (0.x.0)
 
 # 3. Push commit and tag to GitHub
 git push origin main --follow-tags
@@ -23,7 +34,7 @@ git push origin main --follow-tags
 # 4. GitHub Actions automatically:
 #    ✅ Runs tests, linting, security scans
 #    ✅ Builds production code
-#    ✅ Publishes to npm with beta tag (using NPM_TOKEN secret)
+#    ✅ Publishes to npm as latest (using NPM_TOKEN secret)
 #    ✅ Creates GitHub Release
 ```
 
@@ -35,9 +46,9 @@ git push origin main --follow-tags
 
 **To verify successful publish:**
 ```bash
-npm view cidrly@beta version  # Check latest version on npm
+npm view cidrly version  # Check latest version on npm
 gh run list --workflow=release.yml --limit 1  # Check workflow status
-gh release view v1.0.0-beta.X  # View GitHub Release
+gh release view v0.x.x  # View GitHub Release
 ```
 
 ## Project Overview
@@ -117,12 +128,12 @@ Package is a CLI tool with `"preferGlobal": true` to warn users who install loca
 
 Users should install globally:
 ```bash
-npm install -g cidrly@beta
+npm install -g cidrly
 ```
 
 ## Distribution Channels
 
-1. **npm**: `cidrly@beta` tag for beta releases
+1. **npm**: Latest version published automatically (currently v0.x.x)
 2. **GitHub Releases**: Automated with each version tag
 3. **Homebrew**: `chuckycastle/cidrly` tap (manual updates)
 

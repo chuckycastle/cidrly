@@ -26,7 +26,7 @@ cidrly
 **NPM (All Platforms):**
 
 ```bash
-npm install -g cidrly@beta
+npm install -g cidrly
 cidrly
 ```
 
@@ -97,13 +97,14 @@ See [examples/](examples/) for sample network plans:
 - [ARCHITECTURE.md](ARCHITECTURE.md) - Technical architecture and design decisions
 - [CHANGELOG.md](CHANGELOG.md) - Version history and release notes
 
-## Beta Release
+## Development Status
 
-This is a beta release for testing. See [BETA_README.md](BETA_README.md) for:
+cidrly is in **initial development** (v0.x.x). The API may change as we gather feedback and refine features. See [BETA_README.md](BETA_README.md) for:
 
 - Beta testing guidelines
 - Known limitations
 - How to provide feedback
+- Versioning strategy
 
 ## License
 
