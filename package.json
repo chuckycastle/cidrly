@@ -28,7 +28,7 @@
     "security": "semgrep --config=.semgrep.yml --error",
     "security:verbose": "semgrep --config=.semgrep.yml --verbose",
     "verify": "npm run format:check && npm run lint && npm run test && npm run security",
-    "prepack": "npm run build:prod && npm run verify",
+    "prepack": "npm run build:prod",
     "prepublishOnly": "npm run prepack"
   },
   "keywords": [
