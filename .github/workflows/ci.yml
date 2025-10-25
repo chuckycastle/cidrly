@@ -26,7 +26,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --frozen-lockfile
 
       - name: Run linter
         run: npm run lint
@@ -61,7 +61,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --frozen-lockfile
 
       - name: Run Semgrep security scan
         run: npm run security
@@ -87,7 +87,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --frozen-lockfile
 
       - name: Build production
         run: npm run build:prod
