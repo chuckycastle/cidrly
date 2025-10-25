@@ -7,6 +7,7 @@ import fs from 'fs';
 import { Box, Text } from 'ink';
 import path from 'path';
 import React, { useState } from 'react';
+import packageJson from '../../../package.json' with { type: 'json' };
 import { createNetworkPlan } from '../../core/models/network-plan.js';
 import { validateIpAddress, validatePlanName } from '../../core/validators/validators.js';
 import { isFileOperationError } from '../../errors/index.js';
@@ -119,7 +120,7 @@ export const WelcomeView: React.FC = () => {
       <Box marginBottom={1}>
         <Text bold>{colors.accent('cidrly')}</Text>
         <Text> </Text>
-        <Text>{colors.dim('v1.0')}</Text>
+        <Text>{colors.dim(`v${packageJson.version}`)}</Text>
       </Box>
 
       <Box marginBottom={1}>
