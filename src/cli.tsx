@@ -5,12 +5,13 @@
  */
 
 import Pastel from 'pastel';
+import packageJson from '../package.json' with { type: 'json' };
 
 const app = new Pastel({
   importMeta: import.meta,
   name: 'cidrly',
   description: 'Network architecture and design planning CLI tool',
-  version: '1.0.0-rc.1',
+  version: packageJson.version,
 });
 
 await app.run();
