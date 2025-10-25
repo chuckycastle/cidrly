@@ -54,6 +54,7 @@ git push -u origin main
 ```
 
 **What happens:**
+
 - Code is pushed to GitHub
 - CI workflow will run (tests, linting, build)
 - Check at: https://github.com/chuckycastle/cidrly/actions
@@ -70,6 +71,7 @@ git push origin v1.0.0-beta.1
 ```
 
 **What happens:**
+
 - Release workflow is triggered
 - Runs tests, linting, security scan
 - Builds production version
@@ -77,6 +79,7 @@ git push origin v1.0.0-beta.1
 - Creates GitHub Release
 
 **Monitor at:**
+
 - GitHub Actions: https://github.com/chuckycastle/cidrly/actions
 - GitHub Releases: https://github.com/chuckycastle/cidrly/releases
 
@@ -92,6 +95,7 @@ npm view cidrly@beta
 ```
 
 **Test installation:**
+
 ```bash
 # Install globally
 npm install -g cidrly@beta
@@ -147,11 +151,13 @@ nano Formula/cidrly.rb
 ```
 
 Find this line:
+
 ```ruby
 sha256 "" # TODO: Update this after creating the GitHub release
 ```
 
 Replace with (use YOUR actual SHA256):
+
 ```ruby
 sha256 "abc123def456..." # Replace with the actual SHA256 from Step 7
 ```
@@ -160,7 +166,7 @@ Save and exit.
 
 ### Step 9: Create Homebrew Tap README
 
-```bash
+````bash
 # In the homebrew-cidrly directory
 cat > README.md << 'EOF'
 # Homebrew Tap for cidrly
@@ -175,7 +181,7 @@ brew tap chuckycastle/cidrly
 
 # Install cidrly
 brew install cidrly
-```
+````
 
 ## Usage
 
@@ -218,7 +224,8 @@ For more information, visit the [main repository](https://github.com/chuckycastl
 
 ISC
 EOF
-```
+
+````
 
 ### Step 10: Commit and Push Homebrew Tap
 
@@ -227,7 +234,7 @@ EOF
 git add .
 git commit -m "feat: add cidrly formula for v1.0.0-beta.1"
 git push origin main
-```
+````
 
 ### Step 11: Test Homebrew Installation
 
@@ -255,12 +262,14 @@ cidrly
 4. Add/verify these details:
 
 **Title:**
+
 ```
 v1.0.0-beta.1 - Limited Beta Release
 ```
 
 **Description:**
-```markdown
+
+````markdown
 # cidrly Beta 1 Release
 
 First public beta release for testing and feedback! 🎉
@@ -268,12 +277,15 @@ First public beta release for testing and feedback! 🎉
 ## Installation
 
 ### Homebrew (macOS/Linux)
+
 ```bash
 brew tap chuckycastle/cidrly
 brew install cidrly
 ```
+````
 
 ### NPM (All Platforms)
+
 ```bash
 npm install -g cidrly@beta
 ```
@@ -304,6 +316,7 @@ npm install -g cidrly@beta
 ## Beta Testing
 
 This is a **beta release** for testing purposes. See [BETA_README.md](https://github.com/chuckycastle/cidrly/blob/main/BETA_README.md) for:
+
 - Installation instructions
 - Testing guidelines
 - How to provide feedback
@@ -316,7 +329,8 @@ See [CHANGELOG.md](https://github.com/chuckycastle/cidrly/blob/main/CHANGELOG.md
 ---
 
 **Feedback:** [Your Private Channel Here]
-```
+
+````
 
 5. Check **"Set as a pre-release"** (it's a beta)
 6. Click **"Update release"**
@@ -334,9 +348,10 @@ npm info cidrly@beta
 # Test clean installation
 npm install -g cidrly@beta
 cidrly
-```
+````
 
 **Homebrew:**
+
 ```bash
 # Verify tap
 brew tap
@@ -351,6 +366,7 @@ cidrly
 ```
 
 **GitHub:**
+
 - [ ] Code visible at https://github.com/chuckycastle/cidrly
 - [ ] Release visible at https://github.com/chuckycastle/cidrly/releases
 - [ ] CI/CD workflows passing
@@ -387,6 +403,7 @@ git push origin main
 ### Share with Beta Testers
 
 Send them:
+
 1. Installation instructions (Homebrew or NPM)
 2. Link to BETA_README.md
 3. Link to examples/
@@ -401,16 +418,19 @@ Send them:
 ## ⚠️ Troubleshooting
 
 ### NPM publish fails
+
 - Check NPM_TOKEN is correct in GitHub secrets
 - Verify you're logged in to npm: `npm whoami`
 - Check package.json version is unique
 
 ### Homebrew install fails
+
 - Verify SHA256 matches the tarball
 - Check formula syntax: `brew audit --strict Formula/cidrly.rb`
 - Test local install: `brew install --build-from-source Formula/cidrly.rb`
 
 ### CI/CD workflow fails
+
 - Check GitHub Actions logs
 - Verify all tests pass locally: `npm run verify`
 - Check Node.js version matches CI (20.x)
