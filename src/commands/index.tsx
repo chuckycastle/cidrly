@@ -10,7 +10,7 @@ import { Header } from '../components/layout/Header.js';
 import { NotificationDisplay } from '../components/widgets/NotificationDisplay.js';
 import { createNetworkPlan } from '../core/models/network-plan.js';
 import { usePlan, usePlanActions, useSubnets } from '../hooks/usePlan.js';
-import { useNotifications } from '../hooks/useUI.js';
+import { useCurrentView, useNotifications } from '../hooks/useUI.js';
 
 // Mark this as the default command
 export const isDefault = true;
@@ -26,6 +26,7 @@ export default function Index() {
   const subnets = useSubnets();
   const { loadPlan } = usePlanActions();
   const notifications = useNotifications();
+  const currentView = useCurrentView();
 
   if (!plan) {
     const defaultPlan = createNetworkPlan('New Network Plan', '10.0.0.0');
@@ -34,14 +35,15 @@ export default function Index() {
 
   const hasSubnets = subnets.length > 0;
   const hasCalculation = plan?.supernet !== undefined;
+  const showLayout = currentView !== 'welcome';
 
   return (
     <>
       {plan && (
         <>
-          <Header plan={plan} />
+          {showLayout && <Header plan={plan} />}
           <DashboardApp />
-          <Footer hasSubnets={hasSubnets} hasCalculation={hasCalculation} />
+          {showLayout && <Footer hasSubnets={hasSubnets} hasCalculation={hasCalculation} />}
           {notifications.map((notification) => (
             <NotificationDisplay key={notification.id} notification={notification} />
           ))}
