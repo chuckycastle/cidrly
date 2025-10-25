@@ -6,6 +6,18 @@ Thank you for helping test cidrly, an interactive CLI tool for network architect
 
 An interactive terminal tool for network engineers with VLSM optimization, dual efficiency metrics, 50% capacity planning, and JSON-based plan persistence.
 
+## Versioning Strategy
+
+cidrly follows [Semantic Versioning 2.0.0](https://semver.org):
+
+- **v0.x.x** = Initial development (current phase)
+  - API may change as we gather feedback
+  - `0.1.1`, `0.1.2` = Bug fixes
+  - `0.2.0`, `0.3.0` = New features or breaking changes
+- **v1.0.0** = First stable release (when production-ready)
+
+**Note:** We recently reset from `1.0.0-beta.5` to `0.1.0` to properly signal "initial development" phase. This follows semver best practices for pre-1.0 software.
+
 ## Installation
 
 **Homebrew (macOS/Linux):**
@@ -17,7 +29,7 @@ brew tap chuckycastle/cidrly && brew install cidrly
 **NPM (All Platforms):**
 
 ```bash
-npm install -g cidrly@beta
+npm install -g cidrly
 ```
 
 **From Source:**
