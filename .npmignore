@@ -18,6 +18,7 @@ jest.config.*
 
 # Development files
 .gitignore
+CLAUDE.md
 coverage/
 *.log
 .DS_Store
