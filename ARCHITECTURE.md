@@ -5,6 +5,7 @@
 cidrly is a type-safe CLI tool for network architecture planning built with React/ink for terminal UI, Pastel for CLI framework, and Zustand for state management.
 
 **Core Capabilities:**
+
 - Interactive React-based dashboard
 - Command-line interface with 9 commands
 - Automatic VLSM subnet calculations
@@ -15,6 +16,7 @@ cidrly is a type-safe CLI tool for network architecture planning built with Reac
 ## Technology Stack
 
 **Core:**
+
 - Node.js 20+ - Runtime
 - TypeScript 5.7+ - Type safety with strict mode
 - ink 6.3 - React renderer for terminal
@@ -24,11 +26,13 @@ cidrly is a type-safe CLI tool for network architecture planning built with Reac
 - Zod 4.1 - Schema validation
 
 **Libraries:**
+
 - ink-gradient, ink-spinner, ink-table - UI enhancements
 - chalk - Terminal styling
 - date-fns - Date formatting
 
 **Development:**
+
 - Jest - Testing (230 tests)
 - Prettier - Code formatting
 - ESLint - TypeScript linting
@@ -69,11 +73,13 @@ cidrly is a type-safe CLI tool for network architecture planning built with Reac
 ### Application Modes
 
 **Command-line Mode:**
+
 - Quick operations via Pastel commands
 - Non-interactive, scriptable
 - Commands: `create`, `add`, `calculate`, `view`, `save`, `load`, `remove`
 
 **Interactive Dashboard:**
+
 - Full-screen React UI with keyboard navigation
 - Real-time state updates with Zustand
 - Visual feedback with spinners and notifications
@@ -123,12 +129,14 @@ src/
 ### 1. State Management with Zustand
 
 **Why Zustand over Redux:**
+
 - Simpler API with less boilerplate
 - Built-in Immer support for immutable updates
 - Better TypeScript integration
 - Perfect fit for CLI tool complexity
 
 **Store Structure:**
+
 ```typescript
 // planStore: Network plan state
 {
@@ -149,6 +157,7 @@ src/
 ### 2. Pure Ink Architecture
 
 No hybrid approaches - dashboard is pure ink/React:
+
 - Clean separation from CLI commands
 - Consistent React patterns throughout
 - Better performance and maintainability
@@ -156,24 +165,28 @@ No hybrid approaches - dashboard is pure ink/React:
 ### 3. VLSM Optimization
 
 **Largest First Allocation:**
+
 - Sorts subnets by size (descending)
 - Allocates largest subnets first
 - Eliminates address gaps
 - Maximizes range efficiency (typically 100%)
 
 **Dual Efficiency Metrics:**
+
 - **Supernet Efficiency**: How well subnets fit in the supernet
 - **Range Efficiency**: Address packing efficiency (shows VLSM benefit)
 
 ### 4. Security by Default
 
 **Multi-layer Path Protection:**
+
 - Validates all file paths against directory traversal
 - URL-decode detection and blocking
 - Null byte and special character checks
 - Validates paths are within project directory
 
 **Type-safe Operations:**
+
 - Zod schemas validate all external data
 - TypeScript strict mode enforced
 - Input sanitization before use
@@ -181,6 +194,7 @@ No hybrid approaches - dashboard is pure ink/React:
 ### 5. Custom Hooks Pattern
 
 All state access through custom hooks for better DX:
+
 ```typescript
 // Plan management
 const plan = usePlan();
@@ -198,12 +212,14 @@ const { selectedIndex, moveUp, moveDown } = useSelection(max);
 **Coverage:** 230 tests across 12 suites
 
 **Test Categories:**
+
 - Unit tests: Core calculators, validators, models
 - Component tests: React components with Testing Library
 - Integration tests: Service and repository layers
 - Hook tests: Custom hooks with renderHook
 
 **Quality Checks:**
+
 - TypeScript compilation
 - Prettier formatting
 - ESLint linting
@@ -213,16 +229,19 @@ const { selectedIndex, moveUp, moveDown } = useSelection(max);
 ## Build & Deployment
 
 **Production Build:**
+
 ```bash
 npm run build:prod  # Clean + compile with production tsconfig
 ```
 
 **Distribution:**
+
 - NPM: Published as `cidrly@beta`
 - Homebrew: `chuckycastle/cidrly` tap
 - Binary: `dist/cli.js` with shebang
 
 **Requirements:**
+
 - Node.js 20+
 - Terminal with 256-color and Unicode support
 - Minimum 80x24 terminal size
@@ -230,6 +249,7 @@ npm run build:prod  # Clean + compile with production tsconfig
 ## Future Enhancements
 
 Planned features:
+
 - IPv6 network support
 - Export to CSV/YAML/Terraform
 - Network visualization diagrams

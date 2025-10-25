@@ -16,6 +16,7 @@ Network architecture and design planning CLI tool with automatic subnet calculat
 ## Installation
 
 **Homebrew (macOS/Linux):**
+
 ```bash
 brew tap chuckycastle/cidrly
 brew install cidrly
@@ -23,12 +24,14 @@ cidrly
 ```
 
 **NPM (All Platforms):**
+
 ```bash
 npm install -g cidrly@beta
 cidrly
 ```
 
 **From Source:**
+
 ```bash
 git clone https://github.com/chuckycastle/cidrly.git
 cd cidrly
@@ -40,11 +43,13 @@ npm start
 ## Usage
 
 Launch the interactive dashboard:
+
 ```bash
 cidrly
 ```
 
 Or use CLI commands:
+
 ```bash
 cidrly create --name="My Network" --save
 cidrly add --name="Engineering" --vlan=10 --devices=50 --plan=my-network.json
@@ -82,6 +87,7 @@ npm run security     # Security scan
 ## Examples
 
 See [examples/](examples/) for sample network plans:
+
 - `campus-network.json` - Multi-building university network
 - `data-center.json` - Three-tier application infrastructure
 - `branch-office.json` - Small office network
@@ -94,6 +100,7 @@ See [examples/](examples/) for sample network plans:
 ## Beta Release
 
 This is a beta release for testing. See [BETA_README.md](BETA_README.md) for:
+
 - Beta testing guidelines
 - Known limitations
 - How to provide feedback

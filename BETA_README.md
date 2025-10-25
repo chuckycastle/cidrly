@@ -9,16 +9,19 @@ An interactive terminal tool for network engineers with VLSM optimization, dual 
 ## Installation
 
 **Homebrew (macOS/Linux):**
+
 ```bash
 brew tap chuckycastle/cidrly && brew install cidrly
 ```
 
 **NPM (All Platforms):**
+
 ```bash
 npm install -g cidrly@beta
 ```
 
 **From Source:**
+
 ```bash
 git clone https://github.com/chuckycastle/cidrly.git && cd cidrly && npm install && npm run build && npm start
 ```
@@ -34,23 +37,24 @@ git clone https://github.com/chuckycastle/cidrly.git && cd cidrly && npm install
 
 ## Keyboard Shortcuts
 
-| Key            | Action                 |
-| -------------- | ---------------------- |
-| `↑/↓` or `k/j` | Navigate subnets       |
-| `i` or `Enter` | Show subnet details    |
-| `a`            | Add subnet             |
-| `e`            | Edit subnet            |
-| `x`            | Delete subnet          |
-| `c`            | Calculate plan         |
-| `s`            | Save plan              |
-| `l`            | Load plan              |
-| `b`            | Change base IP         |
-| `q`            | Quit                   |
-| `Esc`          | Cancel dialog          |
+| Key            | Action              |
+| -------------- | ------------------- |
+| `↑/↓` or `k/j` | Navigate subnets    |
+| `i` or `Enter` | Show subnet details |
+| `a`            | Add subnet          |
+| `e`            | Edit subnet         |
+| `x`            | Delete subnet       |
+| `c`            | Calculate plan      |
+| `s`            | Save plan           |
+| `l`            | Load plan           |
+| `b`            | Change base IP      |
+| `q`            | Quit                |
+| `Esc`          | Cancel dialog       |
 
 ## Examples
 
 Check `examples/` for sample plans:
+
 - `campus-network.json`
 - `data-center.json`
 - `branch-office.json`
@@ -58,6 +62,7 @@ Check `examples/` for sample plans:
 ## What to Test
 
 **Core Functionality:**
+
 - Create/edit/delete network plans
 - Add/edit/delete subnets
 - Calculate IP ranges
@@ -65,12 +70,14 @@ Check `examples/` for sample plans:
 - View subnet details
 
 **UI/UX:**
+
 - Keyboard navigation
 - Terminal readability (light/dark themes)
 - Different terminal sizes
 - Error message clarity
 
 **Edge Cases:**
+
 - Large device counts (1000+)
 - Small device counts (1-2)
 - Invalid inputs
@@ -86,6 +93,7 @@ Check `examples/` for sample plans:
 ## Provide Feedback
 
 Report issues on GitHub with:
+
 - cidrly version (`cidrly --version`)
 - Operating system
 - Terminal app and size
@@ -101,6 +109,7 @@ Report issues on GitHub with:
 ## Troubleshooting
 
 **Command not found:**
+
 ```bash
 npm config get prefix  # Check PATH for npm
 brew doctor            # Check PATH for Homebrew
