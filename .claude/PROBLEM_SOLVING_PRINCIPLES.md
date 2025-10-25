@@ -238,6 +238,127 @@ You're following these principles when:
 ✅ Future you (6 months later) can understand it instantly
 ✅ Deleting your code is as easy as adding it was
 
+## Mandatory: CI/CD and Verification Practices
+
+### Never Skip Pre-Push Verification
+
+Before any `git push`, **you MUST run local verification**. This is not optional.
+
+#### Why This is Critical:
+
+**Real Example from This Project:**
+
+- **Date**: 2025-10-25
+- **Issue**: Two consecutive CI failures on GitHub
+- **Cause**: CLAUDE.md formatting not checked locally before pushing
+- **Impact**: Wasted CI minutes, delayed development, broken build status
+- **Root Cause**: Skipped local verification before pushing
+
+#### The Mandatory Rule:
+
+```bash
+# One-time setup (REQUIRED for all developers)
+./scripts/setup-git-hooks.sh
+
+# The hook automatically runs on every push
+git push origin main  # Hook runs automatically, blocks if checks fail
+```
+
+#### What the Hook Checks:
+
+1. ✓ ESLint (code quality)
+2. ✓ Prettier (formatting)
+3. ✓ TypeScript compilation
+4. ✓ All tests (230 tests must pass)
+5. ✓ Security scanning
+6. ✓ Production build
+7. ✓ Build artifacts
+
+**If ANY check fails, the push is blocked. Fix it locally, don't bypass the hook.**
+
+#### The "I'll Just Push and Let CI Check It" Anti-Pattern
+
+❌ **WRONG THINKING:**
+
+- "CI will catch it anyway"
+- "It's just a small change"
+- "I'll fix it if CI fails"
+- "The hook takes too long"
+
+✅ **CORRECT THINKING:**
+
+- "If it fails locally, it will fail in CI"
+- "Small changes can still break formatting/tests"
+- "Fixing locally is faster than waiting for CI"
+- "The hook saves time by preventing failed CI runs"
+
+#### Never Use `--no-verify`
+
+**NEVER bypass the pre-push hook unless you have a specific, documented reason:**
+
+```bash
+git push --no-verify  # ⚠️ FORBIDDEN except in emergencies
+```
+
+**Valid reasons to bypass** (document in commit message):
+
+- Emergency hotfix to production (document why checks couldn't run)
+- CI infrastructure is broken (not your code)
+
+**Invalid reasons:**
+
+- "I'm in a hurry"
+- "I'm sure it's fine"
+- "I'll fix it later"
+- "The hook is annoying"
+
+### Lesson Learned: Formatting Matters
+
+**What Happened:**
+
+We fixed two critical bugs (duplicate header/footer, custom save/load paths), committed, and pushed. Both pushes failed CI.
+
+**Why It Failed:**
+
+CLAUDE.md had formatting issues that Prettier caught in CI but not locally (because we didn't run `npm run format:check`).
+
+**What We Should Have Done:**
+
+```bash
+# Before pushing
+./scripts/verify-pre-push.sh  # Would have caught the formatting issue
+# Fix the issue
+npx prettier --write CLAUDE.md
+# Now push safely
+git push origin main
+```
+
+**The Fix:**
+
+1. Fixed formatting locally
+2. Created `verify-pre-push.sh` script
+3. Created Git pre-push hook
+4. Documented mandatory usage
+5. Updated all developer documentation
+
+### Simple Solution to CI Failures: Don't Create Them
+
+The best way to fix CI failures is to prevent them:
+
+- ✅ Run verification locally before pushing
+- ✅ Install the pre-push hook (one-time setup)
+- ✅ Trust the hook to catch issues
+- ✅ Fix issues locally, not in CI
+
+**Remember:**
+
+- Local feedback: seconds to minutes
+- CI feedback: minutes (plus queue time)
+- Local fixes: immediate
+- CI fixes: requires new commit, new push, new CI run
+
+**The math is simple: Local verification is always faster.**
+
 ## Conclusion
 
 **Simple is not easy. Simple is hard-won through experience and discipline.**
@@ -249,4 +370,12 @@ When you're tempted by complexity, remember:
 - One line solution: `{dialog.type === 'none' && <Table />}`
 - Simple, obvious, maintainable, works perfectly
 
+And when you're tempted to skip verification:
+
+- Remember the CI failures caused by skipping checks
+- Remember that local is faster than CI
+- Remember that prevention is better than fixing
+
 **The best code is the code you don't write.**
+
+**The best CI failure is the one that never happens.**

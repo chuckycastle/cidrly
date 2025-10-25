@@ -1,5 +1,60 @@
 # Claude Code Development Guide
 
+## 🚨 CRITICAL: Pre-Push Verification (MANDATORY)
+
+**⚠️ NEVER push to GitHub without running local verification first!**
+
+### One-Time Setup (Required)
+
+```bash
+# Install Git pre-push hook
+./scripts/setup-git-hooks.sh
+```
+
+This installs an automatic pre-push hook that runs ALL CI checks locally before allowing a push.
+
+### Pre-Push Hook Behavior
+
+The hook **automatically** runs these checks on every `git push`:
+
+1. ✓ ESLint (code quality)
+2. ✓ Prettier (formatting check)
+3. ✓ TypeScript compilation
+4. ✓ Tests (all 230 tests must pass)
+5. ✓ Coverage analysis (informational)
+6. ✓ Security scanning (Semgrep)
+7. ✓ NPM audit
+8. ✓ Production build
+9. ✓ Build artifact verification
+
+**If ANY check fails, the push is blocked.**
+
+### Manual Verification
+
+To run checks manually at any time:
+
+```bash
+./scripts/verify-pre-push.sh
+```
+
+### Bypassing the Hook
+
+**⚠️ NEVER bypass the hook unless you have a specific reason and understand the consequences:**
+
+```bash
+git push --no-verify  # ⚠️ NOT RECOMMENDED
+```
+
+**Why This is Mandatory:**
+
+- Prevents CI failures on GitHub (saves time and CI minutes)
+- Catches formatting issues, test failures, and security problems locally
+- Mirrors EXACT CI pipeline - what passes locally will pass in CI
+- Maintains code quality standards automatically
+- Previous CI failures were caused by skipping these checks
+
+**Bottom Line**: If the hook is not installed or you bypass it, expect CI failures.
+
 ## CRITICAL: Publishing Workflow
 
 **⚠️ NEVER use `npm publish` locally!**
@@ -19,19 +74,24 @@ cidrly follows [Semantic Versioning 2.0.0](https://semver.org):
 ### Publishing Updates to NPM
 
 ```bash
-# 1. Make your code changes and commit them
+# 1. Verify all checks pass locally (MANDATORY)
+./scripts/verify-pre-push.sh
+
+# 2. Make your code changes and commit them
 git add .
 git commit -m "fix: your changes here"
+
+# 3. Push to main (pre-push hook runs automatically)
 git push origin main
 
-# 2. Bump version and create tag
+# 4. Bump version and create tag
 npm version patch -m "chore: bump version to %s"     # For bug fixes (0.1.x)
 npm version minor -m "chore: bump version to %s"     # For features/breaking (0.x.0)
 
-# 3. Push commit and tag to GitHub
+# 5. Push commit and tag to GitHub (pre-push hook runs again)
 git push origin main --follow-tags
 
-# 4. GitHub Actions automatically:
+# 6. GitHub Actions automatically:
 #    ✅ Runs tests, linting, security scans
 #    ✅ Builds production code
 #    ✅ Publishes to npm as latest (using NPM_TOKEN secret)
@@ -65,15 +125,43 @@ cidrly is a type-safe CLI tool for network architecture planning built with:
 
 ## Development Commands
 
+### Primary Commands
+
 ```bash
-npm run dev          # Run in development mode (tsx)
-npm run build        # Build TypeScript
-npm run build:prod   # Clean + production build
-npm test             # Run tests
-npm run lint         # Lint code
-npm run security     # Security scan
-npm run verify       # Format + lint + test + security
+npm run dev                    # Run in development mode (tsx)
+./scripts/verify-pre-push.sh  # ⚠️ MANDATORY before every push
+npm run verify                 # Quick verify: format + lint + test + security
 ```
+
+### Individual Checks
+
+```bash
+npm run lint              # ESLint - Check code quality
+npm run lint:fix          # ESLint - Auto-fix issues
+npm run format:check      # Prettier - Check formatting
+npm run format            # Prettier - Auto-fix formatting
+npm test                  # Vitest - Run all tests
+npm run test:coverage     # Vitest - Tests with coverage
+npm run build             # TypeScript - Build
+npm run build:prod        # TypeScript - Clean + production build
+npm run security          # Semgrep - Security scan
+```
+
+### Quality Check Order
+
+**Before making commits:**
+
+1. Write code
+2. Run `npm run format` to auto-fix formatting
+3. Run `npm run lint:fix` to auto-fix lint issues
+4. Run `npm test` to verify tests pass
+5. Commit changes
+
+**Before pushing to GitHub:**
+
+1. Run `./scripts/verify-pre-push.sh` (or let the hook run automatically)
+2. Fix any failures
+3. Push (hook prevents push if checks fail)
 
 ## Architecture Principles
 
