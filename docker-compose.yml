@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  cidrly:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: cidrly:latest
+    container_name: cidrly
+
+    # Interactive mode for CLI
+    stdin_open: true
+    tty: true
+
+    # Environment configuration
+    environment:
+      - NODE_ENV=production
+      - TZ=UTC
+
+    # Volume for persistent saved plans
+    volumes:
+      - cidrly-data:/app/saved-plans
+      # Optional: Mount local plans for development
+      # - ./saved-plans:/app/saved-plans
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Health check
+    healthcheck:
+      test: ['CMD', 'node', '-e', "console.log('healthy')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+    # Logging configuration
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+volumes:
+  cidrly-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/saved-plans
+
+# Networks (optional - for integration with other services)
+networks:
+  default:
+    name: cidrly-network
+    driver: bridge

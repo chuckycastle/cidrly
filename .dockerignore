@@ -1,0 +1,82 @@
+# Node modules
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Development files
+src/
+tests/
+coverage/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Build artifacts (will be rebuilt in container)
+dist/
+*.tsbuildinfo
+
+# Configuration files
+.prettierrc
+.prettierignore
+eslint.config.js
+jest.config.mjs
+tsconfig.json
+tsconfig.prod.json
+.semgrep.yml
+
+# Documentation (archived progress docs, keep only README)
+ARCHITECTURE.md
+docs/
+*.md
+!README.md
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-*
+*.swp
+*.swo
+.DS_Store
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# CI/CD files
+.gitlab-ci.yml
+.travis.yml
+circle.yml
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Saved plans (user data)
+saved-plans/
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+.cache/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.directory
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini

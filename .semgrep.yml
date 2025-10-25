@@ -1,0 +1,24 @@
+rules:
+  # Dangerous Code Execution
+  - id: no-eval
+    pattern: eval(...)
+    message: Use of eval() is dangerous
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: no-function-constructor
+    pattern: new Function(...)
+    message: Function constructor should be avoided
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  # File System Security
+  - id: fs-exists-race-condition
+    patterns:
+      - pattern: |
+          if (fs.existsSync($PATH)) {
+            fs.$METHOD($PATH, ...)
+          }
+    message: Race condition between exists check and file operation
+    severity: INFO
+    languages: [typescript, javascript]
