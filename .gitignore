@@ -9,5 +9,25 @@ coverage
 .vscode
 .idea
 
-# Saved plans (keep directory but ignore JSON files)
-saved-plans/*.json
+# Build artifacts
+*.tar.gz
+*.tsbuildinfo
+
+# Directories excluded from repo
+saved-plans/
+docs/
+scripts/
+Formula/
+homebrew-cidrly/
+
+# Internal documentation (not for public repo)
+CLAUDE.md
+DEPLOYMENT.md
+RELEASE_CHECKLIST.md
+HOMEBREW_SETUP.md
+REFACTORING_SUMMARY.md
+
+# Docker files (we removed Docker support)
+Dockerfile
+docker-compose.yml
+.dockerignore
