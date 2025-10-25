@@ -8,7 +8,7 @@ import path from 'path';
 import type { NetworkPlan } from '../core/models/network-plan.js';
 import { ErrorFactory, isFileOperationError } from '../errors/index.js';
 import { ErrorCode, ValidationError } from '../errors/network-plan-errors.js';
-import { sanitizeFilePath, validateFilename } from '../infrastructure/security/security-utils.js';
+import { resolveUserPath, validateFilename } from '../infrastructure/security/security-utils.js';
 import { parseNetworkPlan } from '../schemas/network-plan.schema.js';
 
 export interface SavedPlanFile {
@@ -77,8 +77,14 @@ export class FileService {
     }
 
     try {
-      // Sanitize the file path to prevent path traversal
-      const filepath = sanitizeFilePath(finalFilename, this.baseDirectory);
+      // Resolve user path (supports filenames, relative paths, absolute paths, ~ paths)
+      const filepath = resolveUserPath(finalFilename, this.baseDirectory);
+
+      // Ensure parent directory exists
+      const dirPath = path.dirname(filepath);
+      if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+      }
 
       // Write the file
       fs.writeFileSync(filepath, JSON.stringify(plan, null, 2), 'utf-8');
@@ -107,13 +113,8 @@ export class FileService {
     const finalFilename = filename.endsWith('.json') ? filename : `${filename}.json`;
 
     try {
-      // Resolve the file path
-      const filepath = path.resolve(this.baseDirectory, finalFilename);
-
-      // Check if path is within allowed directory
-      if (!filepath.startsWith(this.baseDirectory + path.sep) && filepath !== this.baseDirectory) {
-        throw ErrorFactory.pathTraversalDetected(filepath);
-      }
+      // Resolve user path (supports filenames, relative paths, absolute paths, ~ paths)
+      const filepath = resolveUserPath(finalFilename, this.baseDirectory);
 
       // Check if file exists
       if (!fs.existsSync(filepath)) {
