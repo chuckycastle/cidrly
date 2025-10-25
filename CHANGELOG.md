@@ -121,7 +121,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Technical Stack
 
-- **Runtime**: Node.js >=18.0.0
+- **Runtime**: Node.js >=20.0.0
 - **Framework**: ink v6.3.1 + React v19.2.0
 - **CLI**: Pastel v4.0.0
 - **State**: Zustand v5.0.8
