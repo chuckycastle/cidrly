@@ -27,6 +27,11 @@ jobs:
           cache: 'npm'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Configure npm cache
+        run: |
+          npm config set cache .npm-cache --global
+          npm config set logs-dir .npm-logs --global
+
       - name: Install dependencies
         run: npm install --frozen-lockfile
 
