@@ -8,7 +8,7 @@ import '@testing-library/jest-dom';
 // Silence console errors in tests (optional - remove if you want to see them)
 const originalError = console.error;
 beforeAll(() => {
-  console.error = (...args: any[]) => {
+  console.error = (...args: Parameters<typeof console.error>) => {
     if (
       typeof args[0] === 'string' &&
       (args[0].includes('Warning: ReactDOM.render') ||
