@@ -46,9 +46,6 @@ jobs:
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      - name: Update package.json version
-        run: npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version
-
       - name: Publish to npm (dry-run check)
         run: npm publish --dry-run
         env:
