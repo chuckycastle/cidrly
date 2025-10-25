@@ -217,7 +217,7 @@ export const DashboardView: React.FC = () => {
     setDialog({
       type: 'input',
       title: 'Save Plan',
-      label: 'Enter filename to save:',
+      label: 'Filename or path (e.g., my-plan.json or ~/plans/my-plan.json):',
       defaultValue: defaultFilename,
       onSubmit: (filename) => {
         void (async () => {
@@ -244,24 +244,49 @@ export const DashboardView: React.FC = () => {
     try {
       const savedPlans = await fileService.listPlans();
 
-      if (savedPlans.length === 0) {
-        notify.error('No saved plans found. Save a plan first using "s" key.');
-        return;
-      }
+      // Add "Enter custom path" option at the end
+      const filesWithCustomOption: SavedPlanFile[] = [
+        ...savedPlans,
+        {
+          filename: '→ Enter custom path...',
+          path: '__custom__',
+          modifiedAt: new Date(),
+        },
+      ];
 
       setDialog({
         type: 'filepicker',
         title: 'Load Plan',
-        files: savedPlans,
+        files: savedPlans.length > 0 ? filesWithCustomOption : [],
         onSelect: (filepath: string) => {
-          handleLoadSelectedPlan(filepath);
+          if (filepath === '__custom__') {
+            handleLoadCustomPath();
+          } else {
+            handleLoadSelectedPlan(filepath);
+          }
         },
       });
+
+      // If no saved plans, directly show custom path input
+      if (savedPlans.length === 0) {
+        handleLoadCustomPath();
+      }
     } catch (error) {
       notify.error(
         `Failed to list plans: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
+  };
+
+  const handleLoadCustomPath = () => {
+    setDialog({
+      type: 'input',
+      title: 'Load Plan',
+      label: 'Enter file path (e.g., my-plan.json or ~/plans/my-plan.json):',
+      onSubmit: (filepath: string) => {
+        handleLoadSelectedPlan(filepath);
+      },
+    });
   };
 
   const handleLoadSelectedPlan = (filepath: string) => {

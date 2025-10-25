@@ -81,6 +81,54 @@ export function sanitizeFilePath(filePath: string, baseDir: string): string {
 }
 
 /**
+ * Resolves a user-provided path (can be filename, relative path, or absolute path)
+ * Supports: filename.json, ./path/file.json, ~/path/file.json, /absolute/path/file.json
+ * @param userPath - User-provided path
+ * @param baseDir - Default base directory if only filename provided
+ * @returns Resolved absolute path
+ * @throws Error if path contains dangerous patterns
+ */
+export function resolveUserPath(userPath: string, baseDir: string): string {
+  // Decode and normalize input path
+  const decodedPath = normalizePath(userPath);
+
+  // Check for null bytes
+  if (userPath.includes('\0') || decodedPath.includes('\0')) {
+    throw new Error('Invalid file path: Null byte detected');
+  }
+
+  // Check for parent directory references (security risk)
+  if (decodedPath.includes('..') || userPath.includes('..')) {
+    throw new Error('Invalid file path: Parent directory reference (..) not allowed');
+  }
+
+  // Determine path type and resolve accordingly
+  let resolvedPath: string;
+
+  // Check if it's an absolute path or contains directory separators
+  if (path.isAbsolute(userPath)) {
+    // Absolute path: /path/to/file.json
+    resolvedPath = path.resolve(decodedPath);
+  } else if (userPath.startsWith('~')) {
+    // Home directory path: ~/path/to/file.json
+    const homeDir = process.env['HOME'] || process.env['USERPROFILE'] || '';
+    if (!homeDir) {
+      throw new Error('Cannot resolve home directory');
+    }
+    const pathWithoutTilde = userPath.slice(1); // Remove ~
+    resolvedPath = path.resolve(homeDir, pathWithoutTilde);
+  } else if (userPath.includes('/') || userPath.includes(path.sep)) {
+    // Relative path with directories: ./path/to/file.json or path/to/file.json
+    resolvedPath = path.resolve(process.cwd(), decodedPath);
+  } else {
+    // Just a filename: file.json -> use baseDir
+    resolvedPath = path.resolve(baseDir, decodedPath);
+  }
+
+  return resolvedPath;
+}
+
+/**
  * Validates that a filename is safe and doesn't contain dangerous characters
  * Enhanced with URL-encoding detection
  * @param filename - The filename to validate
