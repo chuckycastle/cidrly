@@ -16,15 +16,9 @@ coverage
 # Directories excluded from repo
 saved-plans/
 docs/
+scripts/
 Formula/
 homebrew-cidrly/
-
-# Include verification scripts but exclude deployment scripts
-scripts/
-!scripts/verify-pre-push.sh
-!scripts/setup-git-hooks.sh
-!scripts/git-hooks/
-!scripts/git-hooks/pre-push
 
 # Internal documentation (not for public repo)
 DEPLOYMENT.md

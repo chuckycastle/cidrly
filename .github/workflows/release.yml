@@ -56,6 +56,35 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Update Homebrew formula
+        env:
+          GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+
+          # Download tarball from npm registry
+          TARBALL_URL="https://registry.npmjs.org/cidrly/-/cidrly-${VERSION}.tgz"
+          curl -sL "$TARBALL_URL" -o cidrly.tgz
+
+          # Calculate SHA256
+          SHA256=$(shasum -a 256 cidrly.tgz | awk '{print $1}')
+
+          # Clone homebrew tap
+          git clone https://x-access-token:${GITHUB_TOKEN}@github.com/chuckycastle/homebrew-cidrly.git tap
+          cd tap
+
+          # Update formula
+          sed -i.bak "s|url \".*\"|url \"${TARBALL_URL}\"|" Formula/cidrly.rb
+          sed -i.bak "s|sha256 \".*\"|sha256 \"${SHA256}\"|" Formula/cidrly.rb
+          rm Formula/cidrly.rb.bak
+
+          # Commit and push
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/cidrly.rb
+          git commit -m "chore: bump cidrly to ${VERSION}"
+          git push
+
       - name: Generate changelog
         id: changelog
         run: |
