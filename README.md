@@ -88,53 +88,22 @@ npm test             # Run tests (230 tests)
 
 ### Code Quality Checks
 
-Run individual checks:
+Run checks before committing:
 
 ```bash
-npm run lint              # ESLint - Check code quality
-npm run format:check      # Prettier - Check formatting
-npm run test:coverage     # Vitest - Run tests with coverage
-npm run security          # Semgrep - Security scan
-npm run build:prod        # TypeScript - Production build
-```
-
-### Pre-Push Verification
-
-**IMPORTANT**: Before pushing to GitHub, run all CI checks locally to avoid build failures:
-
-```bash
-# One-time setup (installs Git hooks)
-./scripts/setup-git-hooks.sh
-
-# Manual verification (optional, hook runs automatically)
-./scripts/verify-pre-push.sh
-```
-
-The pre-push hook will automatically run these checks before each `git push`:
-
-1. ✓ ESLint (code quality)
-2. ✓ Prettier (formatting)
-3. ✓ TypeScript compilation
-4. ✓ Tests with coverage
-5. ✓ Security scanning
-6. ✓ Production build
-7. ✓ Build artifact verification
-
-**To bypass the hook** (not recommended):
-
-```bash
-git push --no-verify
+npm run format        # Auto-fix formatting
+npm run lint:fix      # Auto-fix lint issues
+npm test              # Run all tests
+npm run verify        # Run all quality checks (format + lint + test + security)
 ```
 
 ### CI/CD Pipeline
 
-GitHub Actions automatically runs three jobs on every push:
+GitHub Actions automatically runs on every push:
 
 - **Test** (Node 20.x, 22.x): Lint, format check, tests
 - **Security**: Semgrep scan, npm audit
 - **Build**: Production build and artifact verification
-
-All checks must pass before merging to main.
 
 ## Examples
 
@@ -146,17 +115,23 @@ See [examples/](examples/) for sample network plans:
 
 ## Documentation
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) - Technical architecture and design decisions
-- [CHANGELOG.md](CHANGELOG.md) - Version history and release notes
+### For Users
+
+- **Installation & Usage** - See above sections
+- **Examples** - Sample network plans in `examples/` directory
+- **[Changelog](CHANGELOG.md)** - Version history and release notes
+
+### For Contributors
+
+Detailed documentation is available on the [GitHub Wiki](https://github.com/chuckycastle/cidrly/wiki):
+
+- **[Architecture](https://github.com/chuckycastle/cidrly/wiki/Architecture)** - Technical design, layers, and patterns
+- **[Contributing Guide](https://github.com/chuckycastle/cidrly/wiki/Contributing)** - Development workflow, code standards, testing
+- **[Beta Testing](https://github.com/chuckycastle/cidrly/wiki/Beta-Testing)** - Testing guidelines, feedback, and known limitations
 
 ## Development Status
 
-cidrly is in **initial development** (v0.x.x). The API may change as we gather feedback and refine features. See [BETA_README.md](BETA_README.md) for:
-
-- Beta testing guidelines
-- Known limitations
-- How to provide feedback
-- Versioning strategy
+cidrly is in **initial development** (v0.x.x). The API may change as we gather feedback and refine features. See the [Beta Testing wiki](https://github.com/chuckycastle/cidrly/wiki/Beta-Testing) for guidelines and how to provide feedback.
 
 ## License
 
