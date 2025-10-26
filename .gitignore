@@ -9,6 +9,12 @@ coverage
 .vscode
 .idea
 
+# Local development convenience files (not in repo)
+.nvmrc
+.npmrc
+.gitattributes
+__mocks__/
+
 # Build artifacts
 *.tar.gz
 *.tsbuildinfo
