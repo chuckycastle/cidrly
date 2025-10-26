@@ -15,7 +15,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "build:prod": "npm run clean && tsc --project tsconfig.prod.json",
+    "build:prod": "npm run clean && tsc --sourceMap false --declarationMap false --removeComments true",
     "clean": "rm -rf dist coverage *.tsbuildinfo",
     "dev": "tsx src/cli.tsx",
     "dashboard": "tsx src/dashboard/dashboard-cli.ts",

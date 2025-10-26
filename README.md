@@ -11,7 +11,6 @@ Network architecture and design planning CLI tool with automatic subnet calculat
 - Smart subnet and supernet calculation
 - VLAN management
 - Save/load network plans as JSON
-- Full TypeScript with strict mode
 
 ## Installation
 
@@ -28,16 +27,6 @@ cidrly
 ```bash
 npm install -g cidrly
 cidrly
-```
-
-**From Source:**
-
-```bash
-git clone https://github.com/chuckycastle/cidrly.git
-cd cidrly
-npm install
-npm run build
-npm start
 ```
 
 ## Usage
@@ -71,40 +60,6 @@ cidrly view --plan=my-network.json
 - `q` - Quit
 - `Escape` - Cancel dialog
 
-## Technology
-
-Built with ink v6, React 19, Zustand, TypeScript, and Node.js 20+.
-
-## Development
-
-### Quick Start
-
-```bash
-npm install          # Install dependencies
-npm run dev          # Run in development mode
-npm run build        # Build project
-npm test             # Run tests (230 tests)
-```
-
-### Code Quality Checks
-
-Run checks before committing:
-
-```bash
-npm run format        # Auto-fix formatting
-npm run lint:fix      # Auto-fix lint issues
-npm test              # Run all tests
-npm run verify        # Run all quality checks (format + lint + test + security)
-```
-
-### CI/CD Pipeline
-
-GitHub Actions automatically runs on every push:
-
-- **Test** (Node 20.x, 22.x): Lint, format check, tests
-- **Security**: Semgrep scan, npm audit
-- **Build**: Production build and artifact verification
-
 ## Examples
 
 See [examples/](examples/) for sample network plans:
@@ -113,30 +68,10 @@ See [examples/](examples/) for sample network plans:
 - `data-center.json` - Three-tier application infrastructure
 - `branch-office.json` - Small office network
 
-## Documentation
-
-### For Users
-
-- **Installation & Usage** - See above sections
-- **Examples** - Sample network plans in `examples/` directory
-- **[Changelog](CHANGELOG.md)** - Version history and release notes
-
-### For Contributors
-
-Detailed documentation is available on the [GitHub Wiki](https://github.com/chuckycastle/cidrly/wiki):
-
-- **[Architecture](https://github.com/chuckycastle/cidrly/wiki/Architecture)** - Technical design, layers, and patterns
-- **[Contributing Guide](https://github.com/chuckycastle/cidrly/wiki/Contributing)** - Development workflow, code standards, testing
-- **[Beta Testing](https://github.com/chuckycastle/cidrly/wiki/Beta-Testing)** - Testing guidelines, feedback, and known limitations
-
-## Development Status
-
-cidrly is in **initial development** (v0.x.x). The API may change as we gather feedback and refine features. See the [Beta Testing wiki](https://github.com/chuckycastle/cidrly/wiki/Beta-Testing) for guidelines and how to provide feedback.
-
 ## License
 
 ISC
 
 ## Support
 
-For issues or feature requests, open an issue on GitHub.
+For issues or feature requests, open an issue on [GitHub](https://github.com/chuckycastle/cidrly/issues).
