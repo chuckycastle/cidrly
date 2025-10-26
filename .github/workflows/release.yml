@@ -35,6 +35,9 @@ jobs:
       - name: Run linter
         run: npm run lint
 
+      - name: Install Semgrep
+        run: pip install semgrep
+
       - name: Run security scan
         run: npm run security
         continue-on-error: true
