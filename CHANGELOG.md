@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Network visualization diagrams
 - Import from existing network configurations
 
+## [0.1.5] - 2025-10-27
+
+### Changed
+
+- **README Badges** - Added shields.io badges for npm metrics
+  - npm version badge with link to npm package
+  - npm downloads badge showing monthly download count
+  - Node.js version requirement badge (>=20.0.0)
+
 ## [0.1.4] - 2025-10-27
 
 ### Added
@@ -226,7 +235,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **PATCH** version for backwards-compatible bug fixes
 - **Pre-release** suffixes: `-alpha`, `-beta`, `-rc` for pre-release versions
 
-[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/chuckycastle/cidrly/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/chuckycastle/cidrly/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/chuckycastle/cidrly/releases/tag/v0.1.3
 [1.0.0-beta.1]: https://github.com/chuckycastle/cidrly/releases/tag/v1.0.0-beta.1
