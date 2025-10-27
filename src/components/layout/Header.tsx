@@ -5,6 +5,7 @@
 
 import { Box, Text } from 'ink';
 import React from 'react';
+import packageJson from '../../../package.json' with { type: 'json' };
 import type { NetworkPlan } from '../../core/models/network-plan.js';
 import { useTerminalWidth } from '../../hooks/useTerminalWidth.js';
 import { colors, symbols } from '../../themes/colors.js';
@@ -57,6 +58,8 @@ export const Header: React.FC<HeaderProps> = React.memo(({ plan }) => {
           <Box>
             <Text bold>{colors.accent('cidrly')}</Text>
             <Text> </Text>
+            <Text>{colors.dim(`v${packageJson.version}`)}</Text>
+            <Text> </Text>
             <Text>{colors.dim('›')}</Text>
             <Text> </Text>
             <Text>{colors.slate(plan.name)}</Text>
@@ -67,6 +70,8 @@ export const Header: React.FC<HeaderProps> = React.memo(({ plan }) => {
         <Box justifyContent="space-between">
           <Box>
             <Text bold>{colors.accent('cidrly')}</Text>
+            <Text> </Text>
+            <Text>{colors.dim(`v${packageJson.version}`)}</Text>
             <Text> </Text>
             <Text>{colors.dim('›')}</Text>
             <Text> </Text>
