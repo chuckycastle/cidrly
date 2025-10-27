@@ -14,7 +14,9 @@ export interface NotificationDisplayProps {
 
 export const NotificationDisplay: React.FC<NotificationDisplayProps> = React.memo(
   ({ notification }) => {
-    const getStyleByType = (type: Notification['type']): { color: (s: string) => string; icon: string } => {
+    const getStyleByType = (
+      type: Notification['type'],
+    ): { color: (s: string) => string; icon: string } => {
       switch (type) {
         case 'success':
           return { color: colors.success, icon: symbols.success };
@@ -28,7 +30,9 @@ export const NotificationDisplay: React.FC<NotificationDisplayProps> = React.mem
       }
     };
 
-    const getPriorityIndicator = (priority?: Notification['priority']): { symbol: string; color: (s: string) => string } | null => {
+    const getPriorityIndicator = (
+      priority?: Notification['priority'],
+    ): { symbol: string; color: (s: string) => string } | null => {
       switch (priority) {
         case 'high':
           return { symbol: '‼', color: colors.error };
