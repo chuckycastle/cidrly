@@ -5,7 +5,6 @@
 
 import { Box, Text } from 'ink';
 import Spinner from 'ink-spinner';
-import path from 'path';
 import React from 'react';
 import { z as zod } from 'zod';
 import { FILE_RULES } from '../infrastructure/config/validation-rules.js';
@@ -30,9 +29,7 @@ export default function Load({ options }: Props): React.ReactElement {
     async function loadPlans(): Promise<void> {
       try {
         setStatus('loading');
-        const fileService = new FileService(
-          path.resolve(process.cwd(), FILE_RULES.SAVED_PLANS_DIR),
-        );
+        const fileService = new FileService(FILE_RULES.SAVED_PLANS_DIR);
         const repository = new FileSystemRepository(fileService);
 
         if (options.list) {

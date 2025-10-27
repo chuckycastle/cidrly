@@ -5,7 +5,6 @@
 
 import { Box, Text } from 'ink';
 import Spinner from 'ink-spinner';
-import path from 'path';
 import React from 'react';
 import { z as zod } from 'zod';
 import type { NetworkPlan, Subnet } from '../core/models/network-plan.js';
@@ -157,9 +156,7 @@ export default function View({ options }: Props): React.ReactElement | null {
     async function loadPlan(): Promise<void> {
       try {
         setStatus('loading');
-        const fileService = new FileService(
-          path.resolve(process.cwd(), FILE_RULES.SAVED_PLANS_DIR),
-        );
+        const fileService = new FileService(FILE_RULES.SAVED_PLANS_DIR);
         const repository = new FileSystemRepository(fileService);
 
         const loadedPlan = await repository.load(options.plan);
