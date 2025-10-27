@@ -282,7 +282,7 @@ export const DashboardView: React.FC = () => {
     setDialog({
       type: 'input',
       title: 'Load Plan',
-      label: 'Enter file path (e.g., my-plan.json or ~/plans/my-plan.json):',
+      label: 'File path (from ~/cidrly/saved-plans or absolute path):',
       onSubmit: (filepath: string) => {
         handleLoadSelectedPlan(filepath);
       },

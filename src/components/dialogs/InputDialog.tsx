@@ -11,6 +11,7 @@ import { colors } from '../../themes/colors.js';
 export interface InputDialogProps {
   title: string;
   label: string;
+  helperText?: string;
   defaultValue?: string;
   onSubmit: (value: string) => void;
   onCancel: () => void;
@@ -20,6 +21,7 @@ export interface InputDialogProps {
 export const InputDialog: React.FC<InputDialogProps> = ({
   title,
   label,
+  helperText,
   defaultValue = '',
   onSubmit,
   onCancel,
@@ -58,6 +60,13 @@ export const InputDialog: React.FC<InputDialogProps> = ({
       <Box marginBottom={1}>
         <Text bold>{colors.slate(title)}</Text>
       </Box>
+
+      {/* Helper text */}
+      {helperText && (
+        <Box marginBottom={1}>
+          <Text>{colors.dim(helperText)}</Text>
+        </Box>
+      )}
 
       {/* Divider */}
       <Box marginBottom={1}>
