@@ -191,7 +191,9 @@ export const useNotify = (): {
  * });
  * ```
  */
-export const useSelection = (maxIndex: number): {
+export const useSelection = (
+  maxIndex: number,
+): {
   selectedIndex: number;
   select: (index: number) => void;
   moveUp: () => void;

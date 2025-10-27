@@ -59,7 +59,9 @@ export interface KeyboardShortcutConfig {
  * const helpText = shortcuts.getShortcuts();
  * ```
  */
-export const useKeyboardShortcuts = (config: KeyboardShortcutConfig): {
+export const useKeyboardShortcuts = (
+  config: KeyboardShortcutConfig,
+): {
   getShortcuts: () => KeyboardShortcut[];
   getShortcutsByCategory: () => Record<string, KeyboardShortcut[]>;
   isKeyBound: (key: string) => boolean;

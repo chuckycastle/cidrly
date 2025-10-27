@@ -1,0 +1,14 @@
+# Wiki directories
+cidrly.wiki/
+cidrly.wiki.backup/
+
+# Build output
+dist/
+build/
+coverage/
+
+# Dependencies
+node_modules/
+
+# Logs
+*.log
