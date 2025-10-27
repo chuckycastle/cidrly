@@ -65,7 +65,10 @@ export const WelcomeView: React.FC = () => {
     } else if (action === 'load') {
       const savedPlans = getSavedPlans();
       if (savedPlans.length === 0) {
-        setState({ type: 'error', message: 'No saved plans found. Creating new plan instead.' });
+        setState({
+          type: 'error',
+          message: 'No saved plans found in ~/cidrly/saved-plans. Creating new plan instead.',
+        });
         setTimeout(() => setState({ type: 'create-name' }), 2000);
       } else {
         setState({ type: 'load-select' });
@@ -143,6 +146,7 @@ export const WelcomeView: React.FC = () => {
       {state.type === 'create-name' && (
         <InputDialog
           title="Create New Plan"
+          helperText="Plans save to ~/cidrly/saved-plans"
           label="Plan name"
           onSubmit={handlePlanNameSubmit}
           onCancel={() => setState({ type: 'initial' })}
