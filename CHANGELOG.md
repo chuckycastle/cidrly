@@ -14,6 +14,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Network visualization diagrams
 - Import from existing network configurations
 
+## [0.1.3] - 2025-10-27
+
+### Fixed
+
+- **ESLint Warnings** - Resolved all 137 ESLint warnings (100% reduction)
+  - Added explicit return type annotations to all React components, hooks, and store functions
+  - Replaced `||` with `??` for safer nullish coalescing (14 instances)
+  - Fixed unused expression errors in keyboard handlers
+  - Added ESLint suppressions for intentional defensive runtime checks
+- **Code Formatting** - Applied Prettier formatting to maintain consistent code style
+  - Created `.prettierignore` to exclude wiki directories from formatting checks
+
+### Changed
+
+- **Default Save Directory** - Plans now save to `~/cidrly/saved-plans` instead of `{cwd}/saved-plans`
+  - More predictable behavior regardless of current working directory
+  - Users can still override with full paths in `--output` option
+  - Removed dependency on `process.cwd()` from all command files
+
 ## [1.0.0-beta.1] - 2025-10-25
 
 ### Added
