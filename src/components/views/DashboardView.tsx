@@ -217,7 +217,7 @@ export const DashboardView: React.FC = () => {
     setDialog({
       type: 'input',
       title: 'Save Plan',
-      label: 'Filename or path (e.g., my-plan.json or ~/plans/my-plan.json):',
+      label: 'File path (from ~/cidrly/saved-plans or absolute path):',
       defaultValue: defaultFilename,
       onSubmit: (filename) => {
         void (async (): Promise<void> => {
