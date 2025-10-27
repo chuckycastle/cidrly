@@ -14,6 +14,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Network visualization diagrams
 - Import from existing network configurations
 
+## [0.1.4] - 2025-10-27
+
+### Added
+
+- **Dashboard Version Display** - Application version now visible in dashboard header
+  - Format: "cidrly v0.1.4 › plan name"
+  - Keeps version information visible throughout the application
+
+### Improved
+
+- **Directory Path Visibility** - Enhanced user awareness of default save location
+  - WelcomeView: Error message shows `~/cidrly/saved-plans` path when no plans found
+  - Create plan dialog: Added helper text "Plans save to ~/cidrly/saved-plans"
+  - Save/Load dialogs: Updated labels to indicate default directory location
+
 ## [0.1.3] - 2025-10-27
 
 ### Fixed
@@ -211,7 +226,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **PATCH** version for backwards-compatible bug fixes
 - **Pre-release** suffixes: `-alpha`, `-beta`, `-rc` for pre-release versions
 
-[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v1.0.0-beta.1...HEAD
+[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/chuckycastle/cidrly/compare/v0.1.3...v0.1.4
+[0.1.3]: https://github.com/chuckycastle/cidrly/releases/tag/v0.1.3
 [1.0.0-beta.1]: https://github.com/chuckycastle/cidrly/releases/tag/v1.0.0-beta.1
 [1.0.0-rc.2]: https://github.com/chuckycastle/cidrly/compare/v1.0.0-rc.1...v1.0.0-rc.2
 [1.0.0-rc.1]: https://github.com/chuckycastle/cidrly/releases/tag/v1.0.0-rc.1
