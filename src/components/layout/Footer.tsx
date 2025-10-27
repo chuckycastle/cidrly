@@ -56,7 +56,10 @@ export const Footer: React.FC<FooterProps> = React.memo(({ hasSubnets, hasCalcul
   ];
 
   // Render a single command
-  const renderCommand = (cmd: { key: string; label: string; enabled: boolean }, key: string): React.ReactElement => (
+  const renderCommand = (
+    cmd: { key: string; label: string; enabled: boolean },
+    key: string,
+  ): React.ReactElement => (
     <Box key={key} marginRight={isVeryNarrow ? 1 : 2}>
       {cmd.enabled ? (
         <>
@@ -123,8 +126,9 @@ export const Footer: React.FC<FooterProps> = React.memo(({ hasSubnets, hasCalcul
         <Box flexWrap="wrap" marginBottom={0}>
           {commandGroups.slice(0, 2).map((group, groupIndex) => (
             <React.Fragment key={`row1-${groupIndex}`}>
-              {group.commands.map((cmd, cmdIndex): React.ReactElement =>
-                renderCommand(cmd, `row1-${groupIndex}-${cmdIndex}`),
+              {group.commands.map(
+                (cmd, cmdIndex): React.ReactElement =>
+                  renderCommand(cmd, `row1-${groupIndex}-${cmdIndex}`),
               )}
               {groupIndex < 1 && renderDivider(`row1-div-${groupIndex}`)}
             </React.Fragment>
@@ -135,8 +139,9 @@ export const Footer: React.FC<FooterProps> = React.memo(({ hasSubnets, hasCalcul
         <Box flexWrap="wrap">
           {commandGroups.slice(2).map((group, groupIndex) => (
             <React.Fragment key={`row2-${groupIndex}`}>
-              {group.commands.map((cmd, cmdIndex): React.ReactElement =>
-                renderCommand(cmd, `row2-${groupIndex}-${cmdIndex}`),
+              {group.commands.map(
+                (cmd, cmdIndex): React.ReactElement =>
+                  renderCommand(cmd, `row2-${groupIndex}-${cmdIndex}`),
               )}
               {groupIndex < commandGroups.slice(2).length - 1 &&
                 renderDivider(`row2-div-${groupIndex}`)}
@@ -159,7 +164,10 @@ export const Footer: React.FC<FooterProps> = React.memo(({ hasSubnets, hasCalcul
       <Box flexWrap="wrap">
         {commandGroups.map((group, groupIndex) => (
           <React.Fragment key={groupIndex}>
-            {group.commands.map((cmd, cmdIndex): React.ReactElement => renderCommand(cmd, `${groupIndex}-${cmdIndex}`))}
+            {group.commands.map(
+              (cmd, cmdIndex): React.ReactElement =>
+                renderCommand(cmd, `${groupIndex}-${cmdIndex}`),
+            )}
             {groupIndex < commandGroups.length - 1 && renderDivider(`div-${groupIndex}`)}
           </React.Fragment>
         ))}
