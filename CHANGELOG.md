@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Network visualization diagrams
 - Import from existing network configurations
 
+## [0.1.6] - 2025-10-27
+
+### Changed
+
+- **README Badges** - Simplified to show only npm-related metrics
+  - Removed: License, CI, Install Size, GitHub Stars, GitHub Issues badges
+  - Kept: npm version, npm downloads, Node.js version requirement
+
 ## [0.1.5] - 2025-10-27
 
 ### Changed
@@ -235,7 +243,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **PATCH** version for backwards-compatible bug fixes
 - **Pre-release** suffixes: `-alpha`, `-beta`, `-rc` for pre-release versions
 
-[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/chuckycastle/cidrly/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/chuckycastle/cidrly/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/chuckycastle/cidrly/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/chuckycastle/cidrly/releases/tag/v0.1.3
