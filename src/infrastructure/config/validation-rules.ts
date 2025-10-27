@@ -3,6 +3,8 @@
  * Centralized constants for all validation logic
  */
 
+import path from 'path';
+
 /**
  * VLAN ID validation rules
  * Based on IEEE 802.1Q standard
@@ -84,11 +86,16 @@ export const CALCULATION_RULES = {
 /**
  * File operation rules
  */
+
+// Compute default saved plans directory in user's home directory
+const homeDir = process.env['HOME'] ?? process.env['USERPROFILE'] ?? '';
+const SAVED_PLANS_DIR = path.join(homeDir, 'cidrly', 'saved-plans');
+
 export const FILE_RULES = {
   /**
-   * Default saved plans directory
+   * Default saved plans directory (~/cidrly/saved-plans)
    */
-  SAVED_PLANS_DIR: 'saved-plans',
+  SAVED_PLANS_DIR,
 
   /**
    * Supported file extensions
