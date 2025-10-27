@@ -23,7 +23,7 @@ type Props = {
   options: zod.infer<typeof options>;
 };
 
-export default function Calculate({ options }: Props) {
+export default function Calculate({ options }: Props): React.ReactElement {
   const [status, setStatus] = React.useState<
     'loading' | 'calculating' | 'saving' | 'done' | 'error'
   >('loading');
@@ -33,7 +33,7 @@ export default function Calculate({ options }: Props) {
   const [calculatedCount, setCalculatedCount] = React.useState<number>(0);
 
   React.useEffect(() => {
-    async function calculatePlan() {
+    async function calculatePlan(): Promise<void> {
       try {
         // Load plan
         setStatus('loading');
@@ -43,6 +43,7 @@ export default function Calculate({ options }: Props) {
         const repository = new FileSystemRepository(fileService);
 
         const plan = await repository.load(options.plan);
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
         if (!plan) {
           throw new Error(`Plan not found: ${options.plan}`);
         }

@@ -59,7 +59,11 @@ export interface KeyboardShortcutConfig {
  * const helpText = shortcuts.getShortcuts();
  * ```
  */
-export const useKeyboardShortcuts = (config: KeyboardShortcutConfig) => {
+export const useKeyboardShortcuts = (config: KeyboardShortcutConfig): {
+  getShortcuts: () => KeyboardShortcut[];
+  getShortcutsByCategory: () => Record<string, KeyboardShortcut[]>;
+  isKeyBound: (key: string) => boolean;
+} => {
   const { shortcuts, enabled = true } = config;
   const shortcutsRef = useRef(shortcuts);
 
@@ -72,7 +76,7 @@ export const useKeyboardShortcuts = (config: KeyboardShortcutConfig) => {
   useEffect(() => {
     const keyMap = new Map<string, number>();
     shortcuts.forEach((shortcut) => {
-      const count = keyMap.get(shortcut.key) || 0;
+      const count = keyMap.get(shortcut.key) ?? 0;
       keyMap.set(shortcut.key, count + 1);
     });
 
@@ -156,10 +160,8 @@ export const useKeyboardShortcuts = (config: KeyboardShortcutConfig) => {
     shortcuts
       .filter((s) => s.enabled !== false)
       .forEach((shortcut) => {
-        const category = shortcut.category || 'other';
-        if (!grouped[category]) {
-          grouped[category] = [];
-        }
+        const category = shortcut.category ?? 'other';
+        grouped[category] ??= [];
         grouped[category].push(shortcut);
       });
 

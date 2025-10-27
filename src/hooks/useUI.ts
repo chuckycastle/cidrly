@@ -68,7 +68,24 @@ export const useNotifications = (): Notification[] => {
  * };
  * ```
  */
-export const useUIActions = () => {
+export const useUIActions = (): {
+  setView: (view: ViewType) => void;
+  setSelectedIndex: (index: number) => void;
+  moveSelectionUp: (maxIndex: number) => void;
+  moveSelectionDown: (maxIndex: number) => void;
+  showNotification: (
+    message: string,
+    type?: 'info' | 'success' | 'error' | 'warning',
+    options?: {
+      priority?: NotificationPriority;
+      duration?: number;
+      position?: import('../store/uiStore.js').NotificationPosition;
+    },
+  ) => void;
+  dismissNotification: (id: string) => void;
+  clearNotifications: () => void;
+  setMaxVisibleNotifications: (max: number) => void;
+} => {
   const setView = useUIStore.use.setView();
   const setSelectedIndex = useUIStore.use.setSelectedIndex();
   const moveSelectionUp = useUIStore.use.moveSelectionUp();
@@ -104,14 +121,19 @@ export const useUIActions = () => {
  * };
  * ```
  */
-export const useNavigation = () => {
+export const useNavigation = (): {
+  goToWelcome: () => void;
+  goToDashboard: () => void;
+  goToDetail: () => void;
+  goToHelp: () => void;
+} => {
   const setView = useUIStore.use.setView();
 
   return {
-    goToWelcome: () => setView('welcome'),
-    goToDashboard: () => setView('dashboard'),
-    goToDetail: () => setView('detail'),
-    goToHelp: () => setView('help'),
+    goToWelcome: (): void => setView('welcome'),
+    goToDashboard: (): void => setView('dashboard'),
+    goToDetail: (): void => setView('detail'),
+    goToHelp: (): void => setView('help'),
   };
 };
 
@@ -134,17 +156,22 @@ export const useNavigation = () => {
  * };
  * ```
  */
-export const useNotify = () => {
+export const useNotify = (): {
+  success: (message: string, priority?: NotificationPriority) => void;
+  error: (message: string, priority?: NotificationPriority) => void;
+  info: (message: string, priority?: NotificationPriority) => void;
+  warning: (message: string, priority?: NotificationPriority) => void;
+} => {
   const showNotification = useUIStore.use.showNotification();
 
   return {
-    success: (message: string, priority?: NotificationPriority) =>
+    success: (message: string, priority?: NotificationPriority): void =>
       showNotification(message, 'success', { priority }),
-    error: (message: string, priority?: NotificationPriority) =>
+    error: (message: string, priority?: NotificationPriority): void =>
       showNotification(message, 'error', { priority }),
-    info: (message: string, priority?: NotificationPriority) =>
+    info: (message: string, priority?: NotificationPriority): void =>
       showNotification(message, 'info', { priority }),
-    warning: (message: string, priority?: NotificationPriority) =>
+    warning: (message: string, priority?: NotificationPriority): void =>
       showNotification(message, 'warning', { priority }),
   };
 };
@@ -164,7 +191,12 @@ export const useNotify = () => {
  * });
  * ```
  */
-export const useSelection = (maxIndex: number) => {
+export const useSelection = (maxIndex: number): {
+  selectedIndex: number;
+  select: (index: number) => void;
+  moveUp: () => void;
+  moveDown: () => void;
+} => {
   const selectedIndex = useUIStore.use.selectedIndex();
   const setSelectedIndex = useUIStore.use.setSelectedIndex();
   const moveSelectionUp = useUIStore.use.moveSelectionUp();
@@ -173,7 +205,7 @@ export const useSelection = (maxIndex: number) => {
   return {
     selectedIndex,
     select: setSelectedIndex,
-    moveUp: () => moveSelectionUp(maxIndex),
-    moveDown: () => moveSelectionDown(maxIndex),
+    moveUp: (): void => moveSelectionUp(maxIndex),
+    moveDown: (): void => moveSelectionDown(maxIndex),
   };
 };

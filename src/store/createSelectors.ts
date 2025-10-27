@@ -39,7 +39,7 @@ export const createSelectors = <S extends UseBoundStore<StoreApi<object>>>(
   store.use = {} as WithSelectors<typeof _store>['use'];
 
   for (const k of Object.keys(store.getState())) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access -- Dynamic property access required for selector generation
     (store.use as any)[k] = (): any => store((s) => s[k as keyof typeof s]);
   }
 

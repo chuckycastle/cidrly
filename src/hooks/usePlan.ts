@@ -4,6 +4,7 @@
  */
 
 import type { NetworkPlan, Subnet } from '../core/models/network-plan.js';
+import type { NetworkPlanService } from '../services/network-plan.service.js';
 import { usePlanStore } from '../store/planStore.js';
 
 /**
@@ -33,7 +34,7 @@ export const usePlan = (): NetworkPlan | null => {
  * const { plan, planService } = usePlanState();
  * ```
  */
-export const usePlanState = () => {
+export const usePlanState = (): { plan: NetworkPlan | null; planService: NetworkPlanService } => {
   const plan = usePlanStore.use.plan();
   const planService = usePlanStore.use.planService();
   return { plan, planService };
@@ -53,7 +54,15 @@ export const usePlanState = () => {
  * };
  * ```
  */
-export const usePlanActions = () => {
+export const usePlanActions = (): {
+  loadPlan: (plan: NetworkPlan) => void;
+  addSubnet: (subnet: Subnet) => void;
+  updateSubnet: (index: number, name: string, vlanId: number, expectedDevices: number) => void;
+  removeSubnet: (index: number) => Subnet | null;
+  calculatePlan: () => void;
+  updateBaseIp: (newBaseIp: string) => void;
+  clearPlan: () => void;
+} => {
   const loadPlan = usePlanStore.use.loadPlan();
   const addSubnet = usePlanStore.use.addSubnet();
   const updateSubnet = usePlanStore.use.updateSubnet();
@@ -121,7 +130,7 @@ export const useSubnets = (): Subnet[] => {
  * }
  * ```
  */
-export const useSupernet = () => {
+export const useSupernet = (): NetworkPlan['supernet'] | undefined => {
   const plan = usePlanStore.use.plan();
   return plan?.supernet;
 };

@@ -59,7 +59,7 @@ export const WelcomeView: React.FC = () => {
   };
 
   // Handle action selection
-  const handleActionSelect = (action: string) => {
+  const handleActionSelect = (action: string): void => {
     if (action === 'new') {
       setState({ type: 'create-name' });
     } else if (action === 'load') {
@@ -74,13 +74,13 @@ export const WelcomeView: React.FC = () => {
   };
 
   // Handle plan name input
-  const handlePlanNameSubmit = (name: string) => {
+  const handlePlanNameSubmit = (name: string): void => {
     setPlanName(name);
     setState({ type: 'create-ip' });
   };
 
   // Handle base IP input and create plan
-  const handleBaseIpSubmit = (baseIp: string) => {
+  const handleBaseIpSubmit = (baseIp: string): void => {
     const plan = createNetworkPlan(planName, baseIp);
     loadPlan(plan);
     notify.success(`Plan "${planName}" created successfully!`);
@@ -88,7 +88,7 @@ export const WelcomeView: React.FC = () => {
   };
 
   // Handle loading existing plan
-  const handleLoadPlan = (filepath: string) => {
+  const handleLoadPlan = (filepath: string): void => {
     try {
       if (!fs.existsSync(filepath)) {
         setState({ type: 'error', message: 'File not found' });

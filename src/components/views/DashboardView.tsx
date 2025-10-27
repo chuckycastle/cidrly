@@ -80,7 +80,7 @@ export const DashboardView: React.FC = () => {
   const repository = new FileSystemRepository(fileService);
 
   // Action handlers (need to be defined before keyboard shortcuts)
-  const handleShowSubnetDetails = () => {
+  const handleShowSubnetDetails = (): void => {
     if (!plan) return;
     const subnet = subnets[selectedIndex];
     if (!subnet) {
@@ -94,7 +94,7 @@ export const DashboardView: React.FC = () => {
     setDialog({ type: 'info' });
   };
 
-  const handleAddSubnet = () => {
+  const handleAddSubnet = (): void => {
     setDialog({
       type: 'input',
       title: 'Add Subnet',
@@ -129,7 +129,7 @@ export const DashboardView: React.FC = () => {
     });
   };
 
-  const handleEditSubnet = () => {
+  const handleEditSubnet = (): void => {
     if (!plan || subnets.length === 0) return;
     const subnet = subnets[selectedIndex];
     if (!subnet) {
@@ -173,7 +173,7 @@ export const DashboardView: React.FC = () => {
     });
   };
 
-  const handleDeleteSubnet = () => {
+  const handleDeleteSubnet = (): void => {
     if (!plan || subnets.length === 0) return;
     const subnet = subnets[selectedIndex];
     if (!subnet) {
@@ -202,7 +202,7 @@ export const DashboardView: React.FC = () => {
     });
   };
 
-  const handleCalculatePlan = () => {
+  const handleCalculatePlan = (): void => {
     if (!plan || subnets.length === 0) {
       notify.error('Please add at least one subnet before calculating.');
       return;
@@ -211,7 +211,7 @@ export const DashboardView: React.FC = () => {
     notify.success('Network plan calculated successfully!');
   };
 
-  const handleSavePlan = () => {
+  const handleSavePlan = (): void => {
     if (!plan?.supernet) return;
     const defaultFilename = `${plan.name.replace(/\s+/g, '-').toLowerCase()}.json`;
     setDialog({
@@ -220,7 +220,7 @@ export const DashboardView: React.FC = () => {
       label: 'Filename or path (e.g., my-plan.json or ~/plans/my-plan.json):',
       defaultValue: defaultFilename,
       onSubmit: (filename) => {
-        void (async () => {
+        void (async (): Promise<void> => {
           setDialog({ type: 'loading', message: 'Saving plan...' });
           try {
             const filepath = await repository.save(plan, filename);
@@ -240,7 +240,7 @@ export const DashboardView: React.FC = () => {
     });
   };
 
-  const handleLoadPlan = async () => {
+  const handleLoadPlan = async (): Promise<void> => {
     try {
       const savedPlans = await fileService.listPlans();
 
@@ -278,7 +278,7 @@ export const DashboardView: React.FC = () => {
     }
   };
 
-  const handleLoadCustomPath = () => {
+  const handleLoadCustomPath = (): void => {
     setDialog({
       type: 'input',
       title: 'Load Plan',
@@ -289,7 +289,7 @@ export const DashboardView: React.FC = () => {
     });
   };
 
-  const handleLoadSelectedPlan = (filepath: string) => {
+  const handleLoadSelectedPlan = (filepath: string): void => {
     setDialog({ type: 'loading', message: 'Loading plan...' });
 
     try {
@@ -316,7 +316,7 @@ export const DashboardView: React.FC = () => {
     }
   };
 
-  const handleChangeBaseIp = () => {
+  const handleChangeBaseIp = (): void => {
     if (!plan) return;
     setDialog({
       type: 'input',
@@ -344,39 +344,51 @@ export const DashboardView: React.FC = () => {
       {
         key: 'upArrow',
         description: 'Move selection up',
-        handler: () => plan && moveUp(),
+        handler: (): void => {
+          if (plan) moveUp();
+        },
         category: 'navigation',
       },
       {
         key: 'k',
         description: 'Move selection up (vim)',
-        handler: () => plan && moveUp(),
+        handler: (): void => {
+          if (plan) moveUp();
+        },
         category: 'navigation',
       },
       {
         key: 'downArrow',
         description: 'Move selection down',
-        handler: () => plan && moveDown(),
+        handler: (): void => {
+          if (plan) moveDown();
+        },
         category: 'navigation',
       },
       {
         key: 'j',
         description: 'Move selection down (vim)',
-        handler: () => plan && moveDown(),
+        handler: (): void => {
+          if (plan) moveDown();
+        },
         category: 'navigation',
       },
       // Actions
       {
         key: 'i',
         description: 'Show subnet details',
-        handler: () => plan && subnets.length > 0 && handleShowSubnetDetails(),
+        handler: (): void => {
+          if (plan && subnets.length > 0) handleShowSubnetDetails();
+        },
         category: 'actions',
         enabled: subnets.length > 0,
       },
       {
         key: 'return',
         description: 'Show subnet details',
-        handler: () => plan && subnets.length > 0 && handleShowSubnetDetails(),
+        handler: (): void => {
+          if (plan && subnets.length > 0) handleShowSubnetDetails();
+        },
         category: 'actions',
         enabled: subnets.length > 0,
       },
@@ -389,14 +401,18 @@ export const DashboardView: React.FC = () => {
       {
         key: 'e',
         description: 'Edit selected subnet',
-        handler: () => plan && subnets.length > 0 && handleEditSubnet(),
+        handler: (): void => {
+          if (plan && subnets.length > 0) handleEditSubnet();
+        },
         category: 'actions',
         enabled: subnets.length > 0,
       },
       {
         key: 'x',
         description: 'Delete selected subnet',
-        handler: () => plan && subnets.length > 0 && handleDeleteSubnet(),
+        handler: (): void => {
+          if (plan && subnets.length > 0) handleDeleteSubnet();
+        },
         category: 'actions',
         enabled: subnets.length > 0,
       },
@@ -410,14 +426,18 @@ export const DashboardView: React.FC = () => {
       {
         key: 's',
         description: 'Save plan to file',
-        handler: () => void handleSavePlan(),
+        handler: (): void => {
+          void handleSavePlan();
+        },
         category: 'actions',
         enabled: !!plan?.supernet,
       },
       {
         key: 'l',
         description: 'Load plan from file',
-        handler: () => void handleLoadPlan(),
+        handler: (): void => {
+          void handleLoadPlan();
+        },
         category: 'actions',
       },
       {
@@ -430,7 +450,9 @@ export const DashboardView: React.FC = () => {
       {
         key: 'q',
         description: 'Quit dashboard',
-        handler: () => exit(),
+        handler: (): void => {
+          exit();
+        },
         category: 'system',
       },
     ],
