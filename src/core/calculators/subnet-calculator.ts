@@ -92,6 +92,7 @@ function parseNetworkAddress(networkAddress: string): { ipInt: number; cidr: num
     throw new Error(`Invalid network address format: ${networkAddress}`);
   }
   const octets = ipStr.split('.').map(Number);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime validation of parsed numbers
   if (octets.length !== 4 || octets.some((o) => o === undefined)) {
     throw new Error(`Invalid IP address format: ${ipStr}`);
   }

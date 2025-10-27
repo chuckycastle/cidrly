@@ -87,7 +87,7 @@ export const SubnetTable: React.FC<SubnetTableProps> = React.memo(({ subnets, se
           const hosts = subnet.subnetInfo
             ? subnet.subnetInfo.usableHosts.toString().padStart(7)
             : '--'.padStart(7);
-          const network = subnet.subnetInfo?.networkAddress || 'Not calculated';
+          const network = subnet.subnetInfo?.networkAddress ?? 'Not calculated';
 
           if (isSelected) {
             return (

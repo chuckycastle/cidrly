@@ -17,7 +17,7 @@ export const useTerminalWidth = (): number => {
   const [width, setWidth] = useState<number>(stdout.columns || 80);
 
   useEffect(() => {
-    const handleResize = () => {
+    const handleResize = (): void => {
       setWidth(stdout.columns || 80);
     };
 
@@ -25,7 +25,7 @@ export const useTerminalWidth = (): number => {
     stdout.on('resize', handleResize);
 
     // Cleanup listener on unmount
-    return () => {
+    return (): void => {
       stdout.off('resize', handleResize);
     };
   }, [stdout]);

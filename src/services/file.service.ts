@@ -56,6 +56,7 @@ export class FileService {
    * Save a network plan to a file
    */
   async savePlan(plan: NetworkPlan, filename: string): Promise<string> {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
     if (!plan) {
       throw new ValidationError(
         'Cannot save plan: Plan is null or undefined',

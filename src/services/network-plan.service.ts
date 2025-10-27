@@ -16,6 +16,7 @@ export class NetworkPlanService {
    * Updates subnet information, supernet, and network addresses
    */
   calculatePlan(plan: NetworkPlan): void {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
     if (!plan) {
       throw new ValidationError(
         'Cannot calculate plan: Plan is null or undefined',
@@ -43,6 +44,7 @@ export class NetworkPlanService {
    * Add a subnet to the network plan and recalculate
    */
   addSubnet(plan: NetworkPlan, subnet: Subnet): void {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
     if (!plan) {
       throw new ValidationError(
         'Cannot add subnet: Plan is null or undefined',
@@ -50,6 +52,7 @@ export class NetworkPlanService {
       );
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
     if (!subnet) {
       throw new ValidationError(
         'Cannot add subnet: Subnet is null or undefined',
@@ -69,6 +72,7 @@ export class NetworkPlanService {
    * Returns the removed subnet
    */
   removeSubnet(plan: NetworkPlan, index: number): Subnet {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
     if (!plan) {
       throw new ValidationError(
         'Cannot remove subnet: Plan is null or undefined',
@@ -107,6 +111,7 @@ export class NetworkPlanService {
    * Update the base IP address and recalculate network addresses
    */
   updateBaseIp(plan: NetworkPlan, newBaseIp: string): void {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
     if (!plan) {
       throw new ValidationError(
         'Cannot update base IP: Plan is null or undefined',
@@ -140,6 +145,7 @@ export class NetworkPlanService {
     vlanId: number,
     expectedDevices: number,
   ): void {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
     if (!plan) {
       throw new ValidationError(
         'Cannot update subnet: Plan is null or undefined',

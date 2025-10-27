@@ -142,7 +142,9 @@ export function calculateSubnetRanges(plan: NetworkPlan): NetworkPlan {
   // Step 2: Sort by subnet size DESCENDING for optimal allocation
   // Larger subnets first minimizes wasted space due to boundary alignment
   const sortedSubnets = [...subnetsWithInfo].sort((a, b) => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive check for optional chaining
     const sizeA = a.subnetInfo?.subnetSize || 0;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive check for optional chaining
     const sizeB = b.subnetInfo?.subnetSize || 0;
     return sizeB - sizeA; // Descending order
   });
@@ -150,6 +152,7 @@ export function calculateSubnetRanges(plan: NetworkPlan): NetworkPlan {
   // Step 3: Allocate network addresses to sorted subnets
   const sortedSubnetInfos = sortedSubnets
     .map((s) => s.subnetInfo)
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime type guard
     .filter((info): info is NonNullable<typeof info> => info !== undefined);
 
   const allocatedInfos = allocateSubnetAddresses(plan.baseIp, sortedSubnetInfos);

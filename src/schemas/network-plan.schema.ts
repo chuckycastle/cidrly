@@ -97,7 +97,7 @@ export function parseNetworkPlan(data: unknown, filepath?: string): NetworkPlan 
     throw filepath
       ? ErrorFactory.invalidFileFormat(filepath, `Plan validation failed: ${errorDetails}`)
       : ErrorFactory.fileParseError(
-          filepath || 'unknown',
+          filepath ?? 'unknown',
           new Error(`Validation failed: ${errorDetails}`),
         );
   }
