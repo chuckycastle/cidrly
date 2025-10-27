@@ -2,6 +2,16 @@
 
 Network architecture and design planning CLI tool with automatic subnet calculations, VLAN management, and an interactive terminal dashboard.
 
+[![npm version](https://img.shields.io/npm/v/cidrly)](https://www.npmjs.com/package/cidrly)
+[![npm downloads](https://img.shields.io/npm/dm/cidrly)](https://www.npmjs.com/package/cidrly)
+[![License](https://img.shields.io/npm/l/cidrly)](https://github.com/chuckycastle/cidrly/blob/main/LICENSE)
+[![Node Version](https://img.shields.io/node/v/cidrly)](https://nodejs.org)
+
+[![CI](https://img.shields.io/github/actions/workflow/status/chuckycastle/cidrly/ci.yml?label=CI)](https://github.com/chuckycastle/cidrly/actions)
+[![Install Size](https://img.shields.io/badge/dynamic/json?url=https://packagephobia.com/v2/api.json?p=cidrly&query=$.install.pretty&label=install%20size)](https://packagephobia.com/result?p=cidrly)
+[![GitHub Stars](https://img.shields.io/github/stars/chuckycastle/cidrly)](https://github.com/chuckycastle/cidrly/stargazers)
+[![GitHub Issues](https://img.shields.io/github/issues/chuckycastle/cidrly)](https://github.com/chuckycastle/cidrly/issues)
+
 ## Features
 
 - Interactive React-based terminal dashboard
