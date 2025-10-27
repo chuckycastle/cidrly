@@ -23,7 +23,7 @@ type Props = {
   options: zod.infer<typeof options>;
 };
 
-export default function Remove({ options }: Props) {
+export default function Remove({ options }: Props): React.ReactElement {
   const [status, setStatus] = React.useState<'loading' | 'removing' | 'saving' | 'done' | 'error'>(
     'loading',
   );
@@ -32,7 +32,7 @@ export default function Remove({ options }: Props) {
   const [removedName, setRemovedName] = React.useState<string>('');
 
   React.useEffect(() => {
-    async function removeSubnetFromPlan() {
+    async function removeSubnetFromPlan(): Promise<void> {
       try {
         if (!options.id && !options.name) {
           throw new Error('Either --id or --name must be specified');
@@ -46,6 +46,7 @@ export default function Remove({ options }: Props) {
         const repository = new FileSystemRepository(fileService);
 
         const plan = await repository.load(options.plan);
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
         if (!plan) {
           throw new Error(`Plan not found: ${options.plan}`);
         }

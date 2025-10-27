@@ -58,26 +58,26 @@ const useUIStoreBase = create<UIState>()(
       maxVisibleNotifications: 5,
 
       // Actions
-      setView: (view: ViewType) => {
+      setView: (view: ViewType): void => {
         set((state) => {
           state.currentView = view;
           state.selectedIndex = 0;
         });
       },
 
-      setSelectedIndex: (index: number) => {
+      setSelectedIndex: (index: number): void => {
         set((state) => {
           state.selectedIndex = index;
         });
       },
 
-      moveSelectionUp: (_maxIndex: number) => {
+      moveSelectionUp: (_maxIndex: number): void => {
         set((state) => {
           state.selectedIndex = Math.max(0, state.selectedIndex - 1);
         });
       },
 
-      moveSelectionDown: (maxIndex: number) => {
+      moveSelectionDown: (maxIndex: number): void => {
         set((state) => {
           state.selectedIndex = Math.min(maxIndex, state.selectedIndex + 1);
         });
@@ -91,9 +91,9 @@ const useUIStoreBase = create<UIState>()(
           duration?: number;
           position?: NotificationPosition;
         },
-      ) => {
-        const priority = options?.priority || 'normal';
-        const position = options?.position || 'bottom-right';
+      ): void => {
+        const priority = options?.priority ?? 'normal';
+        const position = options?.position ?? 'bottom-right';
 
         // Calculate duration based on priority if not explicitly provided
         let duration = options?.duration;
@@ -140,20 +140,20 @@ const useUIStoreBase = create<UIState>()(
         }
       },
 
-      dismissNotification: (id: string) => {
+      dismissNotification: (id: string): void => {
         set((state) => {
           // With Immer, we can mutate directly
           state.notifications = state.notifications.filter((n) => n.id !== id);
         });
       },
 
-      clearNotifications: () => {
+      clearNotifications: (): void => {
         set((state) => {
           state.notifications = [];
         });
       },
 
-      setMaxVisibleNotifications: (max: number) => {
+      setMaxVisibleNotifications: (max: number): void => {
         set((state) => {
           state.maxVisibleNotifications = max;
         });

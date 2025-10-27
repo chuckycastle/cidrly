@@ -11,7 +11,7 @@ import { usePlan, usePlanActions } from '../hooks/usePlan.js';
 // Set command alias
 export const alias = 'd';
 
-export default function Dashboard() {
+export default function Dashboard(): React.ReactElement {
   // Initialize with a default plan if none exists
   const plan = usePlan();
   const { loadPlan } = usePlanActions();

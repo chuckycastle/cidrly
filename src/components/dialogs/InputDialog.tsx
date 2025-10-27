@@ -41,7 +41,7 @@ export const InputDialog: React.FC<InputDialogProps> = ({
     }
   });
 
-  const handleSubmit = () => {
+  const handleSubmit = (): void => {
     if (validate) {
       const result = validate(value);
       if (result !== true) {

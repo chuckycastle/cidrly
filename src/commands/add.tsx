@@ -25,7 +25,7 @@ type Props = {
   options: zod.infer<typeof options>;
 };
 
-export default function Add({ options }: Props) {
+export default function Add({ options }: Props): React.ReactElement {
   const [status, setStatus] = React.useState<'loading' | 'adding' | 'saving' | 'done' | 'error'>(
     'loading',
   );
@@ -34,7 +34,7 @@ export default function Add({ options }: Props) {
   const [subnetId, setSubnetId] = React.useState<string>('');
 
   React.useEffect(() => {
-    async function addSubnetToPlan() {
+    async function addSubnetToPlan(): Promise<void> {
       try {
         // Validate inputs
         if (!validateSubnetName(options.name)) {
@@ -56,6 +56,7 @@ export default function Add({ options }: Props) {
         }
 
         const plan = await repository.load(options.plan);
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
         if (!plan) {
           throw new Error(`Plan not found: ${options.plan}`);
         }

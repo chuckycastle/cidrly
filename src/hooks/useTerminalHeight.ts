@@ -17,7 +17,7 @@ export const useTerminalHeight = (): number => {
   const [height, setHeight] = useState<number>(stdout.rows || 24);
 
   useEffect(() => {
-    const handleResize = () => {
+    const handleResize = (): void => {
       setHeight(stdout.rows || 24);
     };
 
@@ -25,7 +25,7 @@ export const useTerminalHeight = (): number => {
     stdout.on('resize', handleResize);
 
     // Cleanup listener on unmount
-    return () => {
+    return (): void => {
       stdout.off('resize', handleResize);
     };
   }, [stdout]);

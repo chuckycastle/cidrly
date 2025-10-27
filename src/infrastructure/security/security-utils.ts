@@ -111,7 +111,7 @@ export function resolveUserPath(userPath: string, baseDir: string): string {
     resolvedPath = path.resolve(decodedPath);
   } else if (userPath.startsWith('~')) {
     // Home directory path: ~/path/to/file.json
-    const homeDir = process.env['HOME'] || process.env['USERPROFILE'] || '';
+    const homeDir = process.env['HOME'] ?? process.env['USERPROFILE'] ?? '';
     if (!homeDir) {
       throw new Error('Cannot resolve home directory');
     }

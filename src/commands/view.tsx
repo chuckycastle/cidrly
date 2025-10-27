@@ -22,8 +22,8 @@ type Props = {
   options: zod.infer<typeof options>;
 };
 
-function SubnetRow({ subnet, isLast }: { subnet: Subnet; isLast: boolean }) {
-  const ipRange = subnet.subnetInfo?.networkAddress || null;
+function SubnetRow({ subnet, isLast }: { subnet: Subnet; isLast: boolean }): React.ReactElement {
+  const ipRange = subnet.subnetInfo?.networkAddress ?? null;
   const cidr = subnet.subnetInfo?.cidrPrefix;
 
   return (
@@ -39,10 +39,10 @@ function SubnetRow({ subnet, isLast }: { subnet: Subnet; isLast: boolean }) {
           <Text>{subnet.expectedDevices} devices</Text>
         </Box>
         <Box width={18}>
-          <Text color={ipRange ? 'green' : 'yellow'}>{ipRange ? ipRange : 'Not calculated'}</Text>
+          <Text color={ipRange ? 'green' : 'yellow'}>{ipRange ?? 'Not calculated'}</Text>
         </Box>
         <Box width={6}>
-          <Text dimColor>/{cidr || '?'}</Text>
+          <Text dimColor>/{cidr ?? '?'}</Text>
         </Box>
       </Box>
       {!isLast && (
@@ -52,7 +52,7 @@ function SubnetRow({ subnet, isLast }: { subnet: Subnet; isLast: boolean }) {
   );
 }
 
-function PlanView({ plan }: { plan: NetworkPlan }) {
+function PlanView({ plan }: { plan: NetworkPlan }): React.ReactElement {
   const calculatedCount = plan.subnets.filter((s) => s.subnetInfo?.networkAddress).length;
   const efficiency = plan.supernet?.efficiency ? `${plan.supernet.efficiency.toFixed(1)}%` : 'N/A';
 
@@ -148,13 +148,13 @@ function PlanView({ plan }: { plan: NetworkPlan }) {
   );
 }
 
-export default function View({ options }: Props) {
+export default function View({ options }: Props): React.ReactElement | null {
   const [status, setStatus] = React.useState<'loading' | 'done' | 'error'>('loading');
   const [plan, setPlan] = React.useState<NetworkPlan | null>(null);
   const [error, setError] = React.useState<string>('');
 
   React.useEffect(() => {
-    async function loadPlan() {
+    async function loadPlan(): Promise<void> {
       try {
         setStatus('loading');
         const fileService = new FileService(
@@ -163,6 +163,7 @@ export default function View({ options }: Props) {
         const repository = new FileSystemRepository(fileService);
 
         const loadedPlan = await repository.load(options.plan);
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
         if (!loadedPlan) {
           throw new Error(`Plan not found: ${options.plan}`);
         }

@@ -23,13 +23,13 @@ type Props = {
   options: zod.infer<typeof options>;
 };
 
-export default function Create({ options }: Props) {
+export default function Create({ options }: Props): React.ReactElement {
   const [status, setStatus] = React.useState<'creating' | 'saving' | 'done' | 'error'>('creating');
   const [filepath, setFilepath] = React.useState<string>('');
   const [error, setError] = React.useState<string>('');
 
   React.useEffect(() => {
-    async function createPlan() {
+    async function createPlan(): Promise<void> {
       try {
         // Create the plan
         const plan = createNetworkPlan(options.name, options.baseIp);

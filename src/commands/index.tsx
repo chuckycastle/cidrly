@@ -11,7 +11,7 @@ import { usePlan, usePlanActions } from '../hooks/usePlan.js';
 // Mark this as the default command
 export const isDefault = true;
 
-export default function Index() {
+export default function Index(): React.ReactElement {
   // Clear terminal screen on launch
   useEffect(() => {
     process.stdout.write('\x1Bc'); // Full terminal reset (clears screen and scrollback)

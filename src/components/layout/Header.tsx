@@ -21,7 +21,7 @@ export const Header: React.FC<HeaderProps> = React.memo(({ plan }) => {
   const isNarrow = terminalWidth < 80;
   const isVeryNarrow = terminalWidth < 60;
 
-  const getPlanStatus = () => {
+  const getPlanStatus = (): React.ReactElement => {
     if (plan.supernet) {
       return (
         <>

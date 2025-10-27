@@ -31,11 +31,11 @@ const usePlanStoreBase = create<PlanState>()(
     planService: new NetworkPlanService(),
 
     // Actions
-    loadPlan: (plan: NetworkPlan) => {
+    loadPlan: (plan: NetworkPlan): void => {
       set({ plan });
     },
 
-    addSubnet: (subnet: Subnet) => {
+    addSubnet: (subnet: Subnet): void => {
       const { plan, planService } = get();
       if (plan) {
         planService.addSubnet(plan, subnet);
@@ -43,7 +43,7 @@ const usePlanStoreBase = create<PlanState>()(
       }
     },
 
-    updateSubnet: (index: number, name: string, vlanId: number, expectedDevices: number) => {
+    updateSubnet: (index: number, name: string, vlanId: number, expectedDevices: number): void => {
       const { plan, planService } = get();
       if (plan) {
         planService.updateSubnet(plan, index, name, vlanId, expectedDevices);
@@ -51,7 +51,7 @@ const usePlanStoreBase = create<PlanState>()(
       }
     },
 
-    removeSubnet: (index: number) => {
+    removeSubnet: (index: number): Subnet | null => {
       const { plan, planService } = get();
       if (plan) {
         const removed = planService.removeSubnet(plan, index);
@@ -61,7 +61,7 @@ const usePlanStoreBase = create<PlanState>()(
       return null;
     },
 
-    calculatePlan: () => {
+    calculatePlan: (): void => {
       const { plan, planService } = get();
       if (plan) {
         planService.calculatePlan(plan);
@@ -69,7 +69,7 @@ const usePlanStoreBase = create<PlanState>()(
       }
     },
 
-    updateBaseIp: (newBaseIp: string) => {
+    updateBaseIp: (newBaseIp: string): void => {
       const { plan, planService } = get();
       if (plan) {
         planService.updateBaseIp(plan, newBaseIp);
@@ -77,7 +77,7 @@ const usePlanStoreBase = create<PlanState>()(
       }
     },
 
-    clearPlan: () => {
+    clearPlan: (): void => {
       set((state) => {
         state.plan = null;
       });

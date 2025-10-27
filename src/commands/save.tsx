@@ -23,13 +23,13 @@ type Props = {
   options: zod.infer<typeof options>;
 };
 
-export default function Save({ options }: Props) {
+export default function Save({ options }: Props): React.ReactElement {
   const [status, setStatus] = React.useState<'loading' | 'saving' | 'done' | 'error'>('loading');
   const [filepath, setFilepath] = React.useState<string>('');
   const [error, setError] = React.useState<string>('');
 
   React.useEffect(() => {
-    async function savePlan() {
+    async function savePlan(): Promise<void> {
       try {
         // Load plan
         setStatus('loading');
@@ -39,13 +39,14 @@ export default function Save({ options }: Props) {
         const repository = new FileSystemRepository(fileService);
 
         const plan = await repository.load(options.plan);
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
         if (!plan) {
           throw new Error(`Plan not found: ${options.plan}`);
         }
 
         // Save to output file (or same file if not specified)
         setStatus('saving');
-        const outputFile = options.output || options.plan;
+        const outputFile = options.output ?? options.plan;
         const savedPath = await repository.save(plan, outputFile);
         setFilepath(savedPath);
 
@@ -100,7 +101,7 @@ export default function Save({ options }: Props) {
       </Box>
       <Box marginTop={1}>
         <Text dimColor>
-          Use <Text bold>cidrly view --plan={options.output || options.plan}</Text> to view the
+          Use <Text bold>cidrly view --plan={options.output ?? options.plan}</Text> to view the
           plan.
         </Text>
       </Box>
