@@ -5,7 +5,6 @@
 
 import { Box, Text } from 'ink';
 import Spinner from 'ink-spinner';
-import path from 'path';
 import React from 'react';
 import { z as zod } from 'zod';
 import type { NetworkPlan } from '../core/models/network-plan.js';
@@ -37,9 +36,7 @@ export default function Calculate({ options }: Props): React.ReactElement {
       try {
         // Load plan
         setStatus('loading');
-        const fileService = new FileService(
-          path.resolve(process.cwd(), FILE_RULES.SAVED_PLANS_DIR),
-        );
+        const fileService = new FileService(FILE_RULES.SAVED_PLANS_DIR);
         const repository = new FileSystemRepository(fileService);
 
         const plan = await repository.load(options.plan);
