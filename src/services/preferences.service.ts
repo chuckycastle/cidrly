@@ -4,15 +4,15 @@
  */
 
 import fs from 'fs';
-import path from 'path';
 import os from 'os';
+import path from 'path';
+import { ErrorFactory } from '../errors/index.js';
 import {
   defaultPreferences,
   safeParsePreferences,
   validatePreferences,
   type Preferences,
 } from '../schemas/preferences.schema.js';
-import { ErrorFactory } from '../errors/index.js';
 
 /**
  * Service class for managing user preferences

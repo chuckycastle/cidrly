@@ -5,8 +5,8 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { PreferencesService } from '../../src/services/preferences.service.js';
 import { defaultPreferences, type Preferences } from '../../src/schemas/preferences.schema.js';
+import { PreferencesService } from '../../src/services/preferences.service.js';
 
 describe('PreferencesService', () => {
   let tempDir: string;

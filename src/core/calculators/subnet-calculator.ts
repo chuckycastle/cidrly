@@ -190,7 +190,10 @@ export function getSubnetDetails(subnetInfo: SubnetInfo): {
  * @param expectedDevices - Number of devices expected to use the subnet
  * @param growthPercentage - Growth capacity percentage (0-300%, default: 100%)
  */
-export function calculateSubnet(expectedDevices: number, growthPercentage: number = 100): SubnetInfo {
+export function calculateSubnet(
+  expectedDevices: number,
+  growthPercentage: number = 100,
+): SubnetInfo {
   const plannedDevices = applyPlanningRule(expectedDevices, growthPercentage);
   const hostBits = calculateHostBits(plannedDevices);
   const cidrPrefix = calculateCIDR(hostBits);
