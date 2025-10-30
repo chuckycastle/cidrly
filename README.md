@@ -54,12 +54,14 @@ cidrly view --plan=my-network.json
 ## Dashboard Shortcuts
 
 ### Navigation
+
 - `↑/↓` - Navigate subnet rows
 - `Tab` - Toggle header mode (for column sorting)
 - `←/→` - Navigate columns (header mode only)
 - `Escape` - Cancel dialog / Exit header mode
 
 ### Actions
+
 - `i` - Show subnet details
 - `Enter` - Show subnet details (row mode) / Sort column (header mode)
 - `Space` - Sort selected column (header mode only)
@@ -69,6 +71,7 @@ cidrly view --plan=my-network.json
 - `c` - Calculate network plan
 
 ### File Operations
+
 - `s` - Save plan
 - `l` - Load plan
 - `n` - Create new plan

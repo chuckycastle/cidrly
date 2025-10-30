@@ -5,8 +5,8 @@
 
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { createSelectors } from './createSelectors.js';
 import { defaultPreferences, type Preferences } from '../schemas/preferences.schema.js';
+import { createSelectors } from './createSelectors.js';
 
 interface PreferencesState {
   // State

@@ -21,15 +21,15 @@ import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts.js';
 import { usePlan, usePlanActions, useSubnets } from '../../hooks/usePlan.js';
 import { useNotify, useSelection } from '../../hooks/useUI.js';
 import { FILE_RULES } from '../../infrastructure/config/validation-rules.js';
-import type { SortColumn } from '../../store/uiStore.js';
-import { useUIStore } from '../../store/uiStore.js';
-import { sortSubnets } from '../../utils/subnet-sorters.js';
 import { FileSystemRepository } from '../../repositories/index.js';
 import { parseNetworkPlan } from '../../schemas/network-plan.schema.js';
 import type { SavedPlanFile } from '../../services/file.service.js';
 import { FileService } from '../../services/file.service.js';
+import type { SortColumn } from '../../store/uiStore.js';
+import { useUIStore } from '../../store/uiStore.js';
 import { colors } from '../../themes/colors.js';
 import { parseDeviceCount, parseVlanId } from '../../utils/input-helpers.js';
+import { sortSubnets } from '../../utils/subnet-sorters.js';
 import { ConfirmDialog } from '../dialogs/ConfirmDialog.js';
 import { InputDialog } from '../dialogs/InputDialog.js';
 import { Modal } from '../dialogs/Modal.js';
@@ -106,7 +106,15 @@ export const DashboardView: React.FC = () => {
   const repository = new FileSystemRepository(fileService);
 
   // Column definitions (matching SubnetTable)
-  const columns: SortColumn[] = ['name', 'vlan', 'expected', 'planned', 'cidr', 'usable', 'network'];
+  const columns: SortColumn[] = [
+    'name',
+    'vlan',
+    'expected',
+    'planned',
+    'cidr',
+    'usable',
+    'network',
+  ];
 
   // Apply sorting to subnets
   const sortedSubnets = sortSubnets(subnets, sortColumn, sortDirection);

@@ -6,8 +6,8 @@
 import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import React, { useEffect, useState } from 'react';
-import { colors } from '../../themes/colors.js';
 import { isValidGrowthPercentage } from '../../infrastructure/config/validation-rules.js';
+import { colors } from '../../themes/colors.js';
 
 export interface PreferencesDialogProps {
   currentGrowthPercentage: number;
