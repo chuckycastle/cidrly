@@ -111,15 +111,21 @@ Shows how tightly subnets are packed (VLSM optimization):
 - **100%**: Perfect VLSM allocation (no gaps)
 - **< 100%**: Gaps between subnets (shouldn't happen with cidrly!)
 
-### The 50% Planning Rule
+### Capacity Planning (Configurable Growth)
 
 Each example shows "expected devices" vs "planned devices":
 
 - **Expected:** Devices you know about today
-- **Planned:** 2x expected (50% growth capacity)
+- **Planned:** Expected × (1 + growth%) — default 100% (doubles device count)
 - **Allocated:** Next power of 2 that fits planned devices
 
-Example: 25 expected → 50 planned → 64 allocated (/26)
+**Default Example:** 25 expected → 50 planned (100% growth) → 64 allocated (/26)
+
+**Customize Growth:**
+- Press `p` in the dashboard to adjust growth percentage (0-200%)
+- New plans default to 100% growth
+- Loaded plans restore their saved growth percentage
+- Each plan remembers its own growth setting
 
 ## Modifying Examples
 
@@ -175,6 +181,8 @@ Use these examples to test cidrly features:
 
 - ✅ Load/save functionality
 - ✅ Subnet information dialog (press `i`)
+- ✅ Sortable columns (press `Tab` then `←/→` to navigate, `Enter`/`Space` to sort)
+- ✅ Configurable growth percentage (press `p`)
 - ✅ Edit existing subnets
 - ✅ Delete and recalculate
 - ✅ Base IP changes
