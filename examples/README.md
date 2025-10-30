@@ -122,6 +122,7 @@ Each example shows "expected devices" vs "planned devices":
 **Default Example:** 25 expected → 50 planned (100% growth) → 64 allocated (/26)
 
 **Customize Growth:**
+
 - Press `p` in the dashboard to adjust growth percentage (0-200%)
 - New plans default to 100% growth
 - Loaded plans restore their saved growth percentage
