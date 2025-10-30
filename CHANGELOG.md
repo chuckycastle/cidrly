@@ -14,6 +14,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Network visualization diagrams
 - Import from existing network configurations
 
+## [0.2.1] - 2025-10-30
+
+### Fixed
+
+- **Space Key Sorting** - Fixed Space key not working for column sorting in header mode
+  - Space key was documented but non-functional due to key mapping mismatch
+  - Changed keyboard shortcut from `'space'` to `' '` to match Ink's character input
+  - Space now correctly activates sorting on selected column in header mode
+  - Enter key continues to work as alternative
+
+### Improved
+
+- **Repository Cleanup** - Enhanced ignore files and removed accidentally committed artifacts
+  - Removed npm pack tarball (cidrly-0.1.6.tgz) from version control
+  - Removed GitHub wiki clones (cidrly.wiki/, cidrly.wiki.backup/) from main repo
+  - Enhanced .gitignore with comprehensive patterns (yarn logs, OS files, temp files)
+  - Added .eslintignore for better linting performance
+  - Updated .prettierignore to prevent formatting generated files
+
+- **Test Coverage Strategy** - Implemented per-file coverage thresholds (Option 3)
+  - Core domain layer: 70-85% coverage requirements
+  - Service layer: 80-100% (critical business operations)
+  - Security code: 80-100% (critical infrastructure)
+  - Schemas: 100% (validation must be bulletproof)
+  - Realistic standards based on testability vs criticality
+
 ## [0.2.0] - 2025-10-29
 
 ### Added
@@ -373,7 +399,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **PATCH** version for backwards-compatible bug fixes
 - **Pre-release** suffixes: `-alpha`, `-beta`, `-rc` for pre-release versions
 
-[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/chuckycastle/cidrly/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/chuckycastle/cidrly/compare/v0.1.8...v0.2.0
 [0.1.8]: https://github.com/chuckycastle/cidrly/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/chuckycastle/cidrly/compare/v0.1.6...v0.1.7
