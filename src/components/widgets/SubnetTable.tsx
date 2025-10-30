@@ -69,130 +69,132 @@ export const SubnetTable: React.FC<SubnetTableProps> = React.memo(
     };
 
     if (subnets.length === 0) {
+      return (
+        <Box flexDirection="column" paddingX={2} paddingY={3} flexGrow={1}>
+          <Box marginBottom={2}>
+            <Text bold>{colors.slate('Subnets')}</Text>
+          </Box>
+          <Box>
+            <Text>{colors.muted('No subnets defined yet.')}</Text>
+          </Box>
+          <Box marginTop={1}>
+            <Text>{colors.dim('Press ')}</Text>
+            <Text bold>{colors.accent('a')}</Text>
+            <Text>{colors.dim(' to add your first subnet')}</Text>
+          </Box>
+        </Box>
+      );
+    }
+
     return (
-      <Box flexDirection="column" paddingX={2} paddingY={3} flexGrow={1}>
-        <Box marginBottom={2}>
+      <Box flexDirection="column" paddingX={2} paddingY={0} flexGrow={1}>
+        {/* Table Header */}
+        <Box marginBottom={0}>
           <Text bold>{colors.slate('Subnets')}</Text>
+          <Text> </Text>
+          <Text>{colors.dim(`(${subnets.length})`)}</Text>
         </Box>
-        <Box>
-          <Text>{colors.muted('No subnets defined yet.')}</Text>
+
+        {/* Column Headers - interactive with sort indicators */}
+        <Box marginBottom={0}>
+          {headerMode ? (
+            <Text>{colors.warning(symbols.selected)}</Text>
+          ) : (
+            <Text>{colors.dim(symbols.unselected)}</Text>
+          )}
+          <Text> </Text>
+          <Text>{colors.muted('#'.padEnd(2))}</Text>
+          <Text> {colors.dim(symbols.divider)} </Text>
+          {columns.map((column, index) => (
+            <React.Fragment key={column.key}>
+              {renderHeader(column, index)}
+              {index < columns.length - 1 && <Text> {colors.dim(symbols.divider)} </Text>}
+            </React.Fragment>
+          ))}
         </Box>
-        <Box marginTop={1}>
-          <Text>{colors.dim('Press ')}</Text>
-          <Text bold>{colors.accent('a')}</Text>
-          <Text>{colors.dim(' to add your first subnet')}</Text>
+
+        {/* Subtle divider */}
+        <Box marginBottom={0}>
+          <Text>
+            {colors.dim(symbols.horizontalDivider.repeat(Math.max(0, terminalWidth - 4)))}
+          </Text>
         </Box>
-      </Box>
-    );
-  }
 
-  return (
-    <Box flexDirection="column" paddingX={2} paddingY={0} flexGrow={1}>
-      {/* Table Header */}
-      <Box marginBottom={0}>
-        <Text bold>{colors.slate('Subnets')}</Text>
-        <Text> </Text>
-        <Text>{colors.dim(`(${subnets.length})`)}</Text>
-      </Box>
+        {/* Data Rows */}
+        <Box flexDirection="column">
+          {/* Minimum 12 rows to ensure consistent height for dialogs */}
+          {subnets.map((subnet, index) => {
+            const isSelected = index === selectedIndex;
+            const rowNumber = (index + 1).toString().padStart(2);
+            const name = subnet.name.substring(0, 20).padEnd(20);
+            const vlan = subnet.vlanId.toString().padStart(6);
+            const exp = subnet.expectedDevices.toString().padStart(5);
+            const plan = subnet.subnetInfo
+              ? subnet.subnetInfo.plannedDevices.toString().padStart(6)
+              : '--'.padStart(6);
+            const cidr = subnet.subnetInfo
+              ? `/${subnet.subnetInfo.cidrPrefix}`.padStart(6)
+              : 'N/A'.padStart(6);
+            const hosts = subnet.subnetInfo
+              ? subnet.subnetInfo.usableHosts.toString().padStart(7)
+              : '--'.padStart(7);
+            const network = subnet.subnetInfo?.networkAddress ?? 'Not calculated';
 
-      {/* Column Headers - interactive with sort indicators */}
-      <Box marginBottom={0}>
-        {headerMode ? (
-          <Text>{colors.warning(symbols.selected)}</Text>
-        ) : (
-          <Text>{colors.dim(symbols.unselected)}</Text>
-        )}
-        <Text> </Text>
-        <Text>{colors.muted('#'.padEnd(2))}</Text>
-        <Text> {colors.dim(symbols.divider)} </Text>
-        {columns.map((column, index) => (
-          <React.Fragment key={column.key}>
-            {renderHeader(column, index)}
-            {index < columns.length - 1 && <Text> {colors.dim(symbols.divider)} </Text>}
-          </React.Fragment>
-        ))}
-      </Box>
+            if (isSelected) {
+              return (
+                <Box key={index} marginBottom={0}>
+                  <Text>{colors.highlight(symbols.selected)}</Text>
+                  <Text> </Text>
+                  <Text>{colors.accent(rowNumber)}</Text>
+                  <Text> {colors.dim(symbols.divider)} </Text>
+                  <Text>{colors.accent(name)}</Text>
+                  <Text> {colors.dim(symbols.divider)} </Text>
+                  <Text>{colors.accent(vlan)}</Text>
+                  <Text> {colors.dim(symbols.divider)} </Text>
+                  <Text>{colors.accent(exp)}</Text>
+                  <Text> {colors.dim(symbols.divider)} </Text>
+                  <Text>{colors.accent(plan)}</Text>
+                  <Text> {colors.dim(symbols.divider)} </Text>
+                  <Text>{colors.accent(cidr)}</Text>
+                  <Text> {colors.dim(symbols.divider)} </Text>
+                  <Text>{colors.accent(hosts)}</Text>
+                  <Text> {colors.dim(symbols.divider)} </Text>
+                  <Text>{colors.accent(network)}</Text>
+                </Box>
+              );
+            }
 
-      {/* Subtle divider */}
-      <Box marginBottom={0}>
-        <Text>{colors.dim(symbols.horizontalDivider.repeat(Math.max(0, terminalWidth - 4)))}</Text>
-      </Box>
-
-      {/* Data Rows */}
-      <Box flexDirection="column">
-        {/* Minimum 12 rows to ensure consistent height for dialogs */}
-        {subnets.map((subnet, index) => {
-          const isSelected = index === selectedIndex;
-          const rowNumber = (index + 1).toString().padStart(2);
-          const name = subnet.name.substring(0, 20).padEnd(20);
-          const vlan = subnet.vlanId.toString().padStart(6);
-          const exp = subnet.expectedDevices.toString().padStart(5);
-          const plan = subnet.subnetInfo
-            ? subnet.subnetInfo.plannedDevices.toString().padStart(6)
-            : '--'.padStart(6);
-          const cidr = subnet.subnetInfo
-            ? `/${subnet.subnetInfo.cidrPrefix}`.padStart(6)
-            : 'N/A'.padStart(6);
-          const hosts = subnet.subnetInfo
-            ? subnet.subnetInfo.usableHosts.toString().padStart(7)
-            : '--'.padStart(7);
-          const network = subnet.subnetInfo?.networkAddress ?? 'Not calculated';
-
-          if (isSelected) {
             return (
               <Box key={index} marginBottom={0}>
-                <Text>{colors.highlight(symbols.selected)}</Text>
+                <Text>{colors.dim(symbols.unselected)}</Text>
                 <Text> </Text>
-                <Text>{colors.accent(rowNumber)}</Text>
+                <Text>{colors.dim(rowNumber)}</Text>
                 <Text> {colors.dim(symbols.divider)} </Text>
-                <Text>{colors.accent(name)}</Text>
+                <Text>{colors.slate(name)}</Text>
                 <Text> {colors.dim(symbols.divider)} </Text>
-                <Text>{colors.accent(vlan)}</Text>
+                <Text>{colors.muted(vlan)}</Text>
                 <Text> {colors.dim(symbols.divider)} </Text>
-                <Text>{colors.accent(exp)}</Text>
+                <Text>{colors.muted(exp)}</Text>
                 <Text> {colors.dim(symbols.divider)} </Text>
-                <Text>{colors.accent(plan)}</Text>
+                <Text>{subnet.subnetInfo ? colors.slate(plan) : colors.dim(plan)}</Text>
                 <Text> {colors.dim(symbols.divider)} </Text>
-                <Text>{colors.accent(cidr)}</Text>
+                <Text>{subnet.subnetInfo ? colors.muted(cidr) : colors.dim(cidr)}</Text>
                 <Text> {colors.dim(symbols.divider)} </Text>
-                <Text>{colors.accent(hosts)}</Text>
+                <Text>{subnet.subnetInfo ? colors.slate(hosts) : colors.dim(hosts)}</Text>
                 <Text> {colors.dim(symbols.divider)} </Text>
-                <Text>{colors.accent(network)}</Text>
+                <Text>{subnet.subnetInfo ? colors.slate(network) : colors.dim(network)}</Text>
               </Box>
             );
-          }
+          })}
 
-          return (
-            <Box key={index} marginBottom={0}>
-              <Text>{colors.dim(symbols.unselected)}</Text>
+          {/* Add empty placeholder rows to ensure minimum 12 rows */}
+          {Array.from({ length: Math.max(0, 12 - subnets.length) }).map((_, index) => (
+            <Box key={`empty-${index}`} minHeight={1}>
               <Text> </Text>
-              <Text>{colors.dim(rowNumber)}</Text>
-              <Text> {colors.dim(symbols.divider)} </Text>
-              <Text>{colors.slate(name)}</Text>
-              <Text> {colors.dim(symbols.divider)} </Text>
-              <Text>{colors.muted(vlan)}</Text>
-              <Text> {colors.dim(symbols.divider)} </Text>
-              <Text>{colors.muted(exp)}</Text>
-              <Text> {colors.dim(symbols.divider)} </Text>
-              <Text>{subnet.subnetInfo ? colors.slate(plan) : colors.dim(plan)}</Text>
-              <Text> {colors.dim(symbols.divider)} </Text>
-              <Text>{subnet.subnetInfo ? colors.muted(cidr) : colors.dim(cidr)}</Text>
-              <Text> {colors.dim(symbols.divider)} </Text>
-              <Text>{subnet.subnetInfo ? colors.slate(hosts) : colors.dim(hosts)}</Text>
-              <Text> {colors.dim(symbols.divider)} </Text>
-              <Text>{subnet.subnetInfo ? colors.slate(network) : colors.dim(network)}</Text>
             </Box>
-          );
-        })}
-
-        {/* Add empty placeholder rows to ensure minimum 12 rows */}
-        {Array.from({ length: Math.max(0, 12 - subnets.length) }).map((_, index) => (
-          <Box key={`empty-${index}`} minHeight={1}>
-            <Text> </Text>
-          </Box>
-        ))}
+          ))}
+        </Box>
       </Box>
-    </Box>
     );
   },
 );

@@ -14,7 +14,9 @@ import type { SortColumn, SortDirection } from '../store/uiStore.js';
 function ipToNumber(ip: string): number {
   const parts = ip.split('.').map(Number);
   // Use multiplication instead of bitwise operators to avoid signed integer issues
-  return (parts[0] ?? 0) * 16777216 + (parts[1] ?? 0) * 65536 + (parts[2] ?? 0) * 256 + (parts[3] ?? 0);
+  return (
+    (parts[0] ?? 0) * 16777216 + (parts[1] ?? 0) * 65536 + (parts[2] ?? 0) * 256 + (parts[3] ?? 0)
+  );
 }
 
 /**
