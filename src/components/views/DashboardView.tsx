@@ -445,6 +445,10 @@ export const DashboardView: React.FC = () => {
   };
 
   const handleOpenPreferences = (): void => {
+    if (!plan) {
+      notify.error('No plan loaded');
+      return;
+    }
     setDialog({ type: 'preferences' });
   };
 
@@ -836,6 +840,7 @@ export const DashboardView: React.FC = () => {
           />
         </Modal>
       )}
+      {/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */}
       {dialog.type === 'preferences' && plan && (
         <Modal>
           <PreferencesDialog

@@ -53,7 +53,7 @@ export class PreferencesService {
 
       // Read and parse the file
       const fileContent = fs.readFileSync(this.preferencesFile, 'utf-8');
-      const data = JSON.parse(fileContent);
+      const data = JSON.parse(fileContent) as unknown;
 
       // Validate and return (with fallback to defaults on error)
       return safeParsePreferences(data);

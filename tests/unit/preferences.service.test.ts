@@ -7,7 +7,6 @@ import os from 'os';
 import path from 'path';
 import { PreferencesService } from '../../src/services/preferences.service.js';
 import { defaultPreferences, type Preferences } from '../../src/schemas/preferences.schema.js';
-import { FileOperationError } from '../../src/errors/network-plan-errors.js';
 
 describe('PreferencesService', () => {
   let tempDir: string;
