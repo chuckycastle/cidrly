@@ -1,37 +1,81 @@
-node_modules
-dist
-coverage
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+coverage/
+*.tsbuildinfo
+
+# Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Editor/IDE files
+.vscode/
+.idea/
 .DS_Store
 *.swp
 *.swo
-.env
-.vscode
-.idea
+*.sublime-*
 
-# Local development convenience files (not in repo)
+# Local development files
 .nvmrc
 .npmrc
 .gitattributes
 __mocks__/
 
-# Build artifacts
+# Package archives (npm pack artifacts)
+*.tgz
 *.tar.gz
-*.tsbuildinfo
+*.zip
 
-# Directories excluded from repo
+# User data directories
 saved-plans/
+cidrly-plans/
+
+# Documentation (generated or local)
 docs/
+*.wiki/
+*.wiki.backup/
+cidrly.wiki/
+cidrly.wiki.backup/
+
+# Homebrew formula (published separately)
 Formula/
 homebrew-cidrly/
 
-# Internal documentation (not for public repo)
+# Internal/private documentation
 DEPLOYMENT.md
 RELEASE_CHECKLIST.md
 HOMEBREW_SETUP.md
 REFACTORING_SUMMARY.md
+NOTES.md
+TODO.md
 
-# Docker files (we removed Docker support)
+# Docker (removed support)
 Dockerfile
 docker-compose.yml
 .dockerignore
+
+# Testing
+.nyc_output/
+coverage.*.json
+
+# OS files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*~
