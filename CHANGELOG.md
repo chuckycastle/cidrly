@@ -14,6 +14,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Network visualization diagrams
 - Import from existing network configurations
 
+## [0.1.7] - 2025-10-29
+
+### Added
+
+- **New Plan Creation Shortcut** - Press 'n' to create new plans from dashboard
+  - Interactive two-step workflow: plan name → base IP address
+  - Smart save detection prompts to save current plan before creating new
+  - Validates plan names and IP addresses with helpful error messages
+  - Footer displays 'n' shortcut in file operations group
+  - Closes [Issue #5](https://github.com/chuckycastle/cidrly/issues/5)
+
 ## [0.1.6] - 2025-10-27
 
 ### Changed
@@ -243,7 +254,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **PATCH** version for backwards-compatible bug fixes
 - **Pre-release** suffixes: `-alpha`, `-beta`, `-rc` for pre-release versions
 
-[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.1.6...HEAD
+[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/chuckycastle/cidrly/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/chuckycastle/cidrly/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/chuckycastle/cidrly/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/chuckycastle/cidrly/compare/v0.1.3...v0.1.4
