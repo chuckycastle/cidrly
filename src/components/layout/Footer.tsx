@@ -46,6 +46,7 @@ export const Footer: React.FC<FooterProps> = React.memo(({ hasSubnets, hasCalcul
       commands: [
         { key: 's', label: 'save', enabled: hasCalculation },
         { key: 'l', label: 'load', enabled: true },
+        { key: 'n', label: 'new', enabled: true },
         { key: 'b', label: 'base ip', enabled: true },
       ],
     },
