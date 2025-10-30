@@ -3,96 +3,89 @@
   "baseIp": "192.168.10.0",
   "subnets": [
     {
+      "id": "subnet-1",
       "name": "Office Workstations",
       "vlanId": 10,
       "expectedDevices": 25,
       "subnetInfo": {
+        "expectedDevices": 25,
         "plannedDevices": 50,
-        "requiredAddresses": 52,
-        "allocatedAddresses": 64,
+        "requiredHosts": 52,
+        "subnetSize": 64,
         "cidrPrefix": 26,
         "networkAddress": "192.168.10.0/26",
-        "networkAddressDecimal": 3232238080,
-        "broadcastAddress": "192.168.10.63",
-        "firstHost": "192.168.10.1",
-        "lastHost": "192.168.10.62",
         "usableHosts": 62
       }
     },
     {
+      "id": "subnet-2",
       "name": "VoIP Phones",
       "vlanId": 20,
       "expectedDevices": 15,
       "subnetInfo": {
+        "expectedDevices": 15,
         "plannedDevices": 30,
-        "requiredAddresses": 32,
-        "allocatedAddresses": 32,
+        "requiredHosts": 32,
+        "subnetSize": 32,
         "cidrPrefix": 27,
         "networkAddress": "192.168.10.64/27",
-        "networkAddressDecimal": 3232238144,
-        "broadcastAddress": "192.168.10.95",
-        "firstHost": "192.168.10.65",
-        "lastHost": "192.168.10.94",
         "usableHosts": 30
       }
     },
     {
+      "id": "subnet-3",
       "name": "Guest WiFi",
       "vlanId": 30,
       "expectedDevices": 10,
       "subnetInfo": {
+        "expectedDevices": 10,
         "plannedDevices": 20,
-        "requiredAddresses": 22,
-        "allocatedAddresses": 32,
+        "requiredHosts": 22,
+        "subnetSize": 32,
         "cidrPrefix": 27,
         "networkAddress": "192.168.10.96/27",
-        "networkAddressDecimal": 3232238176,
-        "broadcastAddress": "192.168.10.127",
-        "firstHost": "192.168.10.97",
-        "lastHost": "192.168.10.126",
         "usableHosts": 30
       }
     },
     {
+      "id": "subnet-4",
       "name": "Printers",
       "vlanId": 40,
       "expectedDevices": 5,
       "subnetInfo": {
+        "expectedDevices": 5,
         "plannedDevices": 10,
-        "requiredAddresses": 12,
-        "allocatedAddresses": 16,
+        "requiredHosts": 12,
+        "subnetSize": 16,
         "cidrPrefix": 28,
         "networkAddress": "192.168.10.128/28",
-        "networkAddressDecimal": 3232238208,
-        "broadcastAddress": "192.168.10.143",
-        "firstHost": "192.168.10.129",
-        "lastHost": "192.168.10.142",
         "usableHosts": 14
       }
     },
     {
+      "id": "subnet-5",
       "name": "Servers",
       "vlanId": 50,
       "expectedDevices": 3,
       "subnetInfo": {
+        "expectedDevices": 3,
         "plannedDevices": 6,
-        "requiredAddresses": 8,
-        "allocatedAddresses": 8,
+        "requiredHosts": 8,
+        "subnetSize": 8,
         "cidrPrefix": 29,
         "networkAddress": "192.168.10.144/29",
-        "networkAddressDecimal": 3232238224,
-        "broadcastAddress": "192.168.10.151",
-        "firstHost": "192.168.10.145",
-        "lastHost": "192.168.10.150",
         "usableHosts": 6
       }
     }
   ],
   "supernet": {
-    "networkAddress": "192.168.10.0/25",
-    "totalSubnetAddresses": 152,
-    "supernetAddresses": 128,
-    "efficiency": 118.75,
+    "cidrPrefix": 24,
+    "networkAddress": "192.168.10.0/24",
+    "usedSize": 152,
+    "totalSize": 256,
+    "efficiency": 59.375,
     "rangeEfficiency": 100.0
-  }
+  },
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "updatedAt": "2024-01-01T00:00:00.000Z"
 }
