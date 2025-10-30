@@ -69,9 +69,9 @@ cidrly view --plan=my-network.json
 
 See [examples/](examples/) for sample network plans:
 
-- `campus-network.json` - Multi-building university network
-- `data-center.json` - Three-tier application infrastructure
-- `branch-office.json` - Small office network
+- `example-campus-network.json` - Multi-building university network
+- `example-data-center.json` - Three-tier application infrastructure
+- `example-branch-office.json` - Small office network
 
 ## Contributing
 

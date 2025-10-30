@@ -4,7 +4,7 @@ This directory contains sample network plans demonstrating common network archit
 
 ## Available Examples
 
-### 1. Campus Network (`campus-network.json`)
+### 1. Campus Network (`example-campus-network.json`)
 
 **Scenario:** Multi-building university campus with diverse networking needs
 
@@ -26,7 +26,7 @@ This directory contains sample network plans demonstrating common network archit
 - Large WiFi networks with capacity planning
 - VLAN organization for different departments
 
-### 2. Data Center (`data-center.json`)
+### 2. Data Center (`example-data-center.json`)
 
 **Scenario:** Three-tier application infrastructure with specialized networks
 
@@ -49,7 +49,7 @@ This directory contains sample network plans demonstrating common network archit
 - Small management and backup networks
 - Optimal CIDR allocation for data center use
 
-### 3. Branch Office (`branch-office.json`)
+### 3. Branch Office (`example-branch-office.json`)
 
 **Scenario:** Small branch office with basic networking requirements
 
@@ -84,13 +84,13 @@ This directory contains sample network plans demonstrating common network archit
 
 ```bash
 # Load campus network
-cidrly view --plan=examples/campus-network.json
+cidrly view --plan=examples/example-campus-network.json
 
 # Load data center
-cidrly view --plan=examples/data-center.json
+cidrly view --plan=examples/example-data-center.json
 
 # Load branch office
-cidrly view --plan=examples/branch-office.json
+cidrly view --plan=examples/example-branch-office.json
 ```
 
 ## Understanding the Plans
