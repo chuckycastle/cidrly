@@ -87,6 +87,18 @@ See [examples/](examples/) for sample network plans:
 - `example-data-center.json` - Three-tier application infrastructure
 - `example-branch-office.json` - Small office network
 
+## Roadmap
+
+For planned features and enhancements, see:
+
+- **[GitHub Issues](https://github.com/chuckycastle/cidrly/issues)** - All open issues and feature requests
+- **[Milestones](https://github.com/chuckycastle/cidrly/milestones)** - Organized by version (v0.2.0, v0.3.0, Future)
+
+Issues are prioritized with labels:
+- `priority: high` - Critical features like Terraform export, IPv6 support, network diagrams
+- `priority: medium` - Important improvements like PDF reports, plugin system, API mode
+- `priority: low` - Nice-to-have enhancements like theme customization, cloud sync
+
 ## Contributing
 
 We welcome contributions! Here's how you can help:
