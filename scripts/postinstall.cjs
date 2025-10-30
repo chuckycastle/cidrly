@@ -100,25 +100,25 @@ function setupCidrly() {
     // Create saved-plans directory
     const dirCreated = ensureDirectoryExists(savedPlansDir);
     if (dirCreated) {
-      console.log(`${colors.green}✓${colors.reset} Created directory: ${colors.dim}${savedPlansDir}${colors.reset}`);
+      console.log(
+        `${colors.green}✓${colors.reset} Created directory: ${colors.dim}${savedPlansDir}${colors.reset}`,
+      );
     } else {
       console.log(`${colors.dim}  ↳ Directory already exists: ${savedPlansDir}${colors.reset}`);
     }
 
     // Check if examples source directory exists
     if (!fs.existsSync(examplesSourceDir)) {
-      console.log(`${colors.yellow}⚠${colors.reset} Examples directory not found in package, skipping example setup`);
+      console.log(
+        `${colors.yellow}⚠${colors.reset} Examples directory not found in package, skipping example setup`,
+      );
       console.log(`${colors.green}✓${colors.reset} cidrly setup complete!\n`);
       return;
     }
 
     // Copy example files
     console.log(`\n${colors.blue}Copying example network plans...${colors.reset}`);
-    const examples = [
-      'campus-network.json',
-      'data-center.json',
-      'branch-office.json',
-    ];
+    const examples = ['campus-network.json', 'data-center.json', 'branch-office.json'];
 
     let copiedCount = 0;
     for (const example of examples) {
@@ -129,17 +129,22 @@ function setupCidrly() {
 
     // Final message
     if (copiedCount > 0) {
-      console.log(`\n${colors.green}✓${colors.reset} Successfully copied ${copiedCount} example plan${copiedCount > 1 ? 's' : ''}`);
+      console.log(
+        `\n${colors.green}✓${colors.reset} Successfully copied ${copiedCount} example plan${copiedCount > 1 ? 's' : ''}`,
+      );
       console.log(`${colors.dim}  Location: ${savedPlansDir}${colors.reset}`);
-      console.log(`\n${colors.blue}Get started:${colors.reset} Run ${colors.green}cidrly${colors.reset} and press ${colors.green}l${colors.reset} to load an example!\n`);
+      console.log(
+        `\n${colors.blue}Get started:${colors.reset} Run ${colors.green}cidrly${colors.reset} and press ${colors.green}l${colors.reset} to load an example!\n`,
+      );
     } else {
       console.log(`\n${colors.green}✓${colors.reset} cidrly setup complete!\n`);
     }
-
   } catch (error) {
     // Don't fail installation on setup errors
     console.error(`${colors.yellow}⚠${colors.reset} Setup warning: ${error.message}`);
-    console.log(`${colors.dim}  You can still use cidrly, but you may need to manually create ${getSavedPlansDir()}${colors.reset}\n`);
+    console.log(
+      `${colors.dim}  You can still use cidrly, but you may need to manually create ${getSavedPlansDir()}${colors.reset}\n`,
+    );
   }
 }
 
