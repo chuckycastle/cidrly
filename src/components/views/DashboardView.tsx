@@ -573,8 +573,8 @@ export const DashboardView: React.FC = () => {
         enabled: subnets.length > 0,
       },
       {
-        key: 'space',
-        description: 'Activate sort on selected column',
+        key: ' ',
+        description: 'Activate sort on selected column (Space)',
         handler: (): void => {
           if (plan && headerMode) activateSort();
         },
