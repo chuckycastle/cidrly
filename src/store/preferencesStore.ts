@@ -27,25 +27,25 @@ const usePreferencesStoreBase = create<PreferencesState>()(
     isLoaded: false,
 
     // Actions
-    setPreferences: (newPreferences) => {
+    setPreferences: (newPreferences): void => {
       set((state) => {
         state.preferences = { ...state.preferences, ...newPreferences };
       });
     },
 
-    setGrowthPercentage: (percentage) => {
+    setGrowthPercentage: (percentage): void => {
       set((state) => {
         state.preferences.growthPercentage = percentage;
       });
     },
 
-    resetToDefaults: () => {
+    resetToDefaults: (): void => {
       set((state) => {
         state.preferences = defaultPreferences;
       });
     },
 
-    setLoaded: (loaded) => {
+    setLoaded: (loaded): void => {
       set((state) => {
         state.isLoaded = loaded;
       });
