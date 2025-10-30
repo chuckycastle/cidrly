@@ -60,6 +60,7 @@ cidrly view --plan=my-network.json
 - `c` - Calculate network plan
 - `s` - Save plan
 - `l` - Load plan
+- `n` - Create new plan
 - `b` - Change base IP
 - `q` - Quit
 - `Escape` - Cancel dialog
