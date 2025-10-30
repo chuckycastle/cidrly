@@ -3,7 +3,6 @@ node_modules/
 
 # Build output
 dist/
-build/
 coverage/
 *.tsbuildinfo
 
@@ -14,9 +13,9 @@ cidrly.wiki.backup/
 *.wiki.backup/
 docs/
 
-# Logs
-*.log
-npm-debug.log*
+# Configuration files (already validated)
+*.config.js
+*.config.mjs
 
 # Package archives
 *.tgz
