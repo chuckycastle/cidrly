@@ -8,10 +8,11 @@ import { Box, Text, useApp } from 'ink';
 import Spinner from 'ink-spinner';
 import path from 'path';
 import React, { useState } from 'react';
-import { createSubnet } from '../../core/models/network-plan.js';
+import { createNetworkPlan, createSubnet } from '../../core/models/network-plan.js';
 import {
   validateDeviceCount,
   validateIpAddress,
+  validatePlanName,
   validateSubnetName,
   validateVlanId,
 } from '../../core/validators/validators.js';
@@ -58,7 +59,10 @@ type DialogType =
       files: SavedPlanFile[];
       onSelect: (filepath: string) => void;
     }
-  | { type: 'confirm'; title: string; message: string; onConfirm: (result: boolean) => void };
+  | { type: 'confirm'; title: string; message: string; onConfirm: (result: boolean) => void }
+  | { type: 'new-plan-confirm' }
+  | { type: 'new-plan-name' }
+  | { type: 'new-plan-ip'; name: string };
 
 export const DashboardView: React.FC = () => {
   const { exit } = useApp();
@@ -337,6 +341,51 @@ export const DashboardView: React.FC = () => {
     });
   };
 
+  const handleNewPlan = (): void => {
+    if (plan?.supernet) {
+      // Has calculated plan - offer to save
+      setDialog({ type: 'new-plan-confirm' });
+    } else {
+      // No work to save - go straight to name input
+      setDialog({ type: 'new-plan-name' });
+    }
+  };
+
+  const handleSaveAndCreateNew = (): void => {
+    if (!plan?.supernet) {
+      setDialog({ type: 'new-plan-name' });
+      return;
+    }
+
+    const defaultFilename = `${plan.name.replace(/\s+/g, '-').toLowerCase()}.json`;
+    setDialog({
+      type: 'input',
+      title: 'Save Plan',
+      label: 'File path (from ~/cidrly/saved-plans or absolute path):',
+      defaultValue: defaultFilename,
+      onSubmit: (filename) => {
+        void (async (): Promise<void> => {
+          setDialog({ type: 'loading', message: 'Saving plan...' });
+          try {
+            const filepath = await repository.save(plan, filename);
+            notify.success(`Plan saved to ${filepath}`);
+            // Continue to new plan creation
+            setDialog({ type: 'new-plan-name' });
+          } catch (error) {
+            if (isFileOperationError(error)) {
+              notify.error(error.getUserMessage());
+            } else {
+              notify.error(
+                `Failed to save: ${error instanceof Error ? error.message : 'Unknown error'}`,
+              );
+            }
+            setDialog({ type: 'none' });
+          }
+        })();
+      },
+    });
+  };
+
   // Keyboard shortcuts configuration
   useKeyboardShortcuts({
     shortcuts: [
@@ -441,6 +490,12 @@ export const DashboardView: React.FC = () => {
         category: 'actions',
       },
       {
+        key: 'n',
+        description: 'Create new plan',
+        handler: handleNewPlan,
+        category: 'actions',
+      },
+      {
         key: 'b',
         description: 'Change base IP address',
         handler: handleChangeBaseIp,
@@ -535,6 +590,51 @@ export const DashboardView: React.FC = () => {
             title={dialog.title}
             message={dialog.message}
             onConfirm={dialog.onConfirm}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'new-plan-confirm' && (
+        <Modal>
+          <ConfirmDialog
+            title="Create New Plan"
+            message="Save current plan before creating new?\n\nUnsaved changes will be lost."
+            onConfirm={(shouldSave) => {
+              if (shouldSave) {
+                handleSaveAndCreateNew();
+              } else {
+                setDialog({ type: 'new-plan-name' });
+              }
+            }}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'new-plan-name' && (
+        <Modal>
+          <InputDialog
+            title="Create New Plan"
+            label="Plan name:"
+            onSubmit={(name) => {
+              setDialog({ type: 'new-plan-ip', name });
+            }}
+            onCancel={() => setDialog({ type: 'none' })}
+            validate={validatePlanName}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'new-plan-ip' && (
+        <Modal>
+          <InputDialog
+            title="Create New Plan"
+            label="Base IP address:"
+            defaultValue="10.0.0.0"
+            onSubmit={(baseIp) => {
+              const newPlan = createNetworkPlan(dialog.name, baseIp);
+              loadPlan(newPlan);
+              notify.success(`Plan "${dialog.name}" created successfully!`);
+              setDialog({ type: 'none' });
+            }}
+            onCancel={() => setDialog({ type: 'new-plan-name' })}
+            validate={validateIpAddress}
           />
         </Modal>
       )}
