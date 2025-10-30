@@ -130,6 +130,10 @@ export const Header: React.FC<HeaderProps> = React.memo(({ plan }) => {
               </>
             )}
             <Text>{colors.muted(`Range: ${plan.supernet.rangeEfficiency.toFixed(1)}%`)}</Text>
+            <Text> </Text>
+            <Text>{colors.dim('•')}</Text>
+            <Text> </Text>
+            <Text>{colors.muted(`Growth: ${plan.growthPercentage}%`)}</Text>
           </Box>
           <Box marginTop={isNarrow ? 0 : 0}>
             <Text>{colors.muted(plan.supernet.usedSize.toLocaleString())}</Text>

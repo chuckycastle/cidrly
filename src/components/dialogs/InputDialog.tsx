@@ -16,6 +16,7 @@ export interface InputDialogProps {
   onSubmit: (value: string) => void;
   onCancel: () => void;
   validate?: (value: string) => boolean | string;
+  allowedChars?: RegExp; // Optional regex to restrict input characters
 }
 
 export const InputDialog: React.FC<InputDialogProps> = ({
@@ -26,6 +27,7 @@ export const InputDialog: React.FC<InputDialogProps> = ({
   onSubmit,
   onCancel,
   validate,
+  allowedChars,
 }) => {
   const [value, setValue] = useState(defaultValue);
   const [error, setError] = useState<string>('');
@@ -36,12 +38,36 @@ export const InputDialog: React.FC<InputDialogProps> = ({
     setError('');
   }, [defaultValue, title, label]);
 
-  // Handle Escape key to cancel dialog
-  useInput((_input, key) => {
+  // Handle Escape and conditional 'q' key to cancel dialog
+  // 'q' only closes if it's not an allowed character (e.g., IP addresses)
+  // This allows 'q' in filenames but closes IP address dialogs
+  useInput((input, key) => {
     if (key.escape) {
+      onCancel();
+      return;
+    }
+
+    // If allowedChars is set and 'q' is not allowed, treat 'q' as close
+    if (input === 'q' && allowedChars && !allowedChars.test('q')) {
       onCancel();
     }
   });
+
+  // Handle value changes with character filtering
+  const handleChange = (newValue: string): void => {
+    // If allowedChars is specified, filter out invalid characters
+    if (allowedChars) {
+      const filteredValue = newValue
+        .split('')
+        .filter((char) => allowedChars.test(char))
+        .join('');
+      setValue(filteredValue);
+    } else {
+      setValue(newValue);
+    }
+    // Clear error when user starts typing
+    if (error) setError('');
+  };
 
   const handleSubmit = (): void => {
     if (validate) {
@@ -81,7 +107,7 @@ export const InputDialog: React.FC<InputDialogProps> = ({
       {/* Input */}
       <Box>
         <Text>{colors.accent('› ')}</Text>
-        <TextInput value={value} onChange={setValue} onSubmit={handleSubmit} />
+        <TextInput value={value} onChange={handleChange} onSubmit={handleSubmit} />
       </Box>
 
       {/* Error message */}

@@ -7,17 +7,68 @@ import { Box, Text } from 'ink';
 import React from 'react';
 import type { Subnet } from '../../core/models/network-plan.js';
 import { useTerminalWidth } from '../../hooks/useTerminalWidth.js';
+import type { SortColumn, SortDirection } from '../../store/uiStore.js';
 import { colors, symbols } from '../../themes/colors.js';
 
 export interface SubnetTableProps {
   subnets: Subnet[];
   selectedIndex: number;
+  sortColumn?: SortColumn | null;
+  sortDirection?: SortDirection;
+  headerMode?: boolean;
+  selectedHeaderIndex?: number;
 }
 
-export const SubnetTable: React.FC<SubnetTableProps> = React.memo(({ subnets, selectedIndex }) => {
-  const terminalWidth = useTerminalWidth();
+export const SubnetTable: React.FC<SubnetTableProps> = React.memo(
+  ({
+    subnets,
+    selectedIndex,
+    sortColumn = null,
+    sortDirection = 'asc',
+    headerMode = false,
+    selectedHeaderIndex = 0,
+  }) => {
+    const terminalWidth = useTerminalWidth();
 
-  if (subnets.length === 0) {
+    // Column definitions
+    const columns: Array<{
+      key: SortColumn;
+      label: string;
+      width: number;
+      align: 'left' | 'right';
+    }> = [
+      { key: 'name', label: 'Name', width: 20, align: 'left' },
+      { key: 'vlan', label: 'VLAN', width: 6, align: 'right' },
+      { key: 'expected', label: 'Exp', width: 5, align: 'right' },
+      { key: 'planned', label: 'Plan', width: 6, align: 'right' },
+      { key: 'cidr', label: 'CIDR', width: 6, align: 'right' },
+      { key: 'usable', label: 'Hosts', width: 7, align: 'right' },
+      { key: 'network', label: 'Network', width: 15, align: 'left' },
+    ];
+
+    // Helper to render a column header with sort indicator
+    const renderHeader = (
+      column: { key: SortColumn; label: string; width: number; align: 'left' | 'right' },
+      index: number,
+    ): React.ReactElement => {
+      const isSorted = sortColumn === column.key;
+      const isSelected = headerMode && selectedHeaderIndex === index;
+      const sortIndicator = isSorted ? (sortDirection === 'asc' ? ' ↑' : ' ↓') : '';
+      const label =
+        column.align === 'right'
+          ? `${column.label}${sortIndicator}`.padStart(column.width)
+          : `${column.label}${sortIndicator}`.padEnd(column.width);
+
+      if (isSelected) {
+        return <Text key={column.key}>{colors.warning(label)}</Text>;
+      }
+      if (isSorted) {
+        return <Text key={column.key}>{colors.warning(label)}</Text>;
+      }
+      return <Text key={column.key}>{colors.muted(label)}</Text>;
+    };
+
+    if (subnets.length === 0) {
     return (
       <Box flexDirection="column" paddingX={2} paddingY={3} flexGrow={1}>
         <Box marginBottom={2}>
@@ -44,24 +95,22 @@ export const SubnetTable: React.FC<SubnetTableProps> = React.memo(({ subnets, se
         <Text>{colors.dim(`(${subnets.length})`)}</Text>
       </Box>
 
-      {/* Column Headers - subtle, not bold cyan */}
+      {/* Column Headers - interactive with sort indicators */}
       <Box marginBottom={0}>
+        {headerMode ? (
+          <Text>{colors.warning(symbols.selected)}</Text>
+        ) : (
+          <Text>{colors.dim(symbols.unselected)}</Text>
+        )}
         <Text> </Text>
         <Text>{colors.muted('#'.padEnd(2))}</Text>
         <Text> {colors.dim(symbols.divider)} </Text>
-        <Text>{colors.muted('Name'.padEnd(20))}</Text>
-        <Text> {colors.dim(symbols.divider)} </Text>
-        <Text>{colors.muted('VLAN'.padStart(6))}</Text>
-        <Text> {colors.dim(symbols.divider)} </Text>
-        <Text>{colors.muted('Exp'.padStart(5))}</Text>
-        <Text> {colors.dim(symbols.divider)} </Text>
-        <Text>{colors.muted('Plan'.padStart(6))}</Text>
-        <Text> {colors.dim(symbols.divider)} </Text>
-        <Text>{colors.muted('CIDR'.padStart(6))}</Text>
-        <Text> {colors.dim(symbols.divider)} </Text>
-        <Text>{colors.muted('Hosts'.padStart(7))}</Text>
-        <Text> {colors.dim(symbols.divider)} </Text>
-        <Text>{colors.muted('Network')}</Text>
+        {columns.map((column, index) => (
+          <React.Fragment key={column.key}>
+            {renderHeader(column, index)}
+            {index < columns.length - 1 && <Text> {colors.dim(symbols.divider)} </Text>}
+          </React.Fragment>
+        ))}
       </Box>
 
       {/* Subtle divider */}
@@ -144,5 +193,6 @@ export const SubnetTable: React.FC<SubnetTableProps> = React.memo(({ subnets, se
         ))}
       </Box>
     </Box>
-  );
-});
+    );
+  },
+);

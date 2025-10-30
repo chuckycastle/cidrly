@@ -38,7 +38,7 @@ export const SelectDialog: React.FC<SelectDialogProps> = ({
 
   // Handle keyboard navigation
   useInput((input, key) => {
-    if (key.escape) {
+    if (key.escape || input === 'q') {
       onCancel();
     } else if (key.upArrow || input === 'k') {
       setSelectedIndex((prev) => {

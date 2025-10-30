@@ -14,6 +14,9 @@ export class NetworkPlanService {
   /**
    * Calculate or recalculate the network plan
    * Updates subnet information, supernet, and network addresses
+   * Uses the plan's growthPercentage setting
+   *
+   * @param plan - Network plan to calculate
    */
   calculatePlan(plan: NetworkPlan): void {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
@@ -31,7 +34,7 @@ export class NetworkPlanService {
       );
     }
 
-    // Use VLSM optimization for subnet allocation
+    // Use VLSM optimization for subnet allocation with plan's growth percentage
     const updatedPlan = calculateSubnetRanges(plan);
 
     // Copy results back to the plan (mutate in place)
@@ -42,6 +45,9 @@ export class NetworkPlanService {
 
   /**
    * Add a subnet to the network plan and recalculate
+   *
+   * @param plan - Network plan to modify
+   * @param subnet - Subnet to add
    */
   addSubnet(plan: NetworkPlan, subnet: Subnet): void {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
@@ -70,6 +76,9 @@ export class NetworkPlanService {
   /**
    * Remove a subnet from the network plan and recalculate
    * Returns the removed subnet
+   *
+   * @param plan - Network plan to modify
+   * @param index - Index of subnet to remove
    */
   removeSubnet(plan: NetworkPlan, index: number): Subnet {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
@@ -109,6 +118,9 @@ export class NetworkPlanService {
 
   /**
    * Update the base IP address and recalculate network addresses
+   *
+   * @param plan - Network plan to modify
+   * @param newBaseIp - New base IP address
    */
   updateBaseIp(plan: NetworkPlan, newBaseIp: string): void {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
@@ -137,6 +149,12 @@ export class NetworkPlanService {
 
   /**
    * Update an existing subnet and recalculate
+   *
+   * @param plan - Network plan to modify
+   * @param index - Index of subnet to update
+   * @param name - New subnet name
+   * @param vlanId - New VLAN ID
+   * @param expectedDevices - New expected device count
    */
   updateSubnet(
     plan: NetworkPlan,
@@ -171,5 +189,29 @@ export class NetworkPlanService {
 
     // Automatically recalculate the plan
     this.calculatePlan(plan);
+  }
+
+  /**
+   * Update the growth percentage for the plan and recalculate
+   *
+   * @param plan - Network plan to modify
+   * @param growthPercentage - New growth percentage (0-300%)
+   */
+  setGrowthPercentage(plan: NetworkPlan, growthPercentage: number): void {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
+    if (!plan) {
+      throw new ValidationError(
+        'Cannot set growth percentage: Plan is null or undefined',
+        ErrorCode.NO_PLAN_LOADED,
+      );
+    }
+
+    plan.growthPercentage = growthPercentage;
+    plan.updatedAt = new Date();
+
+    // Recalculate plan if there are subnets
+    if (plan.subnets.length > 0) {
+      this.calculatePlan(plan);
+    }
   }
 }

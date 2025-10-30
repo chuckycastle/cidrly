@@ -14,17 +14,25 @@ export interface SubnetInfo {
 }
 
 /**
- * Apply the 50% planning rule: double the expected device count
- * Accounts for network and broadcast addresses in growth calculation
- * Formula: (expectedDevices + 2) * 2 - 2 = expectedDevices * 2 + 2
+ * Apply growth rule with configurable percentage
+ * Network and broadcast addresses are added later by calculateHostBits()
+ *
+ * @param expectedDevices - Number of devices expected to use the subnet
+ * @param growthPercentage - Growth capacity percentage (0-300%, default: 100%)
+ *   - 0%: No growth (exact device count)
+ *   - 100%: Double the capacity (default)
+ *   - 200%: Triple the capacity
+ *   - 300%: Quadruple the capacity
+ *
+ * Formula: expectedDevices × (1 + growthPercentage / 100)
+ * Example: 25 devices with 100% growth = 25 × 2 = 50 planned devices
  */
-export function applyPlanningRule(expectedDevices: number): number {
-  // 50% rule means doubling total capacity (devices + overhead)
-  // Current capacity: expectedDevices + 2 (network + broadcast)
-  // Future capacity: (expectedDevices + 2) * 2
-  // Usable hosts in future: (expectedDevices + 2) * 2 - 2
-  // Simplified: expectedDevices * 2 + 2
-  return expectedDevices * 2 + 2;
+export function applyPlanningRule(expectedDevices: number, growthPercentage: number = 100): number {
+  // Calculate growth multiplier from percentage
+  const multiplier = 1 + growthPercentage / 100;
+
+  // Apply growth rule - network/broadcast overhead added by calculateHostBits()
+  return Math.ceil(expectedDevices * multiplier);
 }
 
 /**
@@ -177,10 +185,13 @@ export function getSubnetDetails(subnetInfo: SubnetInfo): {
 
 /**
  * Calculate optimal subnet information for a given device count
- * Applies the 50% planning rule automatically
+ * Applies the growth rule with configurable percentage
+ *
+ * @param expectedDevices - Number of devices expected to use the subnet
+ * @param growthPercentage - Growth capacity percentage (0-300%, default: 100%)
  */
-export function calculateSubnet(expectedDevices: number): SubnetInfo {
-  const plannedDevices = applyPlanningRule(expectedDevices);
+export function calculateSubnet(expectedDevices: number, growthPercentage: number = 100): SubnetInfo {
+  const plannedDevices = applyPlanningRule(expectedDevices, growthPercentage);
   const hostBits = calculateHostBits(plannedDevices);
   const cidrPrefix = calculateCIDR(hostBits);
   const subnetSize = calculateSubnetSize(cidrPrefix);

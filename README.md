@@ -8,13 +8,14 @@ Network architecture and design planning CLI tool with automatic subnet calculat
 
 ## Features
 
-- Interactive React-based terminal dashboard
-- VLSM optimization with "Largest First" allocation
-- Dual efficiency metrics (Supernet + Range)
-- 50% capacity planning rule (auto-doubles device counts)
-- Smart subnet and supernet calculation
-- VLAN management
-- Save/load network plans as JSON
+- **Interactive React-based terminal dashboard** with keyboard navigation
+- **VLSM optimization** with "Largest First" allocation
+- **Dual efficiency metrics** (Supernet + Range)
+- **Configurable capacity planning** - Adjust growth percentage from 0-200% (default: 100%)
+- **Sortable table columns** - Sort by any column with Tab + arrow keys
+- **Smart subnet and supernet calculation**
+- **VLAN management** with per-subnet tracking
+- **Save/load network plans** as JSON with per-plan preferences
 
 ## Installation
 
@@ -52,18 +53,28 @@ cidrly view --plan=my-network.json
 
 ## Dashboard Shortcuts
 
-- `↑/↓` or `k/j` - Navigate subnets
-- `i` or `Enter` - Show subnet details
+### Navigation
+- `↑/↓` - Navigate subnet rows
+- `Tab` - Toggle header mode (for column sorting)
+- `←/→` - Navigate columns (header mode only)
+- `Escape` - Cancel dialog / Exit header mode
+
+### Actions
+- `i` - Show subnet details
+- `Enter` - Show subnet details (row mode) / Sort column (header mode)
+- `Space` - Sort selected column (header mode only)
 - `a` - Add subnet
 - `e` - Edit subnet
-- `x` - Delete subnet
+- `d` - Delete subnet
 - `c` - Calculate network plan
+
+### File Operations
 - `s` - Save plan
 - `l` - Load plan
 - `n` - Create new plan
 - `b` - Change base IP
+- `p` - Preferences (adjust growth percentage)
 - `q` - Quit
-- `Escape` - Cancel dialog
 
 ## Examples
 
