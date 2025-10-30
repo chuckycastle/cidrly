@@ -37,8 +37,8 @@ describe('NetworkPlanService', () => {
 
       expect(plan.subnets[0].subnetInfo).toBeDefined();
       expect(plan.subnets[1].subnetInfo).toBeDefined();
-      expect(plan.subnets[0].subnetInfo?.plannedDevices).toBe(102); // 50 * 2 + 2 (50% rule)
-      expect(plan.subnets[1].subnetInfo?.plannedDevices).toBe(52); // 25 * 2 + 2 (50% rule)
+      expect(plan.subnets[0].subnetInfo?.plannedDevices).toBe(100); // 50 × 2 (100% growth)
+      expect(plan.subnets[1].subnetInfo?.plannedDevices).toBe(50); // 25 × 2 (100% growth)
     });
 
     it('should calculate supernet', () => {

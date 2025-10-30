@@ -12,6 +12,9 @@ export type ViewType = 'welcome' | 'dashboard' | 'detail' | 'help';
 export type NotificationPriority = 'low' | 'normal' | 'high';
 export type NotificationPosition = 'top-right' | 'bottom-right' | 'bottom-left' | 'top-center';
 
+export type SortColumn = 'name' | 'vlan' | 'expected' | 'planned' | 'network' | 'cidr' | 'usable';
+export type SortDirection = 'asc' | 'desc';
+
 export interface Notification {
   id: string;
   message: string;
@@ -28,6 +31,8 @@ interface UIState {
   selectedIndex: number;
   notifications: Notification[];
   maxVisibleNotifications: number;
+  sortColumn: SortColumn | null;
+  sortDirection: SortDirection;
 
   // Actions
   setView: (view: ViewType) => void;
@@ -46,6 +51,8 @@ interface UIState {
   dismissNotification: (id: string) => void;
   clearNotifications: () => void;
   setMaxVisibleNotifications: (max: number) => void;
+  setSortColumn: (column: SortColumn) => void;
+  clearSort: () => void;
 }
 
 const useUIStoreBase = create<UIState>()(
@@ -56,6 +63,8 @@ const useUIStoreBase = create<UIState>()(
       selectedIndex: 0,
       notifications: [],
       maxVisibleNotifications: 5,
+      sortColumn: null,
+      sortDirection: 'asc',
 
       // Actions
       setView: (view: ViewType): void => {
@@ -156,6 +165,26 @@ const useUIStoreBase = create<UIState>()(
       setMaxVisibleNotifications: (max: number): void => {
         set((state) => {
           state.maxVisibleNotifications = max;
+        });
+      },
+
+      setSortColumn: (column: SortColumn): void => {
+        set((state) => {
+          // If clicking the same column, toggle direction
+          if (state.sortColumn === column) {
+            state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
+          } else {
+            // New column, default to ascending
+            state.sortColumn = column;
+            state.sortDirection = 'asc';
+          }
+        });
+      },
+
+      clearSort: (): void => {
+        set((state) => {
+          state.sortColumn = null;
+          state.sortDirection = 'asc';
         });
       },
     };

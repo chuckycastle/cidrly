@@ -9,6 +9,7 @@ import {
   CIDR_RULES,
   DEVICE_COUNT_RULES,
   PLAN_NAME_RULES,
+  PREFERENCES_RULES,
   SUBNET_NAME_RULES,
   VLAN_RULES,
 } from '../infrastructure/config/validation-rules.js';
@@ -74,6 +75,12 @@ const NetworkPlanSchema = z.object({
   name: z.string().min(PLAN_NAME_RULES.MIN_LENGTH).max(PLAN_NAME_RULES.MAX_LENGTH),
   baseIp: IpAddressSchema,
   subnets: z.array(SubnetSchema),
+  growthPercentage: z
+    .number()
+    .int()
+    .min(PREFERENCES_RULES.GROWTH_PERCENTAGE_MIN)
+    .max(PREFERENCES_RULES.GROWTH_PERCENTAGE_MAX)
+    .default(100), // Default to 100% for old plans
   supernet: SupernetSchema.optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),

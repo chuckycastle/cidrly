@@ -29,6 +29,7 @@ export interface NetworkPlan {
   name: string;
   baseIp: string;
   subnets: Subnet[];
+  growthPercentage: number;
   supernet?: {
     cidrPrefix: number;
     totalSize: number;
@@ -68,6 +69,7 @@ export function createNetworkPlan(name: string, baseIp = '10.0.0.0'): NetworkPla
     name,
     baseIp,
     subnets: [],
+    growthPercentage: 100, // Default to 100% growth for new plans
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -127,16 +129,18 @@ export function removeSubnet(plan: NetworkPlan, subnetId: string): NetworkPlan {
  * Uses "Largest First" allocation strategy to maximize network efficiency
  * Subnets are returned sorted by size (largest first) for optimal display
  * Returns a new plan with calculated subnet information
+ *
+ * @param plan - Network plan to calculate subnet ranges for
  */
 export function calculateSubnetRanges(plan: NetworkPlan): NetworkPlan {
   if (plan.subnets.length === 0) {
     return plan;
   }
 
-  // Step 1: Calculate subnet information for each subnet
+  // Step 1: Calculate subnet information for each subnet using plan's growth percentage
   const subnetsWithInfo = plan.subnets.map((subnet) => ({
     ...subnet,
-    subnetInfo: calculateSubnet(subnet.expectedDevices),
+    subnetInfo: calculateSubnet(subnet.expectedDevices, plan.growthPercentage),
   }));
 
   // Step 2: Sort by subnet size DESCENDING for optimal allocation

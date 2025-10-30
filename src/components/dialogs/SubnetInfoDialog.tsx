@@ -66,8 +66,6 @@ export const SubnetInfoDialog: React.FC<SubnetInfoDialogProps> = ({ subnet, onCl
         <Box>
           <Text>{colors.dim('Press ')}</Text>
           <Text>{colors.muted('Esc')}</Text>
-          <Text>{colors.dim(' or ')}</Text>
-          <Text>{colors.muted('q')}</Text>
           <Text>{colors.dim(' to close')}</Text>
         </Box>
       </Box>
@@ -184,8 +182,6 @@ export const SubnetInfoDialog: React.FC<SubnetInfoDialogProps> = ({ subnet, onCl
       <Box>
         <Text>{colors.dim('Press ')}</Text>
         <Text>{colors.muted('Esc')}</Text>
-        <Text>{colors.dim(' or ')}</Text>
-        <Text>{colors.muted('q')}</Text>
         <Text>{colors.dim(' to close')}</Text>
       </Box>
     </Box>
