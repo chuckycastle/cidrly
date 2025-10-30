@@ -22,7 +22,6 @@ __mocks__/
 # Directories excluded from repo
 saved-plans/
 docs/
-scripts/
 Formula/
 homebrew-cidrly/
 
