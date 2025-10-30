@@ -14,6 +14,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Network visualization diagrams
 - Import from existing network configurations
 
+## [0.1.8] - 2025-10-29
+
+### Fixed
+
+- **Example File Validation** - Fixed "plan validation failed" error when loading sample plans
+  - Users upgrading from v0.1.6 had outdated example files in `~/cidrly/saved-plans/`
+  - Postinstall script now uses smart checksum detection to identify outdated examples
+  - Old example files are automatically updated while preserving user-created plans
+  - Closes [Issue #6](https://github.com/chuckycastle/cidrly/issues/6)
+
+### Changed
+
+- **Example File Naming** - Renamed example files with "example-" prefix for safety
+  - `branch-office.json` → `example-branch-office.json`
+  - `campus-network.json` → `example-campus-network.json`
+  - `data-center.json` → `example-data-center.json`
+  - Prevents accidentally overwriting user plans with common names
+  - Postinstall script automatically migrates old unprefixed examples
+
+### Improved
+
+- **Smart Example Updates** - Enhanced postinstall script with intelligent file management
+  - Detects outdated example files using SHA-256 checksums
+  - Updates old examples (v0.1.6) to current versions automatically
+  - Preserves user-created files (unknown checksums)
+  - Migrates old unprefixed examples to new prefixed names
+  - Shows clear status messages for each operation
+
 ## [0.1.7] - 2025-10-29
 
 ### Added
@@ -254,7 +282,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **PATCH** version for backwards-compatible bug fixes
 - **Pre-release** suffixes: `-alpha`, `-beta`, `-rc` for pre-release versions
 
-[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.1.7...HEAD
+[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.1.8...HEAD
+[0.1.8]: https://github.com/chuckycastle/cidrly/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/chuckycastle/cidrly/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/chuckycastle/cidrly/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/chuckycastle/cidrly/compare/v0.1.4...v0.1.5
