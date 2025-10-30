@@ -61,6 +61,7 @@ export const usePlanActions = (): {
   removeSubnet: (index: number) => Subnet | null;
   calculatePlan: () => void;
   updateBaseIp: (newBaseIp: string) => void;
+  setGrowthPercentage: (growthPercentage: number) => void;
   clearPlan: () => void;
 } => {
   const loadPlan = usePlanStore.use.loadPlan();
@@ -69,6 +70,7 @@ export const usePlanActions = (): {
   const removeSubnet = usePlanStore.use.removeSubnet();
   const calculatePlan = usePlanStore.use.calculatePlan();
   const updateBaseIp = usePlanStore.use.updateBaseIp();
+  const setGrowthPercentage = usePlanStore.use.setGrowthPercentage();
   const clearPlan = usePlanStore.use.clearPlan();
 
   return {
@@ -78,6 +80,7 @@ export const usePlanActions = (): {
     removeSubnet,
     calculatePlan,
     updateBaseIp,
+    setGrowthPercentage,
     clearPlan,
   };
 };

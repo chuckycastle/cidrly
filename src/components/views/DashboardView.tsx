@@ -21,6 +21,9 @@ import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts.js';
 import { usePlan, usePlanActions, useSubnets } from '../../hooks/usePlan.js';
 import { useNotify, useSelection } from '../../hooks/useUI.js';
 import { FILE_RULES } from '../../infrastructure/config/validation-rules.js';
+import type { SortColumn } from '../../store/uiStore.js';
+import { useUIStore } from '../../store/uiStore.js';
+import { sortSubnets } from '../../utils/subnet-sorters.js';
 import { FileSystemRepository } from '../../repositories/index.js';
 import { parseNetworkPlan } from '../../schemas/network-plan.schema.js';
 import type { SavedPlanFile } from '../../services/file.service.js';
@@ -30,6 +33,7 @@ import { parseDeviceCount, parseVlanId } from '../../utils/input-helpers.js';
 import { ConfirmDialog } from '../dialogs/ConfirmDialog.js';
 import { InputDialog } from '../dialogs/InputDialog.js';
 import { Modal } from '../dialogs/Modal.js';
+import { PreferencesDialog } from '../dialogs/PreferencesDialog.js';
 import { SelectDialog } from '../dialogs/SelectDialog.js';
 import { SubnetInfoDialog } from '../dialogs/SubnetInfoDialog.js';
 import { FilePicker } from '../widgets/FilePicker.js';
@@ -38,6 +42,7 @@ import { SubnetTable } from '../widgets/SubnetTable.js';
 type DialogType =
   | { type: 'none' }
   | { type: 'info' }
+  | { type: 'preferences' }
   | { type: 'loading'; message: string }
   | {
       type: 'input';
@@ -46,6 +51,7 @@ type DialogType =
       defaultValue?: string;
       onSubmit: (value: string) => void;
       validate?: (value: string) => boolean | string;
+      allowedChars?: RegExp;
     }
   | {
       type: 'select';
@@ -68,8 +74,15 @@ export const DashboardView: React.FC = () => {
   const { exit } = useApp();
   const plan = usePlan();
   const subnets = useSubnets();
-  const { addSubnet, updateSubnet, removeSubnet, calculatePlan, updateBaseIp, loadPlan } =
-    usePlanActions();
+  const {
+    addSubnet,
+    updateSubnet,
+    removeSubnet,
+    calculatePlan,
+    updateBaseIp,
+    loadPlan,
+    setGrowthPercentage,
+  } = usePlanActions();
   const notify = useNotify();
   const {
     selectedIndex,
@@ -78,10 +91,49 @@ export const DashboardView: React.FC = () => {
     moveDown,
   } = useSelection(subnets.length - 1);
 
+  // Sort state from UI store
+  const sortColumn = useUIStore.use.sortColumn();
+  const sortDirection = useUIStore.use.sortDirection();
+  const setSortColumn = useUIStore.use.setSortColumn();
+
+  // Header mode state
+  const [headerMode, setHeaderMode] = useState(false);
+  const [selectedHeaderIndex, setSelectedHeaderIndex] = useState(0);
+
   const [dialog, setDialog] = useState<DialogType>({ type: 'none' });
 
   const fileService = new FileService(path.resolve(process.cwd(), FILE_RULES.SAVED_PLANS_DIR));
   const repository = new FileSystemRepository(fileService);
+
+  // Column definitions (matching SubnetTable)
+  const columns: SortColumn[] = ['name', 'vlan', 'expected', 'planned', 'cidr', 'usable', 'network'];
+
+  // Apply sorting to subnets
+  const sortedSubnets = sortSubnets(subnets, sortColumn, sortDirection);
+
+  // Header mode navigation handlers
+  const moveHeaderLeft = (): void => {
+    setSelectedHeaderIndex((prev) => Math.max(0, prev - 1));
+  };
+
+  const moveHeaderRight = (): void => {
+    setSelectedHeaderIndex((prev) => Math.min(columns.length - 1, prev + 1));
+  };
+
+  const activateSort = (): void => {
+    const column = columns[selectedHeaderIndex];
+    if (column) {
+      setSortColumn(column);
+      notify.info(`Sorted by ${column} ${sortDirection === 'asc' ? '↑' : '↓'}`);
+    }
+  };
+
+  const toggleHeaderMode = (): void => {
+    setHeaderMode((prev) => !prev);
+    if (!headerMode) {
+      notify.info('Header mode: Use ← → to navigate, Enter to sort, Tab/Esc to exit');
+    }
+  };
 
   // Action handlers (need to be defined before keyboard shortcuts)
   const handleShowSubnetDetails = (): void => {
@@ -118,9 +170,14 @@ export const DashboardView: React.FC = () => {
                 const expectedDevices = parseDeviceCount(expectedDevicesStr);
                 const subnet = createSubnet(name, vlanId, expectedDevices);
                 addSubnet(subnet);
-                notify.success(
-                  `Subnet "${name}" added! (Planning for ${subnet.expectedDevices * 2} devices using 50% rule)`,
-                );
+                if (plan) {
+                  const plannedDevices = Math.ceil(
+                    expectedDevices * (1 + plan.growthPercentage / 100),
+                  );
+                  notify.success(
+                    `Subnet "${name}" added! (Planning for ${plannedDevices} devices with ${plan.growthPercentage}% growth)`,
+                  );
+                }
                 setDialog({ type: 'none' });
               },
               validate: validateDeviceCount,
@@ -327,6 +384,7 @@ export const DashboardView: React.FC = () => {
       title: 'Change Base IP',
       label: 'Enter new base IP address:',
       defaultValue: plan.baseIp,
+      allowedChars: /[0-9.]/,
       onSubmit: (newBaseIp) => {
         updateBaseIp(newBaseIp);
 
@@ -386,60 +444,153 @@ export const DashboardView: React.FC = () => {
     });
   };
 
+  const handleOpenPreferences = (): void => {
+    setDialog({ type: 'preferences' });
+  };
+
+  const handleSavePreferences = (growthPercentage: number): void => {
+    if (!plan) {
+      notify.error('No plan loaded');
+      setDialog({ type: 'none' });
+      return;
+    }
+
+    // Update plan's growth percentage and recalculate if subnets exist
+    setGrowthPercentage(growthPercentage);
+
+    if (subnets.length > 0) {
+      notify.success(`Growth percentage set to ${growthPercentage}% - Plan recalculated`);
+    } else {
+      notify.success(`Growth percentage set to ${growthPercentage}%`);
+    }
+
+    setDialog({ type: 'none' });
+  };
+
   // Keyboard shortcuts configuration
   useKeyboardShortcuts({
     shortcuts: [
-      // Navigation
+      // Tab: Toggle header mode
+      {
+        key: 'tab',
+        description: 'Toggle header/row mode',
+        handler: (): void => {
+          if (plan && subnets.length > 0) toggleHeaderMode();
+        },
+        category: 'navigation',
+        enabled: subnets.length > 0,
+      },
+      // Navigation - Up/Down (row mode only)
       {
         key: 'upArrow',
         description: 'Move selection up',
         handler: (): void => {
-          if (plan) moveUp();
+          if (plan && !headerMode) moveUp();
         },
         category: 'navigation',
+        enabled: !headerMode,
       },
       {
         key: 'k',
         description: 'Move selection up (vim)',
         handler: (): void => {
-          if (plan) moveUp();
+          if (plan && !headerMode) moveUp();
         },
         category: 'navigation',
+        enabled: !headerMode,
       },
       {
         key: 'downArrow',
         description: 'Move selection down',
         handler: (): void => {
-          if (plan) moveDown();
+          if (plan && !headerMode) moveDown();
         },
         category: 'navigation',
+        enabled: !headerMode,
       },
       {
         key: 'j',
         description: 'Move selection down (vim)',
         handler: (): void => {
-          if (plan) moveDown();
+          if (plan && !headerMode) moveDown();
         },
         category: 'navigation',
+        enabled: !headerMode,
       },
-      // Actions
+      // Navigation - Left/Right (header mode only)
+      {
+        key: 'leftArrow',
+        description: 'Move header selection left',
+        handler: (): void => {
+          if (plan && headerMode) moveHeaderLeft();
+        },
+        category: 'navigation',
+        enabled: headerMode,
+      },
+      {
+        key: 'h',
+        description: 'Move header selection left (vim)',
+        handler: (): void => {
+          if (plan && headerMode) moveHeaderLeft();
+        },
+        category: 'navigation',
+        enabled: headerMode,
+      },
+      {
+        key: 'rightArrow',
+        description: 'Move header selection right',
+        handler: (): void => {
+          if (plan && headerMode) moveHeaderRight();
+        },
+        category: 'navigation',
+        enabled: headerMode,
+      },
+      // Enter: Dual-purpose (row mode = details, header mode = sort)
+      {
+        key: 'return',
+        description: 'Show subnet details (row mode) / Sort column (header mode)',
+        handler: (): void => {
+          if (!plan || subnets.length === 0) return;
+          if (headerMode) {
+            activateSort();
+          } else {
+            handleShowSubnetDetails();
+          }
+        },
+        category: 'actions',
+        enabled: subnets.length > 0,
+      },
+      {
+        key: 'space',
+        description: 'Activate sort on selected column',
+        handler: (): void => {
+          if (plan && headerMode) activateSort();
+        },
+        category: 'actions',
+        enabled: headerMode,
+      },
+      // Escape from header mode
+      {
+        key: 'escape',
+        description: 'Exit header mode',
+        handler: (): void => {
+          if (headerMode) {
+            setHeaderMode(false);
+            notify.info('Exited header mode');
+          }
+        },
+        category: 'navigation',
+        enabled: headerMode,
+      },
+      // Actions (row mode only)
       {
         key: 'i',
         description: 'Show subnet details',
         handler: (): void => {
-          if (plan && subnets.length > 0) handleShowSubnetDetails();
+          if (plan && subnets.length > 0 && !headerMode) handleShowSubnetDetails();
         },
         category: 'actions',
-        enabled: subnets.length > 0,
-      },
-      {
-        key: 'return',
-        description: 'Show subnet details',
-        handler: (): void => {
-          if (plan && subnets.length > 0) handleShowSubnetDetails();
-        },
-        category: 'actions',
-        enabled: subnets.length > 0,
+        enabled: subnets.length > 0 && !headerMode,
       },
       {
         key: 'a',
@@ -457,7 +608,7 @@ export const DashboardView: React.FC = () => {
         enabled: subnets.length > 0,
       },
       {
-        key: 'x',
+        key: 'd',
         description: 'Delete selected subnet',
         handler: (): void => {
           if (plan && subnets.length > 0) handleDeleteSubnet();
@@ -481,11 +632,16 @@ export const DashboardView: React.FC = () => {
         category: 'actions',
         enabled: !!plan?.supernet,
       },
+      // 'l' key: Dual-purpose (row mode = load, header mode = vim right)
       {
         key: 'l',
-        description: 'Load plan from file',
+        description: 'Load plan (row mode) / Move right (header mode)',
         handler: (): void => {
-          void handleLoadPlan();
+          if (headerMode) {
+            if (plan) moveHeaderRight();
+          } else {
+            void handleLoadPlan();
+          }
         },
         category: 'actions',
       },
@@ -496,22 +652,54 @@ export const DashboardView: React.FC = () => {
         category: 'actions',
       },
       {
+        key: 'p',
+        description: 'Open preferences',
+        handler: handleOpenPreferences,
+        category: 'actions',
+      },
+      {
         key: 'b',
         description: 'Change base IP address',
         handler: handleChangeBaseIp,
         category: 'actions',
       },
-      // System
+      // 'q' key: Multi-purpose (quit / exit header mode / close dialogs)
       {
         key: 'q',
-        description: 'Quit dashboard',
+        description: 'Quit / Exit header mode / Close dialog',
         handler: (): void => {
+          // Close non-text-input dialogs (input dialogs excluded to allow typing 'q')
+          const closeableDialogs = [
+            'info',
+            'confirm',
+            'new-plan-confirm',
+            'preferences',
+            'filepicker',
+            'select',
+          ];
+          if (closeableDialogs.includes(dialog.type)) {
+            setDialog({ type: 'none' });
+            return;
+          }
+
+          // Exit header mode if active
+          if (headerMode) {
+            setHeaderMode(false);
+            setSelectedHeaderIndex(0);
+            return;
+          }
+
+          // Otherwise quit the app
           exit();
         },
         category: 'system',
       },
     ],
-    enabled: dialog.type === 'none', // Only handle input when no dialog is open
+    enabled:
+      dialog.type === 'none' ||
+      ['info', 'confirm', 'new-plan-confirm', 'preferences', 'filepicker', 'select'].includes(
+        dialog.type,
+      ),
   });
 
   if (!plan) {
@@ -525,7 +713,16 @@ export const DashboardView: React.FC = () => {
   return (
     <Box flexDirection="column" flexGrow={1}>
       {/* Hide table when dialog is open to prevent text overlap */}
-      {dialog.type === 'none' && <SubnetTable subnets={subnets} selectedIndex={selectedIndex} />}
+      {dialog.type === 'none' && (
+        <SubnetTable
+          subnets={sortedSubnets}
+          selectedIndex={selectedIndex}
+          sortColumn={sortColumn}
+          sortDirection={sortDirection}
+          headerMode={headerMode}
+          selectedHeaderIndex={selectedHeaderIndex}
+        />
+      )}
 
       {/* Dialogs */}
       {dialog.type === 'loading' && (
@@ -560,6 +757,7 @@ export const DashboardView: React.FC = () => {
             onSubmit={dialog.onSubmit}
             onCancel={() => setDialog({ type: 'none' })}
             validate={dialog.validate}
+            allowedChars={dialog.allowedChars}
           />
         </Modal>
       )}
@@ -635,6 +833,15 @@ export const DashboardView: React.FC = () => {
             }}
             onCancel={() => setDialog({ type: 'new-plan-name' })}
             validate={validateIpAddress}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'preferences' && plan && (
+        <Modal>
+          <PreferencesDialog
+            currentGrowthPercentage={plan.growthPercentage}
+            onSubmit={handleSavePreferences}
+            onCancel={() => setDialog({ type: 'none' })}
           />
         </Modal>
       )}

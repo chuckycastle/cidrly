@@ -21,6 +21,7 @@ interface PlanState {
   removeSubnet: (index: number) => Subnet | null;
   calculatePlan: () => void;
   updateBaseIp: (newBaseIp: string) => void;
+  setGrowthPercentage: (growthPercentage: number) => void;
   clearPlan: () => void;
 }
 
@@ -73,6 +74,14 @@ const usePlanStoreBase = create<PlanState>()(
       const { plan, planService } = get();
       if (plan) {
         planService.updateBaseIp(plan, newBaseIp);
+        set({ plan: { ...plan } });
+      }
+    },
+
+    setGrowthPercentage: (growthPercentage: number): void => {
+      const { plan, planService } = get();
+      if (plan) {
+        planService.setGrowthPercentage(plan, growthPercentage);
         set({ plan: { ...plan } });
       }
     },

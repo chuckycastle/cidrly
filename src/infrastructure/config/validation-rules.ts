@@ -84,6 +84,22 @@ export const CALCULATION_RULES = {
 } as const;
 
 /**
+ * User preferences validation rules
+ */
+export const PREFERENCES_RULES = {
+  /**
+   * Growth percentage range
+   * - 0%: No growth (exact capacity)
+   * - 100%: Double capacity (default)
+   * - 200%: Triple capacity
+   * - 300%: Quadruple capacity
+   */
+  GROWTH_PERCENTAGE_MIN: 0,
+  GROWTH_PERCENTAGE_MAX: 300,
+  GROWTH_PERCENTAGE_DEFAULT: 100,
+} as const;
+
+/**
  * File operation rules
  */
 
@@ -151,4 +167,15 @@ export function isValidNameLength(
   rules: typeof SUBNET_NAME_RULES | typeof PLAN_NAME_RULES,
 ): boolean {
   return name.length >= rules.MIN_LENGTH && name.length <= rules.MAX_LENGTH;
+}
+
+/**
+ * Helper function to check if growth percentage is valid
+ */
+export function isValidGrowthPercentage(percentage: number): boolean {
+  return (
+    percentage >= PREFERENCES_RULES.GROWTH_PERCENTAGE_MIN &&
+    percentage <= PREFERENCES_RULES.GROWTH_PERCENTAGE_MAX &&
+    Number.isInteger(percentage)
+  );
 }

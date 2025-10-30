@@ -28,31 +28,33 @@ export const Footer: React.FC<FooterProps> = React.memo(({ hasSubnets, hasCalcul
     // Navigation & Info
     {
       commands: [
-        { key: '↑↓', label: 'navigate', enabled: hasSubnets },
-        { key: 'i', label: 'info', enabled: hasSubnets },
+        { key: '↑↓', label: 'nav', enabled: hasSubnets },
+        { key: 'tab', label: 'sort', enabled: hasSubnets },
+        { key: 'i', label: 'nfo', enabled: hasSubnets },
       ],
     },
     // Actions
     {
       commands: [
-        { key: 'a', label: 'add', enabled: true },
-        { key: 'e', label: 'edit', enabled: hasSubnets },
-        { key: 'x', label: 'delete', enabled: hasSubnets },
-        { key: 'c', label: 'calculate', enabled: hasSubnets },
+        { key: 'a', label: 'dd', enabled: true },
+        { key: 'e', label: 'dit', enabled: hasSubnets },
+        { key: 'd', label: 'el', enabled: hasSubnets },
+        { key: 'c', label: 'alc', enabled: hasSubnets },
       ],
     },
     // File Operations
     {
       commands: [
-        { key: 's', label: 'save', enabled: hasCalculation },
-        { key: 'l', label: 'load', enabled: true },
-        { key: 'n', label: 'new', enabled: true },
-        { key: 'b', label: 'base ip', enabled: true },
+        { key: 's', label: 'ave', enabled: hasCalculation },
+        { key: 'l', label: 'oad', enabled: true },
+        { key: 'n', label: 'ew', enabled: true },
+        { key: 'b', label: 'ase ip', enabled: true },
+        { key: 'p', label: 'refs', enabled: true },
       ],
     },
     // System
     {
-      commands: [{ key: 'q', label: 'quit', enabled: true }],
+      commands: [{ key: 'q', label: 'uit', enabled: true }],
     },
   ];
 
@@ -65,10 +67,10 @@ export const Footer: React.FC<FooterProps> = React.memo(({ hasSubnets, hasCalcul
       {cmd.enabled ? (
         <>
           <Text bold>{colors.accent(cmd.key)}</Text>
-          <Text>{colors.muted(` ${cmd.label}`)}</Text>
+          <Text>{colors.muted(cmd.label)}</Text>
         </>
       ) : (
-        <Text>{colors.dim(`${cmd.key} ${cmd.label}`)}</Text>
+        <Text>{colors.dim(`${cmd.key}${cmd.label}`)}</Text>
       )}
     </Box>
   );
@@ -83,11 +85,15 @@ export const Footer: React.FC<FooterProps> = React.memo(({ hasSubnets, hasCalcul
   // For very narrow screens, show essential commands only
   if (isVeryNarrow) {
     const essentialCommands = [
-      { key: 'a', label: 'add', enabled: true },
-      { key: 'e', label: 'edit', enabled: hasSubnets },
-      { key: 'c', label: 'calc', enabled: hasSubnets },
-      { key: 's', label: 'save', enabled: hasCalculation },
-      { key: 'q', label: 'quit', enabled: true },
+      { key: 'tab', label: 'sort', enabled: hasSubnets },
+      { key: 'a', label: 'dd', enabled: true },
+      { key: 'e', label: 'dit', enabled: hasSubnets },
+      { key: 'd', label: 'el', enabled: hasSubnets },
+      { key: 'c', label: 'alc', enabled: hasSubnets },
+      { key: 's', label: 'ave', enabled: hasCalculation },
+      { key: 'l', label: 'oad', enabled: true },
+      { key: 'p', label: 'refs', enabled: true },
+      { key: 'q', label: 'uit', enabled: true },
     ];
 
     return (

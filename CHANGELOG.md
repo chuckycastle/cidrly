@@ -14,6 +14,97 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Network visualization diagrams
 - Import from existing network configurations
 
+## [0.2.0] - 2025-10-29
+
+### Added
+
+- **User Preferences for Growth Percentage** - Configurable capacity planning per plan
+  - Press 'p' to open preferences dialog and adjust growth percentage (0-200%)
+  - Default remains 100% (doubles device count for capacity planning)
+  - Growth percentage stored per-plan (new plans default to 100%, loaded plans restore saved value)
+  - Header displays current growth percentage: "Growth: 100%"
+  - Notifications show planned device count with current growth percentage
+  - Automatic plan recalculation when growth percentage changes
+  - Closes [Issue #2](https://github.com/chuckycastle/cidrly/issues/2)
+
+- **Sortable Table Columns** - Interactive column sorting with keyboard navigation
+  - Press **Tab** to enter header mode, navigate columns with ← → (or h/l)
+  - Press **Enter** or **Space** to sort by selected column
+  - Toggle sort direction (ascending ↑ / descending ↓) by sorting same column again
+  - Press **Tab** or **Esc** to exit header mode and return to row navigation
+  - Sort by: Name, VLAN, Expected Devices, Planned Devices, Network Address, CIDR, Usable Hosts
+  - Yellow highlight indicates selected column and current sort state
+  - Subnets without calculated data sort to the end automatically
+  - IP address sorting works correctly across octets (10.x.x.x vs 192.x.x.x)
+  - Closes [Issue #4](https://github.com/chuckycastle/cidrly/issues/4)
+
+### Changed
+
+- **Keyboard Shortcuts** - Context-aware multi-purpose key bindings with intelligent input detection
+  - 'l' key is dual-purpose: Load plan (row mode) / Move right (header mode)
+  - 'q' key is multi-purpose with smart behavior:
+    - Quit app (row mode)
+    - Exit header mode (header mode)
+    - Close non-input dialogs (info, confirm, preferences, filepicker, select)
+    - Smart input dialog handling:
+      - Closes dialogs where 'q' is invalid (e.g., IP address: only allows 0-9 and .)
+      - Types 'q' in dialogs where it's valid (e.g., filenames, subnet names)
+      - Uses `allowedChars` pattern to determine behavior automatically
+  - Enter key is dual-purpose: Show details (row mode) / Sort column (header mode)
+  - Vim-style navigation (hjkl, q to exit) works as hidden power-user feature in header mode
+  - Helper text only shows arrow keys and Esc - vim shortcuts are discoverable easter eggs
+  - Updated footer to show compact shortcuts: `add`, `edit`, `del`, `calc`, `save`, `load`, `new`, `base ip`, `prefs`, `quit`
+  - Added `tabsort` to footer navigation group
+
+- **Input Validation** - Dynamic character filtering for IP address inputs
+  - Change Base IP dialog now restricts input to valid IP characters (0-9 and .)
+  - Invalid characters are silently rejected as user types
+  - Validation error shows on submit if IP format is invalid
+
+- **Visual Design** - Improved column sorting indicators
+  - Column headers use yellow/amber highlight (matching efficiency bar color)
+  - Selected column in header mode shows yellow highlight
+  - Sort indicators (↑/↓) displayed directly on column headers
+  - Header row shows selection indicator (▸) when in header mode
+
+### Improved
+
+- **Growth Percentage Architecture** - Refactored as per-plan property
+  - Moved from global preference to per-plan storage
+  - Each plan remembers its own growth percentage setting
+  - New plans always start with 100% growth (default capacity planning)
+  - Loaded plans restore their saved growth percentage
+  - Backward compatible: old plans without field default to 100%
+
+- **Sorting Performance** - Efficient sorting with stable algorithms
+  - IP address sorting uses numeric comparison (not bitwise operators)
+  - Sorts work on arrays up to thousands of subnets
+  - Original array never mutated (immutable sorting)
+  - 22 comprehensive test cases covering all sort scenarios
+
+### Technical
+
+- **New Files Added**:
+  - `src/utils/subnet-sorters.ts` - Sorting utilities for all column types
+  - `tests/unit/subnet-sorters.test.ts` - 22 test cases for sorting logic
+  - `src/components/dialogs/PreferencesDialog.tsx` - Growth percentage configuration UI
+  - `src/services/preferences.service.ts` - Preferences persistence (deprecated in favor of per-plan)
+  - `src/schemas/preferences.schema.ts` - Zod validation for preferences (deprecated)
+  - `src/store/preferencesStore.ts` - Zustand store for preferences (deprecated)
+  - `tests/unit/preferences.service.test.ts` - Preferences service tests
+
+- **Modified Files**:
+  - `src/store/uiStore.ts` - Added sort state (sortColumn, sortDirection, setSortColumn, clearSort)
+  - `src/components/widgets/SubnetTable.tsx` - Interactive headers with sort indicators
+  - `src/components/views/DashboardView.tsx` - Header mode navigation and sorting logic
+  - `src/components/layout/Footer.tsx` - Updated shortcuts display
+  - `src/core/models/network-plan.ts` - Added growthPercentage field to NetworkPlan
+  - `src/services/network-plan.service.ts` - Uses plan.growthPercentage for calculations
+  - `src/schemas/network-plan.schema.ts` - Added growthPercentage with default 100
+  - `src/hooks/usePlan.ts` - Added setGrowthPercentage action
+
+- **Test Coverage**: 289 tests passing (added 22 new tests for sorting)
+
 ## [0.1.8] - 2025-10-29
 
 ### Fixed
@@ -282,7 +373,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **PATCH** version for backwards-compatible bug fixes
 - **Pre-release** suffixes: `-alpha`, `-beta`, `-rc` for pre-release versions
 
-[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.1.8...HEAD
+[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/chuckycastle/cidrly/compare/v0.1.8...v0.2.0
 [0.1.8]: https://github.com/chuckycastle/cidrly/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/chuckycastle/cidrly/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/chuckycastle/cidrly/compare/v0.1.5...v0.1.6
