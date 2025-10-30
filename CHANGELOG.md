@@ -7,12 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned
-
-- IPv6 network support
-- Export to multiple formats (CSV, YAML, Terraform)
-- Network visualization diagrams
-- Import from existing network configurations
+For planned features and enhancements, see [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) and [Milestones](https://github.com/chuckycastle/cidrly/milestones).
 
 ## [0.2.1] - 2025-10-30
 

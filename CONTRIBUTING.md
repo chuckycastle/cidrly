@@ -120,6 +120,13 @@ Look for issues labeled:
 - `bug` - Bug fixes are always welcome
 - `enhancement` - New features or improvements
 
+Check the [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) page to see all open issues, and view [Milestones](https://github.com/chuckycastle/cidrly/milestones) to see the project roadmap organized by version (v0.2.0, v0.3.0, Future).
+
+Priority labels indicate urgency:
+- `priority: high` - Critical features and improvements
+- `priority: medium` - Important but not urgent
+- `priority: low` - Nice-to-have enhancements
+
 ### Before You Start
 
 1. **Check existing issues** - Someone might already be working on it
