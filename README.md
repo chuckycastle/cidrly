@@ -95,6 +95,7 @@ For planned features and enhancements, see:
 - **[Milestones](https://github.com/chuckycastle/cidrly/milestones)** - Organized by version (v0.2.0, v0.3.0, Future)
 
 Issues are prioritized with labels:
+
 - `priority: high` - Critical features like Terraform export, IPv6 support, network diagrams
 - `priority: medium` - Important improvements like PDF reports, plugin system, API mode
 - `priority: low` - Nice-to-have enhancements like theme customization, cloud sync
