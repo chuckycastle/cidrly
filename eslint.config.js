@@ -63,6 +63,6 @@ export default tseslint.config(
     ...tseslint.configs.disableTypeChecked,
   },
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '__mocks__/**'],
+    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '__mocks__/**', 'scripts/**'],
   },
 );

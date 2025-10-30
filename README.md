@@ -79,6 +79,7 @@ We welcome contributions! Here's how you can help:
 ### Reporting Bugs
 
 Found a bug? Please use our [Bug Report template](https://github.com/chuckycastle/cidrly/issues/new?template=bug_report.yml) to provide:
+
 - Clear description of the issue
 - Steps to reproduce
 - Your environment (cidrly version, Node.js version, OS)
@@ -87,6 +88,7 @@ Found a bug? Please use our [Bug Report template](https://github.com/chuckycastl
 ### Feature Requests
 
 Have an idea? Submit a [Feature Request](https://github.com/chuckycastle/cidrly/issues/new?template=feature_request.yml) with:
+
 - Description of the feature
 - Use case and problem it solves
 - Proposed implementation ideas
