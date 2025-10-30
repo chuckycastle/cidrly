@@ -146,13 +146,11 @@ Use descriptive branch names:
    ```
 
 2. **Make your changes**
-
    - Write clear, self-documenting code
    - Add comments for complex logic
    - Update documentation as needed
 
 3. **Add tests**
-
    - Write unit tests for new functionality
    - Update existing tests if behavior changes
    - Ensure all tests pass
@@ -298,7 +296,6 @@ Fixes #58
    ```
 
 2. **Create a Pull Request**
-
    - Go to the repository on GitHub
    - Click "New Pull Request"
    - Select your branch
