@@ -140,9 +140,7 @@ function smartCopyExample(sourceDir, destDir, filename) {
       }
     } else {
       // User file with old name - preserve it
-      console.log(
-        `${colors.dim}  ↳ ${oldFilename} exists (user file, preserving)${colors.reset}`,
-      );
+      console.log(`${colors.dim}  ↳ ${oldFilename} exists (user file, preserving)${colors.reset}`);
       // Still copy the new prefixed example for reference
       if (!fs.existsSync(destPath)) {
         try {
