@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/chuckycastle/cidrly/discussions
+    about: For general questions and community discussions (coming soon)
