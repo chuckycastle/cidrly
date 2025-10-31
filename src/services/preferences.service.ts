@@ -93,11 +93,14 @@ export class PreferencesService {
    */
   async resetPreferences(): Promise<void> {
     try {
-      if (fs.existsSync(this.preferencesFile)) {
-        fs.unlinkSync(this.preferencesFile);
-      }
+      // Attempt to delete the file directly
+      // If it doesn't exist, catch ENOENT and ignore
+      fs.unlinkSync(this.preferencesFile);
     } catch (error) {
-      throw ErrorFactory.fileWriteError(this.preferencesFile, error as Error);
+      // Ignore "file not found" errors - file is already deleted
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw ErrorFactory.fileWriteError(this.preferencesFile, error as Error);
+      }
     }
   }
 
