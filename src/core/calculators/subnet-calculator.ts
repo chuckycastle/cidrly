@@ -37,13 +37,29 @@ export function applyPlanningRule(expectedDevices: number, growthPercentage: num
 
 /**
  * Calculate the number of host bits needed for a given host count
- * Accounts for network and broadcast addresses
+ * Accounts for network and broadcast addresses using binary subnet sizing
+ *
+ * @param hostCount - Number of usable host addresses needed
+ * @returns Number of host bits required (1-30)
+ *
+ * @remarks
+ * Algorithm: Find the smallest power of 2 that accommodates hosts + 2 reserved addresses
+ * - Network address: First address in subnet (e.g., 10.0.0.0)
+ * - Broadcast address: Last address in subnet (e.g., 10.0.0.255)
+ *
+ * @example
+ * ```typescript
+ * calculateHostBits(50)  // Returns 6 (2^6 = 64 addresses, 62 usable)
+ * calculateHostBits(100) // Returns 7 (2^7 = 128 addresses, 126 usable)
+ * calculateHostBits(254) // Returns 8 (2^8 = 256 addresses, 254 usable)
+ * ```
  */
 export function calculateHostBits(hostCount: number): number {
   // Need to accommodate hostCount + network address + broadcast address
   const totalAddresses = hostCount + 2;
 
   // Find the smallest power of 2 that can fit totalAddresses
+  // Example: 50 hosts + 2 = 52, need 2^6 = 64 addresses (6 host bits)
   let hostBits = 0;
   while (Math.pow(2, hostBits) < totalAddresses) {
     hostBits++;
@@ -212,7 +228,42 @@ export function calculateSubnet(
 
 /**
  * Calculate the smallest supernet that can contain all subnets
- * Returns the required CIDR prefix
+ * Uses binary aggregation to find optimal CIDR prefix
+ *
+ * @param subnetInfos - Array of subnet specifications with calculated sizes
+ * @returns Supernet summary with size, efficiency metrics
+ *
+ * @remarks
+ * **Supernet Calculation Algorithm:**
+ * Determines the minimum CIDR block needed to accommodate all subnets.
+ *
+ * **Efficiency Metrics:**
+ * - `efficiency`: Percentage of supernet actually used by subnets
+ * - `rangeEfficiency`: Percentage of allocated IP range used (accounts for gaps)
+ *
+ * **Edge Cases:**
+ * - Gaps between subnets reduce range efficiency but not total efficiency
+ * - Subnets without network addresses default to 100% range efficiency
+ *
+ * @example
+ * ```typescript
+ * const subnets = [
+ *   { subnetSize: 256, ... },  // /24
+ *   { subnetSize: 128, ... },  // /25
+ * ];
+ *
+ * calculateSupernet(subnets);
+ * // Returns:
+ * // {
+ * //   cidrPrefix: 23,           // /23 supernet (512 addresses)
+ * //   totalSize: 512,           // Total supernet capacity
+ * //   usedSize: 384,            // Actually used (256 + 128)
+ * //   efficiency: 75.0,         // 384/512 = 75%
+ * //   rangeEfficiency: 100.0    // If no gaps
+ * // }
+ * ```
+ *
+ * @throws {Error} If subnet list is empty
  */
 export function calculateSupernet(subnetInfos: SubnetInfo[]): {
   cidrPrefix: number;
@@ -311,8 +362,51 @@ export function generateNetworkAddress(baseIp: string, cidr: number): string {
 }
 
 /**
- * Allocate network addresses to subnets sequentially
- * Ensures proper CIDR boundary alignment for each subnet
+ * Allocate network addresses to subnets sequentially using VLSM (Variable Length Subnet Masking)
+ * Ensures proper CIDR boundary alignment for each subnet to prevent overlaps
+ *
+ * @param baseIp - Starting IP address (e.g., "10.0.0.0")
+ * @param subnetInfos - Array of subnet specifications (should be pre-sorted largest to smallest)
+ * @returns Array of subnets with allocated network addresses
+ *
+ * @remarks
+ * **VLSM Boundary Alignment Algorithm:**
+ * Each subnet must start at an address that is a multiple of its size to maintain CIDR compliance.
+ *
+ * **Why Alignment Matters:**
+ * - /24 subnet (256 addresses) must align on 256-byte boundaries
+ * - /23 subnet (512 addresses) must align on 512-byte boundaries
+ * - Misalignment causes invalid CIDR blocks and routing issues
+ *
+ * **Algorithm Steps:**
+ * 1. Convert base IP to 32-bit integer
+ * 2. For each subnet:
+ *    a. Calculate alignment: `remainder = currentIp % subnetSize`
+ *    b. If not aligned, skip forward: `currentIp += (subnetSize - remainder)`
+ *    c. Assign network address at aligned boundary
+ *    d. Advance pointer by subnet size
+ *
+ * @example
+ * ```typescript
+ * // Allocate three subnets from 10.0.0.0
+ * const subnets = [
+ *   { cidrPrefix: 24, subnetSize: 256, ... }, // /24 - 256 addresses
+ *   { cidrPrefix: 25, subnetSize: 128, ... }, // /25 - 128 addresses
+ *   { cidrPrefix: 26, subnetSize: 64, ... },  // /26 - 64 addresses
+ * ];
+ *
+ * allocateSubnetAddresses("10.0.0.0", subnets);
+ * // Returns:
+ * // [
+ * //   { networkAddress: "10.0.0.0/24", ... },    // 10.0.0.0 - 10.0.0.255
+ * //   { networkAddress: "10.0.1.0/25", ... },    // 10.0.1.0 - 10.0.1.127
+ * //   { networkAddress: "10.0.1.128/26", ... },  // 10.0.1.128 - 10.0.1.191
+ * // ]
+ * ```
+ *
+ * @throws {Error} If base IP address is invalid
+ *
+ * @see https://en.wikipedia.org/wiki/Variable-length_subnet_masking
  */
 export function allocateSubnetAddresses(baseIp: string, subnetInfos: SubnetInfo[]): SubnetInfo[] {
   const octets = baseIp.split('.').map((octet) => parseInt(octet, 10));
@@ -329,6 +423,7 @@ export function allocateSubnetAddresses(baseIp: string, subnetInfos: SubnetInfo[
     // CRITICAL: Align to subnet boundary before allocation
     // Each subnet must start at an address that is a multiple of its size
     // Example: A /23 (512 addresses) must start at a 512-aligned boundary
+    // Without alignment: Invalid CIDR blocks and routing failures
     const remainder = currentIp % subnet.subnetSize;
     if (remainder !== 0) {
       currentIp += subnet.subnetSize - remainder;

@@ -3,6 +3,7 @@
  * Provides security-related helper functions with enhanced path traversal protection
  */
 
+import fs from 'fs';
 import path from 'path';
 import { FILENAME_RULES } from '../config/validation-rules.js';
 
@@ -40,8 +41,47 @@ function normalizePath(filePath: string): string {
 }
 
 /**
+ * Checks if a path is a symbolic link or contains symbolic links in its path
+ * @param filePath - The file path to check
+ * @returns true if path is or contains a symlink, false otherwise
+ */
+function isSymbolicLink(filePath: string): boolean {
+  try {
+    // Check if the file itself exists and is a symlink
+    if (fs.existsSync(filePath)) {
+      const stats = fs.lstatSync(filePath);
+      if (stats.isSymbolicLink()) {
+        return true;
+      }
+    }
+
+    // Check each component of the path for symlinks
+    const parts = filePath.split(path.sep);
+    let currentPath = '';
+
+    for (const part of parts) {
+      if (!part) continue; // Skip empty parts (like leading slash)
+
+      currentPath = currentPath ? path.join(currentPath, part) : part;
+
+      if (fs.existsSync(currentPath)) {
+        const stats = fs.lstatSync(currentPath);
+        if (stats.isSymbolicLink()) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  } catch {
+    // If we can't check, assume it's safe (file may not exist yet)
+    return false;
+  }
+}
+
+/**
  * Validates and sanitizes a file path to prevent path traversal attacks
- * Enhanced with multiple layers of protection
+ * Enhanced with multiple layers of protection including symlink detection
  * @param filePath - The file path to validate
  * @param baseDir - The base directory to restrict access to
  * @returns Sanitized absolute path
@@ -56,17 +96,17 @@ export function sanitizeFilePath(filePath: string, baseDir: string): string {
 
   // Check for null bytes (path traversal technique)
   if (filePath.includes('\0') || decodedPath.includes('\0')) {
-    throw new Error('Invalid file path: Null byte detected');
+    throw new Error('Security violation: Null byte detected in file path');
   }
 
   // Check for dangerous patterns even after decoding
   if (decodedPath.includes('..') || filePath.includes('..')) {
-    throw new Error('Invalid file path: Parent directory reference detected');
+    throw new Error('Security violation: Parent directory reference detected');
   }
 
   // Check for absolute paths (should be relative to baseDir)
   if (path.isAbsolute(filePath)) {
-    throw new Error('Invalid file path: Absolute paths not allowed');
+    throw new Error('Security violation: Absolute paths not allowed');
   }
 
   // Resolve the final path
@@ -74,7 +114,12 @@ export function sanitizeFilePath(filePath: string, baseDir: string): string {
 
   // Check if the resolved path is within the base directory
   if (!normalizedPath.startsWith(normalizedBase + path.sep) && normalizedPath !== normalizedBase) {
-    throw new Error('Invalid file path: Path traversal detected');
+    throw new Error('Security violation: Path traversal attempt detected');
+  }
+
+  // Check for symbolic links (can be used to bypass directory restrictions)
+  if (isSymbolicLink(normalizedPath)) {
+    throw new Error('Security violation: Symbolic links not allowed');
   }
 
   return normalizedPath;
