@@ -308,6 +308,20 @@ describe('PreferencesService', () => {
       expect(loaded.growthPercentage).toBe(150);
     });
 
+    it('should handle multiple reset calls safely', async () => {
+      // Create preferences file
+      await service.savePreferences(defaultPreferences);
+
+      // Reset multiple times - should not throw
+      await service.resetPreferences();
+      await service.resetPreferences();
+      await service.resetPreferences();
+
+      // File should stay deleted
+      const prefsFile = path.join(tempDir, 'cidrly', 'preferences.json');
+      expect(fs.existsSync(prefsFile)).toBe(false);
+    });
+
     it('should return defaults after reset', async () => {
       // Save custom preferences
       await service.savePreferences({ growthPercentage: 200, version: 1 });

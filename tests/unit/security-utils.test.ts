@@ -23,13 +23,13 @@ describe('sanitizeFilePath', () => {
 
   it('should reject path traversal with ..', () => {
     expect(() => sanitizeFilePath('../outside.json', baseDir)).toThrow(
-      'Parent directory reference',
+      /Security violation.*Parent directory reference/i,
     );
   });
 
   it('should reject path traversal with multiple ..', () => {
     expect(() => sanitizeFilePath('../../outside.json', baseDir)).toThrow(
-      'Parent directory reference',
+      /Security violation.*Parent directory reference/i,
     );
   });
 
@@ -42,11 +42,15 @@ describe('sanitizeFilePath', () => {
   });
 
   it('should reject null bytes', () => {
-    expect(() => sanitizeFilePath('test\0.json', baseDir)).toThrow('Null byte detected');
+    expect(() => sanitizeFilePath('test\0.json', baseDir)).toThrow(
+      /Security violation.*Null byte/i,
+    );
   });
 
   it('should reject absolute paths', () => {
-    expect(() => sanitizeFilePath('/etc/passwd', baseDir)).toThrow('Absolute paths not allowed');
+    expect(() => sanitizeFilePath('/etc/passwd', baseDir)).toThrow(
+      /Security violation.*Absolute paths not allowed/i,
+    );
   });
 
   it('should reject Windows absolute paths', () => {
@@ -195,5 +199,22 @@ describe('Edge cases and attack vectors', () => {
     const result = validateFilename('CON.json');
     // Should pass validation (OS will handle it)
     expect(result).toBe(true);
+  });
+
+  it('should handle paths with trailing slashes', () => {
+    const result = sanitizeFilePath('subdir/', baseDir);
+    expect(result.startsWith(baseDir)).toBe(true);
+  });
+
+  it('should validate filename with URL-encoded dangerous characters', () => {
+    // Test URL-encoded forbidden characters
+    const result = validateFilename('test%3C%3E.json'); // < and >
+    expect(typeof result === 'string').toBe(true);
+    expect(result).toContain('invalid characters');
+  });
+
+  it('should handle double-encoded null bytes in filenames', () => {
+    const result = validateFilename('test%2500.json'); // Double-encoded null
+    expect(typeof result === 'string').toBe(true);
   });
 });
