@@ -9,6 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 For planned features and enhancements, see [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) and [Milestones](https://github.com/chuckycastle/cidrly/milestones).
 
+## [0.2.2] - 2025-10-31
+
+### Security
+
+- **Fixed TOCTOU Race Condition** ([#40](https://github.com/chuckycastle/cidrly/issues/40), [#12](https://github.com/chuckycastle/cidrly/issues/12))
+  - Eliminated time-of-check-to-time-of-use vulnerability in preferences file deletion
+  - Replaced unsafe `existsSync()` + `unlinkSync()` pattern with direct deletion and error handling
+  - Resolves Semgrep security finding (TOCTOU-FILE-ACCESS)
+  - No functional change for users, purely security hardening
+
+- **Enhanced Path Validation** ([#12](https://github.com/chuckycastle/cidrly/issues/12))
+  - Added symlink detection to prevent directory traversal via symbolic links
+  - Improved security error messages with "Security violation:" prefix for clarity
+  - Validates entire path chain, not just final destination
+  - Prevents malicious path manipulation attempts
+
+### Improved
+
+- **Enhanced Input Sanitization** ([#13](https://github.com/chuckycastle/cidrly/issues/13))
+  - All text inputs now trim leading/trailing whitespace automatically
+  - Subnet and plan names reject inputs with surrounding whitespace
+  - IP address validation enhanced with leading zero detection (e.g., "010.0.0.0" rejected)
+  - VLAN IDs and device counts accept whitespace-padded input (trimmed before parsing)
+  - More specific error messages for validation failures
+  - Improved data quality and consistency
+
+- **Enhanced Code Documentation** ([#42](https://github.com/chuckycastle/cidrly/issues/42))
+  - Added comprehensive TSDoc comments for complex subnet calculation algorithms
+  - Documented VLSM boundary alignment algorithm with examples
+  - Explained supernet efficiency metrics and edge cases
+  - Added algorithm walkthroughs for host bit calculations
+  - Improved maintainability and contributor onboarding
+
+### Changed
+
+- **Closed as Won't Do** ([#32](https://github.com/chuckycastle/cidrly/issues/32))
+  - Theme customization feature will not be implemented
+  - Rationale: Terminal emulators provide superior theme management
+  - Users should configure dark/light themes at terminal level
+  - Keeps CLI tool focused on core network planning functionality
+
 ## [0.2.1] - 2025-10-30
 
 ### Fixed
