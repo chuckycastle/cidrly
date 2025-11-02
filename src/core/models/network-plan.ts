@@ -17,6 +17,18 @@ import {
   generateNetworkAddress,
 } from '../calculators/subnet-calculator.js';
 
+// Re-export SubnetInfo for convenience
+export type { SubnetInfo };
+
+export interface Supernet {
+  cidrPrefix: number;
+  totalSize: number;
+  usedSize: number;
+  efficiency: number;
+  rangeEfficiency: number;
+  networkAddress: string;
+}
+
 export interface Subnet {
   id: string;
   name: string;
@@ -30,14 +42,7 @@ export interface NetworkPlan {
   baseIp: string;
   subnets: Subnet[];
   growthPercentage: number;
-  supernet?: {
-    cidrPrefix: number;
-    totalSize: number;
-    usedSize: number;
-    efficiency: number;
-    rangeEfficiency: number;
-    networkAddress: string;
-  };
+  supernet?: Supernet;
   createdAt: Date;
   updatedAt: Date;
 }

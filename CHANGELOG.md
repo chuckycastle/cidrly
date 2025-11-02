@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 For planned features and enhancements, see [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) and [Milestones](https://github.com/chuckycastle/cidrly/milestones).
 
+## [0.3.0] - 2025-11-01
+
+### Removed
+
+- **Import Functionality** - Deferred to future milestone (never released in v0.3.0)
+  - CSV/YAML import parsers removed
+  - papaparse dependency removed
+  - Tagged for future implementation - see [GitHub Issues](https://github.com/chuckycastle/cidrly/issues)
+- **OpenAPI Generation** - Removed (was documentation-only, not user-facing)
+  - OpenAPI generation script removed from build pipeline
+  - Focused on user-facing export formats only
+
+### Added
+
+- **Multi-Format Export System** ([#17](https://github.com/chuckycastle/cidrly/issues/17), [#18](https://github.com/chuckycastle/cidrly/issues/18))
+  - Export network plans to YAML format for Infrastructure-as-Code workflows
+  - Export to PDF for professional documentation and reporting
+  - Export to CSV with metadata headers
+  - All export formats preserve complete network plan data
+  - New `cidrly export` command with format selection (--format=yaml|csv|pdf)
+  - Automatic filename sanitization and extension handling
+  - Path traversal protection on all exports
+
+### Technical Improvements
+
+- Added comprehensive export service architecture
+- Enhanced CSV format with metadata comment headers (# key: value)
+- CSV supports all SubnetInfo fields (9 fields)
+- Supernet metrics preserved in CSV export
+- Security-first file operations with path validation
+- Multi-page PDF rendering with professional layouts
+- Modular formatter architecture for easy extensibility
+
+### Dependencies Added
+
+- `yaml` v2.8.1 - YAML serialization
+- `pdfkit` v0.17.2 - PDF document generation
+
 ## [0.2.2] - 2025-10-31
 
 ### Security

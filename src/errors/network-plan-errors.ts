@@ -23,6 +23,9 @@ export enum ErrorCode {
   FILE_PARSE_ERROR = 'E2004',
   INVALID_FILE_FORMAT = 'E2005',
   PATH_TRAVERSAL_DETECTED = 'E2006',
+  EXPORT_ERROR = 'E2007',
+  IMPORT_ERROR = 'E2008',
+  UNSUPPORTED_FORMAT = 'E2009',
 
   // Calculation Errors (3000-3999)
   EMPTY_SUBNET_LIST = 'E3001',
@@ -192,6 +195,30 @@ export const ErrorFactory = {
       `Path traversal detected: ${filepath}`,
       ErrorCode.PATH_TRAVERSAL_DETECTED,
       filepath,
+    ),
+
+  exportError: (format: string, filepath: string, originalError?: Error): FileOperationError =>
+    new FileOperationError(
+      `Failed to export to ${format}: ${filepath}`,
+      ErrorCode.EXPORT_ERROR,
+      filepath,
+      { format, originalError: originalError?.message },
+    ),
+
+  importError: (format: string, filepath: string, originalError?: Error): FileOperationError =>
+    new FileOperationError(
+      `Failed to import from ${format}: ${filepath}`,
+      ErrorCode.IMPORT_ERROR,
+      filepath,
+      { format, originalError: originalError?.message },
+    ),
+
+  unsupportedFormat: (format: string): FileOperationError =>
+    new FileOperationError(
+      `Unsupported format: ${format}`,
+      ErrorCode.UNSUPPORTED_FORMAT,
+      undefined,
+      { format },
     ),
 
   // Calculation errors

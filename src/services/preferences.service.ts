@@ -41,6 +41,17 @@ export class PreferencesService {
   }
 
   /**
+   * Validate and create a directory if it doesn't exist
+   * Expands ~ to home directory
+   */
+  private validateAndCreateDirectory(dirPath: string): void {
+    const expandedPath = dirPath.replace(/^~/, os.homedir());
+    if (!fs.existsSync(expandedPath)) {
+      fs.mkdirSync(expandedPath, { recursive: true });
+    }
+  }
+
+  /**
    * Load preferences from file
    * Returns default preferences if file doesn't exist or is invalid
    */
@@ -73,7 +84,15 @@ export class PreferencesService {
       // Validate preferences
       const validatedPreferences = validatePreferences(preferences);
 
-      // Ensure directory exists
+      // Validate and create custom directories if specified
+      if (validatedPreferences.savedPlansDir) {
+        this.validateAndCreateDirectory(validatedPreferences.savedPlansDir);
+      }
+      if (validatedPreferences.exportsDir) {
+        this.validateAndCreateDirectory(validatedPreferences.exportsDir);
+      }
+
+      // Ensure preferences directory exists
       this.ensureDirectoryExists();
 
       // Write to file

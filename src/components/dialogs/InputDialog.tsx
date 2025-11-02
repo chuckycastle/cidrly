@@ -38,18 +38,11 @@ export const InputDialog: React.FC<InputDialogProps> = ({
     setError('');
   }, [defaultValue, title, label]);
 
-  // Handle Escape and conditional 'q' key to cancel dialog
-  // 'q' only closes if it's not an allowed character (e.g., IP addresses)
-  // This allows 'q' in filenames but closes IP address dialogs
-  useInput((input, key) => {
+  // Handle Escape key to cancel dialog
+  useInput((_input, key) => {
     if (key.escape) {
       onCancel();
       return;
-    }
-
-    // If allowedChars is set and 'q' is not allowed, treat 'q' as close
-    if (input === 'q' && allowedChars && !allowedChars.test('q')) {
-      onCancel();
     }
   });
 

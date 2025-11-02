@@ -6,7 +6,6 @@
 import fs from 'fs';
 import { Box, Text, useApp } from 'ink';
 import Spinner from 'ink-spinner';
-import path from 'path';
 import React, { useState } from 'react';
 import { createNetworkPlan, createSubnet } from '../../core/models/network-plan.js';
 import {
@@ -20,11 +19,14 @@ import { isFileOperationError } from '../../errors/index.js';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts.js';
 import { usePlan, usePlanActions, useSubnets } from '../../hooks/usePlan.js';
 import { useNotify, useSelection } from '../../hooks/useUI.js';
-import { FILE_RULES } from '../../infrastructure/config/validation-rules.js';
+import { getDirectory } from '../../infrastructure/config/validation-rules.js';
 import { FileSystemRepository } from '../../repositories/index.js';
 import { parseNetworkPlan } from '../../schemas/network-plan.schema.js';
+import { ExportService } from '../../services/export.service.js';
 import type { SavedPlanFile } from '../../services/file.service.js';
 import { FileService } from '../../services/file.service.js';
+import { PreferencesService } from '../../services/preferences.service.js';
+import { usePreferencesStore } from '../../store/preferencesStore.js';
 import type { SortColumn } from '../../store/uiStore.js';
 import { useUIStore } from '../../store/uiStore.js';
 import { colors } from '../../themes/colors.js';
@@ -33,7 +35,6 @@ import { sortSubnets } from '../../utils/subnet-sorters.js';
 import { ConfirmDialog } from '../dialogs/ConfirmDialog.js';
 import { InputDialog } from '../dialogs/InputDialog.js';
 import { Modal } from '../dialogs/Modal.js';
-import { PreferencesDialog } from '../dialogs/PreferencesDialog.js';
 import { SelectDialog } from '../dialogs/SelectDialog.js';
 import { SubnetInfoDialog } from '../dialogs/SubnetInfoDialog.js';
 import { FilePicker } from '../widgets/FilePicker.js';
@@ -42,7 +43,6 @@ import { SubnetTable } from '../widgets/SubnetTable.js';
 type DialogType =
   | { type: 'none' }
   | { type: 'info' }
-  | { type: 'preferences' }
   | { type: 'loading'; message: string }
   | {
       type: 'input';
@@ -68,21 +68,22 @@ type DialogType =
   | { type: 'confirm'; title: string; message: string; onConfirm: (result: boolean) => void }
   | { type: 'new-plan-confirm' }
   | { type: 'new-plan-name' }
-  | { type: 'new-plan-ip'; name: string };
+  | { type: 'new-plan-ip'; name: string }
+  | { type: 'export-format-select' }
+  | { type: 'export-filename'; format: string }
+  | { type: 'preferences-menu' }
+  | { type: 'preferences-growth' }
+  | { type: 'preferences-base-ip' }
+  | { type: 'preferences-saved-dir' }
+  | { type: 'preferences-exports-dir' }
+  | { type: 'preferences-continue' };
 
 export const DashboardView: React.FC = () => {
   const { exit } = useApp();
   const plan = usePlan();
   const subnets = useSubnets();
-  const {
-    addSubnet,
-    updateSubnet,
-    removeSubnet,
-    calculatePlan,
-    updateBaseIp,
-    loadPlan,
-    setGrowthPercentage,
-  } = usePlanActions();
+  const { addSubnet, updateSubnet, removeSubnet, calculatePlan, loadPlan, setGrowthPercentage } =
+    usePlanActions();
   const notify = useNotify();
   const {
     selectedIndex,
@@ -96,14 +97,20 @@ export const DashboardView: React.FC = () => {
   const sortDirection = useUIStore.use.sortDirection();
   const setSortColumn = useUIStore.use.setSortColumn();
 
+  // Preferences store
+  const preferences = usePreferencesStore.use.preferences();
+  const setPreferences = usePreferencesStore.use.setPreferences();
+
   // Header mode state
   const [headerMode, setHeaderMode] = useState(false);
   const [selectedHeaderIndex, setSelectedHeaderIndex] = useState(0);
 
   const [dialog, setDialog] = useState<DialogType>({ type: 'none' });
 
-  const fileService = new FileService(path.resolve(process.cwd(), FILE_RULES.SAVED_PLANS_DIR));
+  const fileService = new FileService(getDirectory('saved', preferences.savedPlansDir));
   const repository = new FileSystemRepository(fileService);
+  const exportService = new ExportService(getDirectory('exports', preferences.exportsDir));
+  const preferencesService = new PreferencesService();
 
   // Column definitions (matching SubnetTable)
   const columns: SortColumn[] = [
@@ -385,28 +392,6 @@ export const DashboardView: React.FC = () => {
     }
   };
 
-  const handleChangeBaseIp = (): void => {
-    if (!plan) return;
-    setDialog({
-      type: 'input',
-      title: 'Change Base IP',
-      label: 'Enter new base IP address:',
-      defaultValue: plan.baseIp,
-      allowedChars: /[0-9.]/,
-      onSubmit: (newBaseIp) => {
-        updateBaseIp(newBaseIp);
-
-        if (subnets.length > 0) {
-          notify.success(`Base IP updated to ${newBaseIp}. Network addresses recalculated.`);
-        } else {
-          notify.success(`Base IP updated to ${newBaseIp}.`);
-        }
-        setDialog({ type: 'none' });
-      },
-      validate: validateIpAddress,
-    });
-  };
-
   const handleNewPlan = (): void => {
     if (plan?.supernet) {
       // Has calculated plan - offer to save
@@ -453,30 +438,76 @@ export const DashboardView: React.FC = () => {
   };
 
   const handleOpenPreferences = (): void => {
-    if (!plan) {
-      notify.error('No plan loaded');
-      return;
-    }
-    setDialog({ type: 'preferences' });
+    setDialog({ type: 'preferences-menu' });
   };
 
-  const handleSavePreferences = (growthPercentage: number): void => {
+  const handlePreferenceSelected = (preference: string): void => {
+    switch (preference) {
+      case 'growth':
+        setDialog({ type: 'preferences-growth' });
+        break;
+      case 'base-ip':
+        setDialog({ type: 'preferences-base-ip' });
+        break;
+      case 'saved-dir':
+        setDialog({ type: 'preferences-saved-dir' });
+        break;
+      case 'exports-dir':
+        setDialog({ type: 'preferences-exports-dir' });
+        break;
+    }
+  };
+
+  const handlePreferenceSaved = (message: string): void => {
+    notify.success(message);
+    setDialog({ type: 'preferences-continue' });
+  };
+
+  const handleExport = (): void => {
+    if (!plan?.supernet) {
+      notify.error('No calculated plan to export');
+      return;
+    }
+    // Open format selection dialog
+    setDialog({ type: 'export-format-select' });
+  };
+
+  const handleExportFormatSelected = (format: string): void => {
     if (!plan) {
-      notify.error('No plan loaded');
+      setDialog({ type: 'none' });
+      return;
+    }
+    // Open filename input dialog
+    setDialog({
+      type: 'export-filename',
+      format,
+    });
+  };
+
+  const handleExportWithFilename = (format: string, filename: string): void => {
+    if (!plan) {
       setDialog({ type: 'none' });
       return;
     }
 
-    // Update plan's growth percentage and recalculate if subnets exist
-    setGrowthPercentage(growthPercentage);
-
-    if (subnets.length > 0) {
-      notify.success(`Growth percentage set to ${growthPercentage}% - Plan recalculated`);
-    } else {
-      notify.success(`Growth percentage set to ${growthPercentage}%`);
-    }
-
-    setDialog({ type: 'none' });
+    void (async (): Promise<void> => {
+      setDialog({ type: 'loading', message: 'Exporting plan...' });
+      try {
+        const exportFormat = format as 'yaml' | 'csv' | 'pdf';
+        const filepath = await exportService.export(plan, exportFormat, filename);
+        notify.success(`Plan exported to ${filepath}`);
+        setDialog({ type: 'none' });
+      } catch (error) {
+        if (isFileOperationError(error)) {
+          notify.error(error.getUserMessage());
+        } else {
+          notify.error(
+            `Failed to export: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          );
+        }
+        setDialog({ type: 'none' });
+      }
+    })();
   };
 
   // Keyboard shortcuts configuration
@@ -485,6 +516,16 @@ export const DashboardView: React.FC = () => {
       // Tab: Toggle header mode
       {
         key: 'tab',
+        description: 'Toggle header/row mode',
+        handler: (): void => {
+          if (plan && subnets.length > 0) toggleHeaderMode();
+        },
+        category: 'navigation',
+        enabled: subnets.length > 0,
+      },
+      // T: Toggle header mode (alternative to tab)
+      {
+        key: 't',
         description: 'Toggle header/row mode',
         handler: (): void => {
           if (plan && subnets.length > 0) toggleHeaderMode();
@@ -506,7 +547,14 @@ export const DashboardView: React.FC = () => {
         key: 'k',
         description: 'Move selection up (vim)',
         handler: (): void => {
-          if (plan && !headerMode) moveUp();
+          if (plan) {
+            if (!headerMode && selectedIndex === 0) {
+              // At top of table, enter header mode
+              setHeaderMode(true);
+            } else if (!headerMode) {
+              moveUp();
+            }
+          }
         },
         category: 'navigation',
         enabled: !headerMode,
@@ -524,10 +572,18 @@ export const DashboardView: React.FC = () => {
         key: 'j',
         description: 'Move selection down (vim)',
         handler: (): void => {
-          if (plan && !headerMode) moveDown();
+          if (plan) {
+            if (headerMode) {
+              // In header mode, exit to table mode (select first row)
+              setHeaderMode(false);
+              setSelectedIndex(0);
+            } else {
+              moveDown();
+            }
+          }
         },
         category: 'navigation',
-        enabled: !headerMode,
+        enabled: true, // Now enabled in both modes
       },
       // Navigation - Left/Right (header mode only)
       {
@@ -644,6 +700,13 @@ export const DashboardView: React.FC = () => {
         category: 'actions',
         enabled: !!plan?.supernet,
       },
+      {
+        key: 'x',
+        description: 'Export plan',
+        handler: handleExport,
+        category: 'actions',
+        enabled: !!plan?.supernet,
+      },
       // 'l' key: Dual-purpose (row mode = load, header mode = vim right)
       {
         key: 'l',
@@ -667,12 +730,6 @@ export const DashboardView: React.FC = () => {
         key: 'p',
         description: 'Open preferences',
         handler: handleOpenPreferences,
-        category: 'actions',
-      },
-      {
-        key: 'b',
-        description: 'Change base IP address',
-        handler: handleChangeBaseIp,
         category: 'actions',
       },
       // 'q' key: Multi-purpose (quit / exit header mode / close dialogs)
@@ -836,7 +893,7 @@ export const DashboardView: React.FC = () => {
           <InputDialog
             title="Create New Plan"
             label="Base IP address:"
-            defaultValue="10.0.0.0"
+            defaultValue={preferences.baseIp}
             onSubmit={(baseIp) => {
               const newPlan = createNetworkPlan(dialog.name, baseIp);
               loadPlan(newPlan);
@@ -848,12 +905,194 @@ export const DashboardView: React.FC = () => {
           />
         </Modal>
       )}
-      {/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */}
-      {dialog.type === 'preferences' && plan && (
+      {dialog.type === 'preferences-menu' && (
         <Modal>
-          <PreferencesDialog
-            currentGrowthPercentage={plan.growthPercentage}
-            onSubmit={handleSavePreferences}
+          <SelectDialog
+            title="Preferences"
+            items={[
+              {
+                label: `Growth Percentage (${preferences.growthPercentage}%)`,
+                value: 'growth',
+              },
+              { label: `Base IP (${preferences.baseIp})`, value: 'base-ip' },
+              {
+                label: `Saved Plans Dir (${preferences.savedPlansDir ? preferences.savedPlansDir.replace(process.env['HOME'] ?? '', '~') : '~/cidrly/saved-plans'})`,
+                value: 'saved-dir',
+              },
+              {
+                label: `Exports Dir (${preferences.exportsDir ? preferences.exportsDir.replace(process.env['HOME'] ?? '', '~') : '~/cidrly/exports'})`,
+                value: 'exports-dir',
+              },
+            ]}
+            onSelect={handlePreferenceSelected}
+            onCancel={() => setDialog({ type: 'none' })}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'preferences-growth' && (
+        <Modal>
+          <InputDialog
+            title="Growth Percentage"
+            label="Enter growth percentage (0-300%):"
+            defaultValue={preferences.growthPercentage.toString()}
+            onSubmit={(value) => {
+              const growthPercentage = parseInt(value, 10);
+              void (async (): Promise<void> => {
+                try {
+                  const updatedPrefs = { ...preferences, growthPercentage };
+                  await preferencesService.savePreferences(updatedPrefs);
+                  setPreferences(updatedPrefs);
+                  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                  if (plan) {
+                    setGrowthPercentage(growthPercentage);
+                  }
+                  handlePreferenceSaved(
+                    /* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */
+                    `Growth percentage set to ${growthPercentage}%${plan && subnets.length > 0 ? ' - Plan recalculated' : ''}`,
+                  );
+                } catch (error) {
+                  notify.error(
+                    `Failed to save preference: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                  );
+                  setDialog({ type: 'preferences-menu' });
+                }
+              })();
+            }}
+            onCancel={() => setDialog({ type: 'preferences-menu' })}
+            validate={(value) => {
+              const num = parseInt(value, 10);
+              if (isNaN(num)) return 'Must be a number';
+              if (num < 0) return 'Must be at least 0';
+              if (num > 300) return 'Cannot exceed 300';
+              return true;
+            }}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'preferences-base-ip' && (
+        <Modal>
+          <InputDialog
+            title="Default Base IP"
+            label="Enter default base IP for new plans:"
+            defaultValue={preferences.baseIp}
+            allowedChars={/[0-9.]/}
+            onSubmit={(baseIp) => {
+              void (async (): Promise<void> => {
+                try {
+                  const updatedPrefs = { ...preferences, baseIp };
+                  await preferencesService.savePreferences(updatedPrefs);
+                  setPreferences(updatedPrefs);
+                  handlePreferenceSaved(`Default base IP set to ${baseIp}`);
+                } catch (error) {
+                  notify.error(
+                    `Failed to save preference: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                  );
+                  setDialog({ type: 'preferences-menu' });
+                }
+              })();
+            }}
+            onCancel={() => setDialog({ type: 'preferences-menu' })}
+            validate={validateIpAddress}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'preferences-saved-dir' && (
+        <Modal>
+          <InputDialog
+            title="Saved Plans Directory"
+            label="Enter custom directory path (or leave blank for default):"
+            defaultValue={preferences.savedPlansDir ?? ''}
+            onSubmit={(dir) => {
+              void (async (): Promise<void> => {
+                try {
+                  const updatedPrefs = {
+                    ...preferences,
+                    savedPlansDir: dir.trim() || undefined,
+                  };
+                  await preferencesService.savePreferences(updatedPrefs);
+                  setPreferences(updatedPrefs);
+                  handlePreferenceSaved(
+                    `Saved plans directory ${dir.trim() ? `set to ${dir}` : 'reset to default'}`,
+                  );
+                } catch (error) {
+                  notify.error(
+                    `Failed to save preference: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                  );
+                  setDialog({ type: 'preferences-menu' });
+                }
+              })();
+            }}
+            onCancel={() => setDialog({ type: 'preferences-menu' })}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'preferences-exports-dir' && (
+        <Modal>
+          <InputDialog
+            title="Exports Directory"
+            label="Enter custom directory path (or leave blank for default):"
+            defaultValue={preferences.exportsDir ?? ''}
+            onSubmit={(dir) => {
+              void (async (): Promise<void> => {
+                try {
+                  const updatedPrefs = {
+                    ...preferences,
+                    exportsDir: dir.trim() || undefined,
+                  };
+                  await preferencesService.savePreferences(updatedPrefs);
+                  setPreferences(updatedPrefs);
+                  handlePreferenceSaved(
+                    `Exports directory ${dir.trim() ? `set to ${dir}` : 'reset to default'}`,
+                  );
+                } catch (error) {
+                  notify.error(
+                    `Failed to save preference: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                  );
+                  setDialog({ type: 'preferences-menu' });
+                }
+              })();
+            }}
+            onCancel={() => setDialog({ type: 'preferences-menu' })}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'preferences-continue' && (
+        <Modal>
+          <ConfirmDialog
+            title="Preferences"
+            message="Preference saved successfully!\n\nEdit another preference?"
+            onConfirm={(result) => {
+              if (result) {
+                setDialog({ type: 'preferences-menu' });
+              } else {
+                setDialog({ type: 'none' });
+              }
+            }}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'export-format-select' && (
+        <Modal>
+          <SelectDialog
+            title="Export Plan"
+            items={[
+              { label: 'YAML', value: 'yaml' },
+              { label: 'CSV', value: 'csv' },
+              { label: 'PDF', value: 'pdf' },
+            ]}
+            onSelect={handleExportFormatSelected}
+            onCancel={() => setDialog({ type: 'none' })}
+          />
+        </Modal>
+      )}
+      {/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */}
+      {dialog.type === 'export-filename' && plan && (
+        <Modal>
+          <InputDialog
+            title="Export Plan"
+            label="Filename:"
+            defaultValue={`${plan.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.${dialog.format}`}
+            onSubmit={(filename) => handleExportWithFilename(dialog.format, filename)}
             onCancel={() => setDialog({ type: 'none' })}
           />
         </Modal>

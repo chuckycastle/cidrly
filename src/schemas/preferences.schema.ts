@@ -24,6 +24,26 @@ export const preferencesSchema = z.object({
     .default(100),
 
   /**
+   * Default base IP address for new plans
+   */
+  baseIp: z
+    .string()
+    .regex(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/, 'Must be a valid IP address')
+    .default('10.0.0.0'),
+
+  /**
+   * Custom directory for saved plans (optional override)
+   * Defaults to ~/cidrly/saved-plans if not set
+   */
+  savedPlansDir: z.string().optional(),
+
+  /**
+   * Custom directory for exported files (optional override)
+   * Defaults to ~/cidrly/exports if not set
+   */
+  exportsDir: z.string().optional(),
+
+  /**
    * Schema version for future migrations
    */
   version: z.number().default(1),
@@ -39,6 +59,9 @@ export type Preferences = z.infer<typeof preferencesSchema>;
  */
 export const defaultPreferences: Preferences = {
   growthPercentage: 100,
+  baseIp: '10.0.0.0',
+  savedPlansDir: undefined,
+  exportsDir: undefined,
   version: 1,
 };
 
