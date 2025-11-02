@@ -3,6 +3,7 @@
  * Centralized constants for all validation logic
  */
 
+import os from 'os';
 import path from 'path';
 
 /**
@@ -106,6 +107,7 @@ export const PREFERENCES_RULES = {
 // Compute default saved plans directory in user's home directory
 const homeDir = process.env['HOME'] ?? process.env['USERPROFILE'] ?? '';
 const SAVED_PLANS_DIR = path.join(homeDir, 'cidrly', 'saved-plans');
+const EXPORTS_DIR = path.join(homeDir, 'cidrly', 'exports');
 
 export const FILE_RULES = {
   /**
@@ -114,15 +116,53 @@ export const FILE_RULES = {
   SAVED_PLANS_DIR,
 
   /**
+   * Default exports directory (~/cidrly/exports)
+   */
+  EXPORTS_DIR,
+
+  /**
    * Supported file extensions
    */
-  ALLOWED_EXTENSIONS: ['.json'] as const,
+  ALLOWED_EXTENSIONS: ['.json', '.yaml', '.yml', '.csv', '.pdf'] as const,
+
+  /**
+   * Export format extensions
+   */
+  EXPORT_EXTENSIONS: {
+    JSON: '.json',
+    YAML: '.yaml',
+    CSV: '.csv',
+    PDF: '.pdf',
+  } as const,
 
   /**
    * Default file extension
    */
   DEFAULT_EXTENSION: '.json',
 } as const;
+
+/**
+ * Get directory path from preferences or use default
+ * Expands ~ to home directory
+ *
+ * @param type - Directory type
+ * @param customPath - Optional custom path from preferences
+ * @returns Absolute directory path
+ */
+export function getDirectory(type: 'saved' | 'exports', customPath?: string): string {
+  if (customPath) {
+    // Expand ~ to home directory
+    return customPath.replace(/^~/, os.homedir());
+  }
+
+  // Use defaults
+  switch (type) {
+    case 'saved':
+      return FILE_RULES.SAVED_PLANS_DIR;
+    case 'exports':
+      return FILE_RULES.EXPORTS_DIR;
+  }
+}
 
 /**
  * Helper function to check if a VLAN ID is valid

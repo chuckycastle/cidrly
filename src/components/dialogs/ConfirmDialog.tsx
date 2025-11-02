@@ -19,11 +19,11 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({ title, message, on
   useInput((input, key) => {
     if (input === 'y') {
       onConfirm(true);
-    } else if (input === 'n' || key.escape) {
+    } else if (input === 'n' || key.escape || input === 'q') {
       onConfirm(false);
-    } else if (key.leftArrow) {
+    } else if (key.leftArrow || input === 'h') {
       setFocused('yes');
-    } else if (key.rightArrow) {
+    } else if (key.rightArrow || input === 'l') {
       setFocused('no');
     } else if (key.return) {
       onConfirm(focused === 'yes');
@@ -50,8 +50,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({ title, message, on
       </Box>
 
       {/* Message */}
-      <Box marginBottom={1}>
-        <Text>{colors.muted(message)}</Text>
+      <Box marginBottom={1} flexDirection="column">
+        {message.split('\n').map((line, index) => (
+          <Text key={index}>{colors.muted(line)}</Text>
+        ))}
       </Box>
 
       {/* Divider */}

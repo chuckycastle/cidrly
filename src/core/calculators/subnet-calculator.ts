@@ -219,7 +219,7 @@ export function calculateSubnet(
   return {
     expectedDevices,
     plannedDevices,
-    requiredHosts: plannedDevices,
+    requiredHosts: expectedDevices,
     subnetSize,
     cidrPrefix,
     usableHosts,
