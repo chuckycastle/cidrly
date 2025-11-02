@@ -1,6 +1,6 @@
 # Contributing to cidrly
 
-Thank you for your interest in contributing to cidrly! This document provides guidelines and instructions for contributing to the project.
+Guidelines and instructions for contributing to the project.
 
 ## Table of Contents
 
@@ -16,12 +16,12 @@ Thank you for your interest in contributing to cidrly! This document provides gu
 
 ## Code of Conduct
 
-By participating in this project, you agree to maintain a respectful and inclusive environment for all contributors. We expect:
+By participating in this project, you agree to:
 
-- Respectful communication
-- Constructive feedback
-- Focus on the technical merits of contributions
-- Welcoming attitude toward new contributors
+- Communicate respectfully
+- Provide constructive feedback
+- Focus on technical merits
+- Welcome new contributors
 
 ## Getting Started
 
@@ -70,7 +70,7 @@ By participating in this project, you agree to maintain a respectful and inclusi
 
 ## Reporting Issues
 
-We use GitHub Issues to track bugs, feature requests, questions, and documentation improvements.
+Use GitHub Issues for bugs, feature requests, questions, and documentation improvements.
 
 ### Bug Reports
 

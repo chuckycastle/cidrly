@@ -8,12 +8,12 @@ Network architecture and design planning CLI tool with automatic subnet calculat
 
 ## Features
 
-- **Interactive React-based terminal dashboard** with keyboard navigation
+- **Terminal dashboard** with keyboard navigation
 - **VLSM optimization** with "Largest First" allocation
 - **Dual efficiency metrics** (Supernet + Range)
 - **Configurable capacity planning** - Adjust growth percentage from 0-200% (default: 100%)
 - **Sortable table columns** - Sort by any column with Tab + arrow keys
-- **Smart subnet and supernet calculation**
+- **Automatic subnet and supernet calculation**
 - **VLAN management** with per-subnet tracking
 - **Save/load network plans** as JSON with per-plan preferences
 
@@ -89,17 +89,14 @@ See [examples/](examples/) for sample network plans:
 
 ## Roadmap
 
-cidrly follows semantic versioning and maintains an active development schedule. For planned features and development status:
+See [ROADMAP.md](ROADMAP.md) for planned features and development status.
 
-- **[ROADMAP.md](ROADMAP.md)** - Detailed development roadmap with feature categories
-- **[GitHub Issues](https://github.com/chuckycastle/cidrly/issues)** - All open issues and feature requests
-- **[Milestones](https://github.com/chuckycastle/cidrly/milestones)** - Upcoming releases and features
-
-See the roadmap for information about user experience enhancements, export/import features, testing improvements, and advanced capabilities planned for future releases.
+- **[GitHub Issues](https://github.com/chuckycastle/cidrly/issues)** - Open issues and feature requests
+- **[Milestones](https://github.com/chuckycastle/cidrly/milestones)** - Upcoming releases
 
 ## Contributing
 
-We welcome contributions! Here's how you can help:
+Contributions are welcome. Here's how to help:
 
 ### Reporting Bugs
 

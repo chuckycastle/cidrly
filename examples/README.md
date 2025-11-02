@@ -1,6 +1,6 @@
 # Example Network Plans
 
-This directory contains sample network plans demonstrating common network architectures and cidrly's features.
+Sample network plans demonstrating common architectures.
 
 ## Available Examples
 
