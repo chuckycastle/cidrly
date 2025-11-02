@@ -89,10 +89,10 @@ See [examples/](examples/) for sample network plans:
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for planned features and development status.
+Development roadmap is managed through GitHub:
 
-- **[GitHub Issues](https://github.com/chuckycastle/cidrly/issues)** - Open issues and feature requests
-- **[Milestones](https://github.com/chuckycastle/cidrly/milestones)** - Upcoming releases
+- **[Milestones](https://github.com/chuckycastle/cidrly/milestones)** - Planned releases and feature grouping
+- **[Issues](https://github.com/chuckycastle/cidrly/issues)** - Feature requests and bug tracking
 
 ## Contributing
 
