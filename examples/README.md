@@ -192,4 +192,4 @@ Use these examples to test cidrly features:
 
 ## Questions?
 
-See [BETA_README.md](../BETA_README.md) for beta testing guidelines and feedback instructions.
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for contribution guidelines and feedback instructions.

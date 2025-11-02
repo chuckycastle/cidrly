@@ -27,8 +27,8 @@ By participating in this project, you agree to maintain a respectful and inclusi
 
 ### Prerequisites
 
-- Node.js >= 18.0.0
-- npm >= 9.0.0
+- Node.js >= 20.0.0
+- npm >= 10.0.0
 - Git
 
 ### Development Setup
@@ -120,7 +120,7 @@ Look for issues labeled:
 - `bug` - Bug fixes are always welcome
 - `enhancement` - New features or improvements
 
-Check the [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) page to see all open issues, and view [Milestones](https://github.com/chuckycastle/cidrly/milestones) to see the project roadmap organized by version (v0.2.0, v0.3.0, Future).
+Check the [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) page to see all open issues, and view [Milestones](https://github.com/chuckycastle/cidrly/milestones) to see the project roadmap. For a comprehensive overview, see [ROADMAP.md](ROADMAP.md).
 
 Priority labels indicate urgency:
 
