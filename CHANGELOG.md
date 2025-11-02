@@ -25,7 +25,7 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 
 - **Multi-Format Export System** ([#17](https://github.com/chuckycastle/cidrly/issues/17), [#18](https://github.com/chuckycastle/cidrly/issues/18))
   - Export network plans to YAML format for Infrastructure-as-Code workflows
-  - Export to PDF for professional documentation and reporting
+  - Export to PDF for documentation and reporting
   - Export to CSV with metadata headers
   - All export formats preserve complete network plan data
   - New `cidrly export` command with format selection (--format=yaml|csv|pdf)
@@ -34,13 +34,12 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 
 ### Technical Improvements
 
-- Added comprehensive export service architecture
-- Enhanced CSV format with metadata comment headers (# key: value)
+- Export service architecture with modular formatters
+- CSV format with metadata comment headers (# key: value)
 - CSV supports all SubnetInfo fields (9 fields)
 - Supernet metrics preserved in CSV export
-- Security-first file operations with path validation
-- Multi-page PDF rendering with professional layouts
-- Modular formatter architecture for easy extensibility
+- File operations with path validation
+- Multi-page PDF rendering
 
 ### Dependencies Added
 
@@ -52,33 +51,27 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 ### Security
 
 - **Fixed TOCTOU Race Condition** ([#40](https://github.com/chuckycastle/cidrly/issues/40), [#12](https://github.com/chuckycastle/cidrly/issues/12))
-  - Eliminated time-of-check-to-time-of-use vulnerability in preferences file deletion
-  - Replaced unsafe `existsSync()` + `unlinkSync()` pattern with direct deletion and error handling
-  - Resolves Semgrep security finding (TOCTOU-FILE-ACCESS)
-  - No functional change for users, purely security hardening
+  - Fixed time-of-check-to-time-of-use vulnerability in file operations
+  - Resolves Semgrep finding (TOCTOU-FILE-ACCESS)
 
-- **Enhanced Path Validation** ([#12](https://github.com/chuckycastle/cidrly/issues/12))
-  - Added symlink detection to prevent directory traversal via symbolic links
-  - Improved security error messages with "Security violation:" prefix for clarity
-  - Validates entire path chain, not just final destination
-  - Prevents malicious path manipulation attempts
+- **Path Validation** ([#12](https://github.com/chuckycastle/cidrly/issues/12))
+  - Added symlink detection for directory traversal protection
+  - Security error messages with "Security violation:" prefix
 
 ### Improved
 
-- **Enhanced Input Sanitization** ([#13](https://github.com/chuckycastle/cidrly/issues/13))
-  - All text inputs now trim leading/trailing whitespace automatically
+- **Input Sanitization** ([#13](https://github.com/chuckycastle/cidrly/issues/13))
+  - All text inputs trim leading/trailing whitespace automatically
   - Subnet and plan names reject inputs with surrounding whitespace
-  - IP address validation enhanced with leading zero detection (e.g., "010.0.0.0" rejected)
+  - IP address validation with leading zero detection (e.g., "010.0.0.0" rejected)
   - VLAN IDs and device counts accept whitespace-padded input (trimmed before parsing)
   - More specific error messages for validation failures
-  - Improved data quality and consistency
 
-- **Enhanced Code Documentation** ([#42](https://github.com/chuckycastle/cidrly/issues/42))
-  - Added comprehensive TSDoc comments for complex subnet calculation algorithms
+- **Code Documentation** ([#42](https://github.com/chuckycastle/cidrly/issues/42))
+  - Added TSDoc comments for subnet calculation algorithms
   - Documented VLSM boundary alignment algorithm with examples
   - Explained supernet efficiency metrics and edge cases
   - Added algorithm walkthroughs for host bit calculations
-  - Improved maintainability and contributor onboarding
 
 ### Changed
 

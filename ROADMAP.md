@@ -1,27 +1,17 @@
 # cidrly Roadmap
 
-This document outlines the planned development roadmap for cidrly, organized by version milestones.
-
-## Version Strategy
-
-cidrly follows [Semantic Versioning](https://semver.org/):
-
-- **MAJOR (x.0.0)**: Breaking changes, API changes, removed features
-- **MINOR (0.x.0)**: New features, backward-compatible enhancements
-- **PATCH (0.0.x)**: Bug fixes, security patches, documentation improvements
+Development roadmap organized by version milestones. Follows [Semantic Versioning](https://semver.org/).
 
 ## Release History
 
 ### v0.2.2 (2025-10-31) - Security & Quality Improvements
 
-**Status**: Released
-
-Security fixes and enhanced input validation:
+Security fixes and input validation:
 
 - Fixed TOCTOU race condition in file operations
 - Added symlink detection for path traversal protection
-- Enhanced input sanitization (whitespace trimming, leading zero detection)
-- Comprehensive TSDoc documentation for complex algorithms
+- Input sanitization (whitespace trimming, leading zero detection)
+- TSDoc documentation for complex algorithms
 
 **Issues**: #40, #12, #13, #42
 
@@ -29,9 +19,7 @@ Security fixes and enhanced input validation:
 
 ### v0.2.1 (2025-10-28) - Keyboard Input Fix
 
-**Status**: Released
-
-Critical bug fix for space key handling in column sorting.
+Bug fix for space key handling in column sorting.
 
 **Issues**: #41
 
@@ -39,9 +27,7 @@ Critical bug fix for space key handling in column sorting.
 
 ### v0.2.0 (2025-10-27) - Sortable Columns
 
-**Status**: Released
-
-First feature release with interactive column sorting in the dashboard.
+Interactive column sorting in the dashboard.
 
 ---
 
@@ -49,20 +35,17 @@ First feature release with interactive column sorting in the dashboard.
 
 ### v0.3.0 - Multi-Format Export System (Released Nov 1, 2025)
 
-**Status**: Released
-**Effort**: 16 hours
-
-Major feature release focusing on data export capabilities.
+Data export capabilities.
 
 #### Features Delivered
 
 - **#17**: Export to YAML format for infrastructure-as-code workflows ✅
-- **#18**: Export to PDF for professional documentation and reporting ✅
+- **#18**: Export to PDF for documentation and reporting ✅
 - Export to CSV with metadata headers for data portability ✅
 
 #### User Impact
 
-Enables integration with DevOps workflows (Terraform/Ansible), professional documentation generation, and data sharing via CSV.
+Enables integration with DevOps workflows (Terraform/Ansible), documentation generation, and data sharing via CSV.
 
 #### Features Deferred to Future Milestones
 
@@ -124,42 +107,6 @@ The following features conflict with cidrly's CLI-focused architecture and will 
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for information on how to contribute to cidrly.
 
-### Roadmap Process
-
-1. **Planning**: Issues are analyzed and grouped into milestone versions
-2. **Estimation**: Effort estimates are provided for each milestone
-3. **Prioritization**: Milestones are ordered by user value and technical dependencies
-4. **Implementation**: Features are developed, tested, and documented
-5. **Release**: Versions are tagged, released, and announced
-
 ### Feedback
 
 Have feedback on the roadmap? Open an issue with the `roadmap-feedback` label or discuss in GitHub Discussions.
-
----
-
-## Archive
-
-### Completed Milestones
-
-#### v0.2.2 - Security & Quality Improvements ✅
-
-Completed: 2025-10-31
-
-Security fixes (#40, #12), input sanitization (#13), TSDoc documentation (#42)
-
-#### v0.2.1 - Keyboard Input Fix ✅
-
-Completed: 2025-10-28
-
-Fixed space key handling for column sorting (#41)
-
-#### v0.2.0 - Sortable Columns ✅
-
-Completed: 2025-10-27
-
-Interactive column sorting in dashboard view
-
----
-
-_This roadmap is subject to change based on user feedback, technical constraints, and project priorities._
