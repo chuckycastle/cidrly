@@ -89,16 +89,13 @@ See [examples/](examples/) for sample network plans:
 
 ## Roadmap
 
-For planned features and enhancements, see:
+cidrly follows semantic versioning and maintains an active development schedule. For planned features and development status:
 
+- **[ROADMAP.md](ROADMAP.md)** - Detailed development roadmap with feature categories
 - **[GitHub Issues](https://github.com/chuckycastle/cidrly/issues)** - All open issues and feature requests
-- **[Milestones](https://github.com/chuckycastle/cidrly/milestones)** - Organized by version (v0.2.0, v0.3.0, Future)
+- **[Milestones](https://github.com/chuckycastle/cidrly/milestones)** - Upcoming releases and features
 
-Issues are prioritized with labels:
-
-- `priority: high` - Critical features like Terraform export, IPv6 support, network diagrams
-- `priority: medium` - Important improvements like PDF reports, plugin system, API mode
-- `priority: low` - Nice-to-have enhancements like theme customization, cloud sync
+See the roadmap for information about user experience enhancements, export/import features, testing improvements, and advanced capabilities planned for future releases.
 
 ## Contributing
 
