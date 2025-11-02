@@ -5,6 +5,7 @@ Network architecture and design planning CLI tool with automatic subnet calculat
 [![npm version](https://img.shields.io/npm/v/cidrly)](https://www.npmjs.com/package/cidrly)
 [![npm downloads](https://img.shields.io/npm/dm/cidrly)](https://www.npmjs.com/package/cidrly)
 [![Node Version](https://img.shields.io/node/v/cidrly)](https://nodejs.org)
+[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE)
 
 ## Features
 
