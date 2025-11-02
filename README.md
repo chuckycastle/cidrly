@@ -125,10 +125,6 @@ Have an idea? Submit a [Feature Request](https://github.com/chuckycastle/cidrly/
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
-## License
-
-ISC
-
 ## Support
 
 For issues or feature requests, open an issue on [GitHub](https://github.com/chuckycastle/cidrly/issues).
