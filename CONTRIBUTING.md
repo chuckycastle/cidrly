@@ -120,7 +120,7 @@ Look for issues labeled:
 - `bug` - Bug fixes are always welcome
 - `enhancement` - New features or improvements
 
-Check the [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) page to see all open issues, and view [Milestones](https://github.com/chuckycastle/cidrly/milestones) to see the project roadmap. For a comprehensive overview, see [ROADMAP.md](ROADMAP.md).
+Check the [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) page to see all open issues, and view [Milestones](https://github.com/chuckycastle/cidrly/milestones) to see the project roadmap.
 
 Priority labels indicate urgency:
 
