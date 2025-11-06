@@ -296,5 +296,180 @@ describe('Services Integration', () => {
       expect(plan.subnets).toHaveLength(1);
       expect(plan.supernet).toBeDefined();
     });
+
+    it('should handle growth percentage changes and recalculation', async () => {
+      // Create plan with default growth (100%)
+      const plan = createNetworkPlan('Growth Test', '10.0.0.0');
+      planService.addSubnet(plan, createSubnet('Engineering', 10, 50));
+
+      // With 100% growth, 50 devices → 100 planned → /25 subnet (126 usable)
+      expect(plan.subnets[0].subnetInfo?.cidrPrefix).toBe(25);
+      expect(plan.subnets[0].subnetInfo?.usableHosts).toBe(126);
+
+      // Save plan
+      await fileService.savePlan(plan, 'growth-test.json');
+
+      // Change growth to 0% (exact capacity)
+      planService.setGrowthPercentage(plan, 0);
+
+      // With 0% growth, 50 devices → 50 planned → /26 subnet (62 usable)
+      expect(plan.subnets[0].subnetInfo?.cidrPrefix).toBe(26);
+      expect(plan.subnets[0].subnetInfo?.usableHosts).toBe(62);
+      expect(plan.growthPercentage).toBe(0);
+
+      // Save and reload
+      await fileService.savePlan(plan, 'growth-test.json');
+      const loadedPlan = await fileService.loadPlan('growth-test.json');
+
+      // Verify growth percentage persisted
+      expect(loadedPlan.growthPercentage).toBe(0);
+      expect(loadedPlan.subnets[0].subnetInfo?.cidrPrefix).toBe(26);
+
+      // Change growth to 200% (triple capacity)
+      planService.setGrowthPercentage(loadedPlan, 200);
+
+      // With 200% growth, 50 devices → 150 planned → /24 subnet (254 usable)
+      expect(loadedPlan.subnets[0].subnetInfo?.cidrPrefix).toBe(24);
+      expect(loadedPlan.subnets[0].subnetInfo?.usableHosts).toBe(254);
+    });
+
+    it('should detect subnet overlaps after recalculation', async () => {
+      const plan = createNetworkPlan('Overlap Test', '10.0.0.0');
+
+      // Add subnets - VLSM should prevent overlaps
+      planService.addSubnet(plan, createSubnet('Subnet A', 10, 50));
+      planService.addSubnet(plan, createSubnet('Subnet B', 20, 25));
+
+      // Check for overlaps (should be none with proper VLSM)
+      const overlapResult = planService.checkOverlaps(plan);
+      expect(overlapResult.hasOverlap).toBe(false);
+      expect(overlapResult.conflicts).toHaveLength(0);
+
+      // Verify subnet addresses are allocated without overlap
+      expect(plan.subnets[0].subnetInfo?.networkAddress).toBeDefined();
+      expect(plan.subnets[1].subnetInfo?.networkAddress).toBeDefined();
+
+      // Save and reload
+      await fileService.savePlan(plan, 'overlap-test.json');
+      const loadedPlan = await fileService.loadPlan('overlap-test.json');
+
+      // Verify no overlaps after reload
+      const reloadOverlapResult = planService.checkOverlaps(loadedPlan);
+      expect(reloadOverlapResult.hasOverlap).toBe(false);
+    });
+
+    it('should preserve subnet descriptions through full workflow', async () => {
+      const plan = createNetworkPlan('Description Test', '192.168.0.0');
+
+      // Add subnets with descriptions
+      const subnet1 = createSubnet('Engineering', 10, 50);
+      subnet1.description = 'Primary engineering team network';
+      const subnet2 = createSubnet('Guest WiFi', 20, 25);
+      subnet2.description = 'Guest wireless access network';
+
+      planService.addSubnet(plan, subnet1);
+      planService.addSubnet(plan, subnet2);
+
+      // Verify descriptions are set
+      expect(plan.subnets[0].description).toBe('Primary engineering team network');
+      expect(plan.subnets[1].description).toBe('Guest wireless access network');
+
+      // Save plan
+      await fileService.savePlan(plan, 'description-test.json');
+
+      // Load plan
+      const loadedPlan = await fileService.loadPlan('description-test.json');
+
+      // Verify descriptions persisted (note: subnets are reordered by size after VLSM)
+      const loadedEngineering = loadedPlan.subnets.find((s) => s.name === 'Engineering');
+      const loadedGuest = loadedPlan.subnets.find((s) => s.name === 'Guest WiFi');
+
+      expect(loadedEngineering?.description).toBe('Primary engineering team network');
+      expect(loadedGuest?.description).toBe('Guest wireless access network');
+
+      // Update description
+      const engineeringIndex = loadedPlan.subnets.findIndex((s) => s.name === 'Engineering');
+      planService.updateSubnet(
+        loadedPlan,
+        engineeringIndex,
+        'Engineering',
+        10,
+        50,
+        'Updated engineering description',
+      );
+
+      // Save and reload
+      await fileService.savePlan(loadedPlan, 'description-test.json');
+      const reloadedPlan = await fileService.loadPlan('description-test.json');
+
+      const reloadedEngineering = reloadedPlan.subnets.find((s) => s.name === 'Engineering');
+      expect(reloadedEngineering?.description).toBe('Updated engineering description');
+    });
+
+    it('should handle complex workflow: create → add → edit → change base IP → adjust growth → save → load', async () => {
+      // 1. Create plan with custom growth
+      const plan = createNetworkPlan('Complex Workflow', '10.0.0.0');
+      plan.growthPercentage = 50; // 50% growth
+
+      // 2. Add multiple subnets with descriptions
+      const engineering = createSubnet('Engineering', 10, 100);
+      engineering.description = 'Engineering department';
+      const sales = createSubnet('Sales', 20, 50);
+      sales.description = 'Sales team';
+      const guest = createSubnet('Guest WiFi', 30, 20);
+
+      planService.addSubnet(plan, engineering);
+      planService.addSubnet(plan, sales);
+      planService.addSubnet(plan, guest);
+
+      expect(plan.subnets).toHaveLength(3);
+      expect(plan.baseIp).toBe('10.0.0.0');
+
+      // 3. Edit a subnet
+      const salesIndex = plan.subnets.findIndex((s) => s.name === 'Sales');
+      planService.updateSubnet(plan, salesIndex, 'Sales & Marketing', 20, 75, 'Combined team');
+
+      expect(plan.subnets[salesIndex].name).toBe('Sales & Marketing');
+      expect(plan.subnets[salesIndex].expectedDevices).toBe(75);
+
+      // 4. Change base IP
+      planService.updateBaseIp(plan, '172.16.0.0');
+      expect(plan.baseIp).toBe('172.16.0.0');
+
+      // Verify addresses updated
+      expect(plan.subnets[0].subnetInfo?.networkAddress).toContain('172.16.');
+
+      // 5. Adjust growth percentage
+      planService.setGrowthPercentage(plan, 100); // Back to default
+      expect(plan.growthPercentage).toBe(100);
+
+      // 6. Check for overlaps
+      const overlapResult = planService.checkOverlaps(plan);
+      expect(overlapResult.hasOverlap).toBe(false);
+
+      // 7. Save plan
+      await fileService.savePlan(plan, 'complex-workflow.json');
+
+      // 8. Load and verify everything
+      const loadedPlan = await fileService.loadPlan('complex-workflow.json');
+
+      expect(loadedPlan.name).toBe('Complex Workflow');
+      expect(loadedPlan.baseIp).toBe('172.16.0.0');
+      expect(loadedPlan.growthPercentage).toBe(100);
+      expect(loadedPlan.subnets).toHaveLength(3);
+
+      const loadedSales = loadedPlan.subnets.find((s) => s.name === 'Sales & Marketing');
+      expect(loadedSales?.expectedDevices).toBe(75);
+      expect(loadedSales?.description).toBe('Combined team');
+
+      const loadedEngineering = loadedPlan.subnets.find((s) => s.name === 'Engineering');
+      expect(loadedEngineering?.description).toBe('Engineering department');
+
+      // Verify all subnets have network addresses
+      loadedPlan.subnets.forEach((subnet) => {
+        expect(subnet.subnetInfo?.networkAddress).toBeDefined();
+        expect(subnet.subnetInfo?.networkAddress).toContain('172.16.');
+      });
+    });
   });
 });

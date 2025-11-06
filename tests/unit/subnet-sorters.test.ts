@@ -513,4 +513,32 @@ describe('subnet-sorters', () => {
       expect(getSortDescription('description', 'desc')).toBe('Description ↓');
     });
   });
+
+  describe('Edge Cases', () => {
+    it('should handle invalid sort column gracefully', () => {
+      const subnets: Subnet[] = [
+        createSubnet('1', 'Network A', 10, 50, {
+          plannedDevices: 100,
+          networkAddress: '10.0.0.0',
+          cidrPrefix: 24,
+          usableHosts: 254,
+        }),
+        createSubnet('2', 'Network B', 20, 25, {
+          plannedDevices: 50,
+          networkAddress: '10.0.1.0',
+          cidrPrefix: 26,
+          usableHosts: 62,
+        }),
+      ];
+
+      // TypeScript would normally prevent this, but test runtime behavior
+      const invalidColumn = 'invalid' as SortColumn;
+      const sorted = sortSubnets(subnets, invalidColumn, 'asc');
+
+      // Should return array in original order when invalid column provided
+      expect(sorted).toHaveLength(2);
+      expect(sorted[0].id).toBe('1');
+      expect(sorted[1].id).toBe('2');
+    });
+  });
 });

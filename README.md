@@ -18,6 +18,11 @@ Network architecture and design planning CLI tool with automatic subnet calculat
 - **VLAN management** with per-subnet tracking
 - **Save/load network plans** as JSON with per-plan preferences
 
+## Requirements
+
+- **Node.js**: 24.0.0 or higher
+- **npm**: 10.0.0 or higher
+
 ## Installation
 
 **Homebrew (macOS/Linux):**

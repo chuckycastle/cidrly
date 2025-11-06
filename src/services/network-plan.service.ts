@@ -3,6 +3,7 @@
  * Centralized business logic for network plan operations
  */
 
+import { detectOverlaps, type OverlapResult } from '../core/calculators/overlap-detector.js';
 import type { NetworkPlan, Subnet } from '../core/models/network-plan.js';
 import { calculateSubnetRanges } from '../core/models/network-plan.js';
 import { ErrorCode, ValidationError } from '../errors/network-plan-errors.js';
@@ -215,5 +216,46 @@ export class NetworkPlanService {
     if (plan.subnets.length > 0) {
       this.calculatePlan(plan);
     }
+  }
+
+  /**
+   * Check for subnet overlaps in the network plan
+   *
+   * @param plan - Network plan to validate
+   * @returns Overlap detection result with conflict details
+   *
+   * @remarks
+   * This method detects IP address range overlaps between subnets.
+   * VLSM allocation should prevent overlaps, but this validates the plan's integrity.
+   *
+   * @example
+   * ```typescript
+   * const result = service.checkOverlaps(plan);
+   * if (result.hasOverlap) {
+   *   console.log(`Found ${result.conflicts.length} overlaps`);
+   *   result.conflicts.forEach(conflict => {
+   *     console.log(`${conflict.subnet1} overlaps with ${conflict.subnet2}`);
+   *   });
+   * }
+   * ```
+   */
+  checkOverlaps(plan: NetworkPlan): OverlapResult {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
+    if (!plan) {
+      throw new ValidationError(
+        'Cannot check overlaps: Plan is null or undefined',
+        ErrorCode.NO_PLAN_LOADED,
+      );
+    }
+
+    // Filter subnets with network addresses assigned
+    const subnetsWithAddresses = plan.subnets
+      .filter((subnet) => subnet.subnetInfo?.networkAddress !== undefined)
+      .map((subnet) => ({
+        networkAddress: subnet.subnetInfo!.networkAddress!,
+        name: subnet.name,
+      }));
+
+    return detectOverlaps(subnetsWithAddresses);
   }
 }

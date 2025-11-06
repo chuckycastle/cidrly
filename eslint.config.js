@@ -7,8 +7,24 @@ export default tseslint.config(
   {
     languageOptions: {
       parserOptions: {
-        project: true,
+        project: './tsconfig.eslint.json',
         tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
+    // Test files configuration - must come before main rules
+    files: ['**/*.test.ts', '**/*.test.tsx', 'tests/**/*.ts', 'tests/**/*.tsx'],
+    languageOptions: {
+      globals: {
+        describe: 'readonly',
+        it: 'readonly',
+        expect: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+        jest: 'readonly',
       },
     },
   },
@@ -58,11 +74,26 @@ export default tseslint.config(
     },
   },
   {
-    // Disable type-checking for config files and tests
-    files: ['**/*.js', '**/*.mjs', '**/*.test.ts', 'tests/**/*.ts'],
+    // Disable type-checking for config files and test files
+    files: [
+      '**/*.js',
+      '**/*.mjs',
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      'tests/**/*.ts',
+      'tests/**/*.tsx',
+    ],
     ...tseslint.configs.disableTypeChecked,
   },
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '__mocks__/**', 'scripts/**'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'coverage/**',
+      '__mocks__/**',
+      'scripts/**',
+      'tests/**/*.js',
+      'tests/**/*.d.ts',
+    ],
   },
 );

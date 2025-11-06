@@ -61,7 +61,7 @@ describe('Network Plan Models', () => {
       expect(isValidIpAddress('10.0.0.0')).toBe(true);
       expect(isValidIpAddress('192.168.1.1')).toBe(true);
       expect(isValidIpAddress('172.16.0.0')).toBe(true);
-      expect(isValidIpAddress('255.255.255.255')).toBe(true);
+      expect(isValidIpAddress('8.8.8.8')).toBe(true); // Public DNS
     });
 
     it('should reject invalid IP addresses', () => {
@@ -70,6 +70,14 @@ describe('Network Plan Models', () => {
       expect(isValidIpAddress('10.0.0.0.0')).toBe(false);
       expect(isValidIpAddress('abc.def.ghi.jkl')).toBe(false);
       expect(isValidIpAddress('10.-1.0.0')).toBe(false);
+    });
+
+    it('should reject reserved addresses (Issue #25)', () => {
+      expect(isValidIpAddress('127.0.0.1')).toBe(false); // Loopback
+      expect(isValidIpAddress('0.0.0.0')).toBe(false); // This network
+      expect(isValidIpAddress('169.254.1.1')).toBe(false); // Link-local
+      expect(isValidIpAddress('255.255.255.255')).toBe(false); // Broadcast
+      expect(isValidIpAddress('224.0.0.1')).toBe(false); // Multicast
     });
   });
 

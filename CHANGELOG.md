@@ -9,6 +9,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 For planned features and enhancements, see [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) and [Milestones](https://github.com/chuckycastle/cidrly/milestones).
 
+## [0.3.2] - 2025-11-06
+
+### Added
+
+- **Subnet Overlap Detection** ([#10](https://github.com/chuckycastle/cidrly/issues/10))
+  - Complete overlap detection system for IP address range conflicts
+  - `detectOverlaps()` function checks all subnets in a plan
+  - `checkNewSubnetOverlap()` validates new subnets before adding
+  - Integrated into NetworkPlanService with `checkOverlaps()` method
+  - Detects complete overlaps (subnet containment) and partial overlaps
+  - Comprehensive test suite with 23 tests covering edge cases
+
+- **Ink Component Testing Infrastructure** ([#26](https://github.com/chuckycastle/cidrly/issues/26))
+  - ink-testing-library integration for React/Ink component tests
+  - Component tests for InputDialog (5 tests) and ConfirmDialog (8 tests)
+  - Jest configuration updated to support .tsx files with React JSX
+  - Foundation for testing all UI components going forward
+
+- **Integration Tests** ([#15](https://github.com/chuckycastle/cidrly/issues/15))
+  - Growth percentage workflow tests
+  - Overlap detection workflow tests
+  - Subnet descriptions workflow tests
+  - Complex end-to-end workflow tests
+
+- **Utility Test Coverage** ([#27](https://github.com/chuckycastle/cidrly/issues/27))
+  - input-helpers.ts: 0% → 100% coverage (14 new tests)
+  - validation-rules.ts: 80.95% → 100% coverage (11 new tests)
+  - subnet-sorters.ts edge case tests (1 new test)
+  - Overall utils coverage: 86.25% → 90%
+
+### Changed
+
+- **Enhanced Error Messages** ([#20](https://github.com/chuckycastle/cidrly/issues/20))
+  - All validation errors now include contextual information
+  - validateSubnetName: Added examples and current length
+  - validateVlanId: Shows actual input value for invalid entries
+  - validateDeviceCount: Shows actual vs expected values with formatting
+  - validateIpAddress: Provides examples and suggestions for invalid IPs
+  - validatePlanName: Added examples and current length
+  - validateSubnetDescription: Shows current length when too long
+
+- **Export Documentation** ([#50](https://github.com/chuckycastle/cidrly/issues/50))
+  - Updated wiki Examples.md to show YAML export (was JSON)
+  - Updated Beta-Testing.md with correct export formats (YAML, CSV, PDF)
+  - Updated Node.js requirement to 24+ (was 20+)
+
+- **PDF Export Improvements** ([#51](https://github.com/chuckycastle/cidrly/issues/51))
+  - Added footer with generation timestamp and tool information
+  - Footer format: "Generated on {date} with cidrly v{version}"
+
+### Technical
+
+- **Export Service Architecture** ([#49](https://github.com/chuckycastle/cidrly/issues/49))
+  - Refactored export system to use Strategy pattern
+  - Modular formatter architecture (YAML, CSV, PDF)
+  - Centralized export service with consistent error handling
+  - TSDoc documentation for all export functions
+
+- **Test Suite Growth**
+  - 393 → 459 tests (+66 tests, +16.8%)
+  - Global coverage: ~70% → 78.16% (+8.16%)
+  - 22 test suites passing
+
 ## [0.3.1] - 2025-01-05
 
 ### Added
@@ -524,7 +587,8 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 - **PATCH** version for backwards-compatible bug fixes
 - **Pre-release** suffixes: `-alpha`, `-beta`, `-rc` for pre-release versions
 
-[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/chuckycastle/cidrly/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/chuckycastle/cidrly/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/chuckycastle/cidrly/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/chuckycastle/cidrly/compare/v0.2.1...v0.2.2

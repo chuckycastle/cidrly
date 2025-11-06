@@ -5,6 +5,8 @@ node_modules/
 dist/
 coverage/
 *.tsbuildinfo
+tests/**/*.js
+tests/**/*.d.ts
 
 # Logs
 *.log

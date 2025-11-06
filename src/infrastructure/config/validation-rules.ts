@@ -31,6 +31,40 @@ export const IP_ADDRESS_RULES = {
   OCTET_MIN: 0,
   OCTET_MAX: 255,
   OCTET_COUNT: 4,
+
+  /**
+   * Reserved IP address ranges (RFC 5735, RFC 6890)
+   */
+  RESERVED_RANGES: [
+    { start: '0.0.0.0', end: '0.255.255.255', description: 'This network' },
+    { start: '127.0.0.0', end: '127.255.255.255', description: 'Loopback' },
+    { start: '169.254.0.0', end: '169.254.255.255', description: 'Link-local' },
+    { start: '192.0.0.0', end: '192.0.0.255', description: 'IETF Protocol Assignments' },
+    { start: '192.0.2.0', end: '192.0.2.255', description: 'TEST-NET-1' },
+    { start: '198.51.100.0', end: '198.51.100.255', description: 'TEST-NET-2' },
+    { start: '203.0.113.0', end: '203.0.113.255', description: 'TEST-NET-3' },
+    { start: '240.0.0.0', end: '255.255.255.255', description: 'Reserved for future use' },
+  ],
+
+  /**
+   * Private IP address ranges (RFC 1918)
+   */
+  PRIVATE_RANGES: [
+    { start: '10.0.0.0', end: '10.255.255.255', description: 'Class A private' },
+    { start: '172.16.0.0', end: '172.31.255.255', description: 'Class B private' },
+    { start: '192.168.0.0', end: '192.168.255.255', description: 'Class C private' },
+  ],
+
+  /**
+   * Multicast range (RFC 5771)
+   */
+  MULTICAST_START: '224.0.0.0',
+  MULTICAST_END: '239.255.255.255',
+
+  /**
+   * Broadcast address
+   */
+  BROADCAST: '255.255.255.255',
 } as const;
 
 /**
@@ -226,4 +260,76 @@ export function isValidGrowthPercentage(percentage: number): boolean {
     percentage <= PREFERENCES_RULES.GROWTH_PERCENTAGE_MAX &&
     Number.isInteger(percentage)
   );
+}
+
+/**
+ * Convert IP address string to 32-bit integer for range comparison
+ * @param ip - IP address in dotted decimal notation
+ * @returns 32-bit integer representation
+ */
+function ipToInt(ip: string): number {
+  const octets = ip.split('.').map(Number);
+  return (
+    ((octets[0] ?? 0) << 24) | ((octets[1] ?? 0) << 16) | ((octets[2] ?? 0) << 8) | (octets[3] ?? 0)
+  );
+}
+
+/**
+ * Check if an IP address is within a given range
+ * @param ip - IP address to check
+ * @param start - Range start IP
+ * @param end - Range end IP
+ * @returns True if IP is within range
+ */
+function isIpInRange(ip: string, start: string, end: string): boolean {
+  const ipInt = ipToInt(ip);
+  const startInt = ipToInt(start);
+  const endInt = ipToInt(end);
+  return ipInt >= startInt && ipInt <= endInt;
+}
+
+/**
+ * Check if an IP address is reserved (RFC 5735, RFC 6890)
+ * @param ip - IP address to check
+ * @returns Object with isReserved flag and description if reserved
+ */
+export function isReservedIp(ip: string): { isReserved: boolean; description?: string } {
+  for (const range of IP_ADDRESS_RULES.RESERVED_RANGES) {
+    if (isIpInRange(ip, range.start, range.end)) {
+      return { isReserved: true, description: range.description };
+    }
+  }
+  return { isReserved: false };
+}
+
+/**
+ * Check if an IP address is private (RFC 1918)
+ * @param ip - IP address to check
+ * @returns Object with isPrivate flag and description if private
+ */
+export function isPrivateIp(ip: string): { isPrivate: boolean; description?: string } {
+  for (const range of IP_ADDRESS_RULES.PRIVATE_RANGES) {
+    if (isIpInRange(ip, range.start, range.end)) {
+      return { isPrivate: true, description: range.description };
+    }
+  }
+  return { isPrivate: false };
+}
+
+/**
+ * Check if an IP address is in the multicast range
+ * @param ip - IP address to check
+ * @returns True if IP is multicast (224.0.0.0 - 239.255.255.255)
+ */
+export function isMulticastIp(ip: string): boolean {
+  return isIpInRange(ip, IP_ADDRESS_RULES.MULTICAST_START, IP_ADDRESS_RULES.MULTICAST_END);
+}
+
+/**
+ * Check if an IP address is the broadcast address
+ * @param ip - IP address to check
+ * @returns True if IP is 255.255.255.255
+ */
+export function isBroadcastIp(ip: string): boolean {
+  return ip === IP_ADDRESS_RULES.BROADCAST;
 }

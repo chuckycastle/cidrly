@@ -138,6 +138,93 @@ describe('Validators', () => {
       expect(validateIpAddress('1'.repeat(16))).toMatch(/too long/i);
       expect(validateIpAddress('192.168.1.1.1.1.1')).toMatch(/too long/i);
     });
+
+    describe('reserved IP addresses', () => {
+      it('should reject loopback addresses (127.0.0.0/8)', () => {
+        expect(validateIpAddress('127.0.0.0')).toMatch(/Reserved IP address.*Loopback/i);
+        expect(validateIpAddress('127.0.0.1')).toMatch(/Reserved IP address.*Loopback/i);
+        expect(validateIpAddress('127.255.255.255')).toMatch(/Reserved IP address.*Loopback/i);
+      });
+
+      it('should reject link-local addresses (169.254.0.0/16)', () => {
+        expect(validateIpAddress('169.254.0.0')).toMatch(/Reserved IP address.*Link-local/i);
+        expect(validateIpAddress('169.254.1.1')).toMatch(/Reserved IP address.*Link-local/i);
+        expect(validateIpAddress('169.254.255.255')).toMatch(/Reserved IP address.*Link-local/i);
+      });
+
+      it('should reject this network (0.0.0.0/8)', () => {
+        expect(validateIpAddress('0.0.0.0')).toMatch(/Reserved IP address.*This network/i);
+        expect(validateIpAddress('0.0.0.1')).toMatch(/Reserved IP address.*This network/i);
+        expect(validateIpAddress('0.255.255.255')).toMatch(/Reserved IP address.*This network/i);
+      });
+
+      it('should reject IETF protocol assignments (192.0.0.0/24)', () => {
+        expect(validateIpAddress('192.0.0.0')).toMatch(
+          /Reserved IP address.*IETF Protocol Assignments/i,
+        );
+        expect(validateIpAddress('192.0.0.255')).toMatch(
+          /Reserved IP address.*IETF Protocol Assignments/i,
+        );
+      });
+
+      it('should reject TEST-NET addresses', () => {
+        expect(validateIpAddress('192.0.2.0')).toMatch(/Reserved IP address.*TEST-NET-1/i);
+        expect(validateIpAddress('198.51.100.0')).toMatch(/Reserved IP address.*TEST-NET-2/i);
+        expect(validateIpAddress('203.0.113.0')).toMatch(/Reserved IP address.*TEST-NET-3/i);
+      });
+
+      it('should reject future reserved addresses (240.0.0.0/4)', () => {
+        expect(validateIpAddress('240.0.0.0')).toMatch(
+          /Reserved IP address.*Reserved for future use/i,
+        );
+        expect(validateIpAddress('255.255.255.254')).toMatch(
+          /Reserved IP address.*Reserved for future use/i,
+        );
+      });
+    });
+
+    describe('multicast addresses', () => {
+      it('should reject multicast range (224.0.0.0 - 239.255.255.255)', () => {
+        expect(validateIpAddress('224.0.0.0')).toMatch(/Multicast IP address/i);
+        expect(validateIpAddress('224.0.0.1')).toMatch(/Multicast IP address/i);
+        expect(validateIpAddress('239.255.255.255')).toMatch(/Multicast IP address/i);
+      });
+
+      it('should accept addresses just outside multicast range', () => {
+        expect(validateIpAddress('223.255.255.255')).toBe(true);
+        expect(validateIpAddress('240.0.0.1')).toMatch(/Reserved/i); // Reserved, not multicast
+      });
+    });
+
+    describe('broadcast address', () => {
+      it('should reject broadcast address (255.255.255.255)', () => {
+        expect(validateIpAddress('255.255.255.255')).toMatch(/Broadcast IP address/i);
+      });
+
+      it('should accept 255.255.255.254 (reserved but not broadcast)', () => {
+        expect(validateIpAddress('255.255.255.254')).toMatch(/Reserved/i);
+      });
+    });
+
+    describe('private IP addresses - should accept', () => {
+      it('should accept Class A private range (10.0.0.0/8)', () => {
+        expect(validateIpAddress('10.0.0.0')).toBe(true);
+        expect(validateIpAddress('10.128.0.0')).toBe(true);
+        expect(validateIpAddress('10.255.255.255')).toBe(true);
+      });
+
+      it('should accept Class B private range (172.16.0.0/12)', () => {
+        expect(validateIpAddress('172.16.0.0')).toBe(true);
+        expect(validateIpAddress('172.24.0.0')).toBe(true);
+        expect(validateIpAddress('172.31.255.255')).toBe(true);
+      });
+
+      it('should accept Class C private range (192.168.0.0/16)', () => {
+        expect(validateIpAddress('192.168.0.0')).toBe(true);
+        expect(validateIpAddress('192.168.1.0')).toBe(true);
+        expect(validateIpAddress('192.168.255.255')).toBe(true);
+      });
+    });
   });
 
   describe('validatePlanName', () => {
