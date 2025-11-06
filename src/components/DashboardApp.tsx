@@ -23,8 +23,25 @@ export const DashboardApp: React.FC = () => {
     <Layout>
       {currentView === 'dashboard' && <DashboardView />}
       {currentView === 'help' && (
-        <Box>
-          <Text>Help view - coming soon</Text>
+        <Box flexDirection="column" padding={1}>
+          <Box marginBottom={1}>
+            <Text bold>Documentation Available on GitHub Wiki</Text>
+          </Box>
+          <Box marginBottom={1}>
+            <Text>
+              Help documentation is available at:{' '}
+              <Text color="cyan">https://github.com/chuckycastle/cidrly/wiki</Text>
+            </Text>
+          </Box>
+          <Box flexDirection="column" marginBottom={1}>
+            <Text bold>Available Guides:</Text>
+            <Text>• User Guide - Getting started, concepts, and workflows</Text>
+            <Text>• Keyboard Shortcuts - Complete reference with examples</Text>
+            <Text>• Examples and Tutorials - Practical scenarios and integrations</Text>
+          </Box>
+          <Box>
+            <Text dimColor>Press Esc to return to dashboard</Text>
+          </Box>
         </Box>
       )}
       {currentView === 'detail' && (
