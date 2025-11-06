@@ -98,13 +98,6 @@ Documentation is available on the [GitHub Wiki](https://github.com/chuckycastle/
 
 Access help in the dashboard by pressing `?`
 
-## Roadmap
-
-Development roadmap is managed through GitHub:
-
-- **[Milestones](https://github.com/chuckycastle/cidrly/milestones)** - Planned releases and feature grouping
-- **[Issues](https://github.com/chuckycastle/cidrly/issues)** - Feature requests and bug tracking
-
 ## Contributing
 
 Contributions are welcome. Here's how to help:
