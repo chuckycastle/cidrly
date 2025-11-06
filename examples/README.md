@@ -180,15 +180,15 @@ These examples can serve as templates:
 
 Use these examples to test cidrly features:
 
-- ✅ Load/save functionality
-- ✅ Subnet information dialog (press `i`)
-- ✅ Sortable columns (press `Tab` then `←/→` to navigate, `Enter`/`Space` to sort)
-- ✅ Configurable growth percentage (press `p`)
-- ✅ Edit existing subnets
-- ✅ Delete and recalculate
-- ✅ Base IP changes
-- ✅ VLSM optimization
-- ✅ Efficiency calculations
+- Load/save functionality
+- Subnet information dialog (press `i`)
+- Sortable columns (press `Tab` then `←/→` to navigate, `Enter`/`Space` to sort)
+- Configurable growth percentage (press `p`)
+- Edit existing subnets
+- Delete and recalculate
+- Base IP changes
+- VLSM optimization
+- Efficiency calculations
 
 ## Questions?
 
