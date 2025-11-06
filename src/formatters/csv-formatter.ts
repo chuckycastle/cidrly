@@ -88,7 +88,10 @@ const COLUMN_FIELD_MAPPING = {
   },
   network: {
     header: 'network_address',
-    getValue: (subnet: Subnet) => subnet.subnetInfo?.networkAddress.split('/')[0] ?? '',
+    getValue: (subnet: Subnet) => {
+      if (!subnet.subnetInfo?.networkAddress) return '';
+      return subnet.subnetInfo.networkAddress.split('/')[0];
+    },
   },
   cidr: {
     header: 'cidr_prefix',
@@ -151,7 +154,7 @@ function formatSubnetRows(
   }
 
   // Build header row
-  const headers = orderedColumns.map((col) => COLUMN_FIELD_MAPPING[col].header);
+  const headers: string[] = orderedColumns.map((col) => COLUMN_FIELD_MAPPING[col].header);
   // Add extra fields that are always exported
   headers.push('subnet_size', 'required_hosts');
   rows.push(headers.join(','));
