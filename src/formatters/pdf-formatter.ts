@@ -227,10 +227,11 @@ function renderSubnetTable(
   let columns: PdfColumn[];
   if (preferences?.columnPreferences) {
     const { columnOrder, visibleColumns } = preferences.columnPreferences;
-    const visibleSet = new Set(visibleColumns);
+    const visibleSet = new Set<string>(visibleColumns);
     columns = columnOrder
       .filter(
-        (col): col is PdfColumnKey => col in PDF_COLUMNS && (col === 'name' || visibleSet.has(col)),
+        (col): col is PdfColumnKey =>
+          col in PDF_COLUMNS && (col === 'name' || visibleSet.has(col as string)),
       )
       .map((col) => PDF_COLUMNS[col]);
   } else {

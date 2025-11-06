@@ -65,8 +65,8 @@ function buildSubnetObject(
 
   // Add additional fields always included
   if (subnet.subnetInfo) {
-    subnetObj.requiredHosts = subnet.subnetInfo.requiredHosts;
-    subnetObj.subnetSize = subnet.subnetInfo.subnetSize;
+    subnetObj['requiredHosts'] = subnet.subnetInfo.requiredHosts;
+    subnetObj['subnetSize'] = subnet.subnetInfo.subnetSize;
   }
 
   return subnetObj;
