@@ -10,6 +10,7 @@ import {
   DEVICE_COUNT_RULES,
   PLAN_NAME_RULES,
   PREFERENCES_RULES,
+  SUBNET_DESCRIPTION_RULES,
   SUBNET_NAME_RULES,
   VLAN_RULES,
 } from '../infrastructure/config/validation-rules.js';
@@ -39,6 +40,7 @@ const SubnetSchema = z.object({
   name: z.string().min(SUBNET_NAME_RULES.MIN_LENGTH).max(SUBNET_NAME_RULES.MAX_LENGTH),
   vlanId: z.number().int().min(VLAN_RULES.MIN).max(VLAN_RULES.MAX),
   expectedDevices: z.number().int().min(DEVICE_COUNT_RULES.MIN).max(DEVICE_COUNT_RULES.MAX),
+  description: z.string().max(SUBNET_DESCRIPTION_RULES.MAX_LENGTH).optional(),
   subnetInfo: SubnetInfoSchema.optional(),
 });
 

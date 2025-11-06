@@ -9,7 +9,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 For planned features and enhancements, see [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) and [Milestones](https://github.com/chuckycastle/cidrly/milestones).
 
-## [0.3.0] - 2025-11-01
+## [0.3.1] - 2025-01-05
+
+### Added
+
+- **Column Visibility Configuration** ([#47](https://github.com/chuckycastle/cidrly/issues/47))
+  - Configure which columns are visible in subnet table via Preferences menu
+  - Show/hide columns: name (locked), vlan, expected, planned, cidr, usable, network, description
+  - Column visibility settings persist in preferences.json
+  - All visible columns remain sortable
+  - Vim navigation support (j/k, h/l) with hidden keyboard shortcuts
+
+- **Column Reordering**
+  - Reorder columns using left/right arrow keys (or hidden h/l vim keys)
+  - Visual feedback as columns move in Configure Columns dialog
+  - Name column is locked and cannot be reordered
+  - Column order persists across sessions
+  - Instructions: "Use arrows to navigate/reorder, Space to toggle, Enter to save"
+
+### Fixed
+
+- **Critical: Sorted Table Index Bug**
+  - Fixed incorrect subnet being edited/deleted when table is sorted
+  - Operations now correctly map selected row to original subnet by ID
+  - Prevents data loss from accidental deletions
+  - Affects: Edit, Delete, and Info dialogs
+
+- **Table Column Widths**
+  - Adjusted Network column width (15→17 chars) for better fit
+  - Adjusted Description column width (25→20 chars) for all 8 columns visible
+  - Table now displays cleanly with all columns shown
+
+### Removed
+
+- **Deprecated Import Command** ([#48](https://github.com/chuckycastle/cidrly/issues/48))
+  - Removed non-functional 'import' command from footer
+  - Import functionality deferred to future milestone
+
+### Changed
+
+- **Description Column Visibility**
+  - Description column now visible by default (was hidden in v0.3.0)
+  - Added to default visibleColumns and columnOrder preferences
+
+## [0.3.0] - 2025-11-05
+
+### Added
+
+- **Subnet Description Field**
+  - Optional description field for subnets (max 200 characters)
+  - Description shown in Add/Edit subnet dialogs (4-step flow)
+  - Description displayed in Subnet Info dialog
+  - Description exported to CSV and YAML formats
+  - Description column in subnet table (sortable)
+  - Validation with trimming and length checks
+  - Backward compatible - old plans load without descriptions
+
+- **Multi-Format Export System** ([#17](https://github.com/chuckycastle/cidrly/issues/17), [#18](https://github.com/chuckycastle/cidrly/issues/18))
+  - Export network plans to YAML format for Infrastructure-as-Code workflows
+  - Export to PDF for documentation and reporting
+  - Export to CSV with metadata headers and description column
+  - All export formats preserve complete network plan data
+  - New `cidrly export` command with format selection (--format=yaml|csv|pdf)
+  - Automatic filename sanitization and extension handling
+  - Path traversal protection on all exports
+
+- **Enhanced Column Preferences**
+  - Column preferences schema added to preferences system
+  - All 8 columns sortable (name, vlan, expected, planned, cidr, usable, network, description)
+  - Preferences persist across sessions
+  - Default visible columns exclude description (opt-in)
 
 ### Removed
 
@@ -20,17 +89,6 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 - **OpenAPI Generation** - Removed (was documentation-only, not user-facing)
   - OpenAPI generation script removed from build pipeline
   - Focused on user-facing export formats only
-
-### Added
-
-- **Multi-Format Export System** ([#17](https://github.com/chuckycastle/cidrly/issues/17), [#18](https://github.com/chuckycastle/cidrly/issues/18))
-  - Export network plans to YAML format for Infrastructure-as-Code workflows
-  - Export to PDF for documentation and reporting
-  - Export to CSV with metadata headers
-  - All export formats preserve complete network plan data
-  - New `cidrly export` command with format selection (--format=yaml|csv|pdf)
-  - Automatic filename sanitization and extension handling
-  - Path traversal protection on all exports
 
 ### Technical Improvements
 
@@ -466,7 +524,10 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 - **PATCH** version for backwards-compatible bug fixes
 - **Pre-release** suffixes: `-alpha`, `-beta`, `-rc` for pre-release versions
 
-[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/chuckycastle/cidrly/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/chuckycastle/cidrly/compare/v0.2.2...v0.3.0
+[0.2.2]: https://github.com/chuckycastle/cidrly/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/chuckycastle/cidrly/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/chuckycastle/cidrly/compare/v0.1.8...v0.2.0
 [0.1.8]: https://github.com/chuckycastle/cidrly/compare/v0.1.7...v0.1.8

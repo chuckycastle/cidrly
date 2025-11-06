@@ -17,7 +17,13 @@ interface PlanState {
   // Actions
   loadPlan: (plan: NetworkPlan) => void;
   addSubnet: (subnet: Subnet) => void;
-  updateSubnet: (index: number, name: string, vlanId: number, expectedDevices: number) => void;
+  updateSubnet: (
+    index: number,
+    name: string,
+    vlanId: number,
+    expectedDevices: number,
+    description?: string,
+  ) => void;
   removeSubnet: (index: number) => Subnet | null;
   calculatePlan: () => void;
   updateBaseIp: (newBaseIp: string) => void;
@@ -44,10 +50,16 @@ const usePlanStoreBase = create<PlanState>()(
       }
     },
 
-    updateSubnet: (index: number, name: string, vlanId: number, expectedDevices: number): void => {
+    updateSubnet: (
+      index: number,
+      name: string,
+      vlanId: number,
+      expectedDevices: number,
+      description?: string,
+    ): void => {
       const { plan, planService } = get();
       if (plan) {
-        planService.updateSubnet(plan, index, name, vlanId, expectedDevices);
+        planService.updateSubnet(plan, index, name, vlanId, expectedDevices, description);
         set({ plan: { ...plan } });
       }
     },

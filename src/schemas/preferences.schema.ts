@@ -47,6 +47,70 @@ export const preferencesSchema = z.object({
    * Schema version for future migrations
    */
   version: z.number().default(1),
+
+  /**
+   * Column display preferences for subnet table
+   */
+  columnPreferences: z
+    .object({
+      visibleColumns: z
+        .array(
+          z.enum([
+            'name',
+            'vlan',
+            'expected',
+            'planned',
+            'cidr',
+            'usable',
+            'network',
+            'description',
+          ]),
+        )
+        .default([
+          'name',
+          'vlan',
+          'expected',
+          'planned',
+          'cidr',
+          'usable',
+          'network',
+          'description',
+        ]),
+      columnOrder: z
+        .array(z.string())
+        .default([
+          'name',
+          'vlan',
+          'expected',
+          'planned',
+          'cidr',
+          'usable',
+          'network',
+          'description',
+        ]),
+    })
+    .default({
+      visibleColumns: [
+        'name',
+        'vlan',
+        'expected',
+        'planned',
+        'cidr',
+        'usable',
+        'network',
+        'description',
+      ],
+      columnOrder: [
+        'name',
+        'vlan',
+        'expected',
+        'planned',
+        'cidr',
+        'usable',
+        'network',
+        'description',
+      ],
+    }),
 });
 
 /**
@@ -63,6 +127,28 @@ export const defaultPreferences: Preferences = {
   savedPlansDir: undefined,
   exportsDir: undefined,
   version: 1,
+  columnPreferences: {
+    visibleColumns: [
+      'name',
+      'vlan',
+      'expected',
+      'planned',
+      'cidr',
+      'usable',
+      'network',
+      'description',
+    ],
+    columnOrder: [
+      'name',
+      'vlan',
+      'expected',
+      'planned',
+      'cidr',
+      'usable',
+      'network',
+      'description',
+    ],
+  },
 };
 
 /**

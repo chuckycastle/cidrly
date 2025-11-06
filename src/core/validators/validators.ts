@@ -11,6 +11,7 @@ import {
   isValidNameLength,
   isValidVlanRange,
   PLAN_NAME_RULES,
+  SUBNET_DESCRIPTION_RULES,
   SUBNET_NAME_RULES,
   VLAN_RULES,
 } from '../../infrastructure/config/validation-rules.js';
@@ -177,6 +178,28 @@ export function validatePlanName(name: string): string | true {
   // Check for leading/trailing whitespace in original input
   if (name !== trimmed) {
     return 'Plan name cannot have leading or trailing whitespace';
+  }
+
+  return true;
+}
+
+/**
+ * Validates a subnet description
+ * @param description - The subnet description to validate
+ * @returns Validation error message or true if valid
+ * @remarks Description is optional, so empty strings are valid
+ */
+export function validateSubnetDescription(description: string): string | true {
+  // Trim whitespace for validation
+  const trimmed = description.trim();
+
+  // Empty description is valid (optional field)
+  if (trimmed.length === 0) {
+    return true;
+  }
+
+  if (trimmed.length > SUBNET_DESCRIPTION_RULES.MAX_LENGTH) {
+    return `Description must be ${SUBNET_DESCRIPTION_RULES.MAX_LENGTH} characters or less`;
   }
 
   return true;

@@ -12,6 +12,7 @@ import { generatePdfReport } from '../formatters/pdf-formatter.js';
 import { exportToYaml } from '../formatters/yaml-formatter.js';
 import { FILE_RULES } from '../infrastructure/config/validation-rules.js';
 import { sanitizeFilePath, validateFilename } from '../infrastructure/security/security-utils.js';
+import type { Preferences } from '../schemas/preferences.schema.js';
 
 export type ExportFormat = 'yaml' | 'csv' | 'pdf';
 
@@ -41,9 +42,15 @@ export class ExportService {
    * @param plan - The network plan to export
    * @param format - The export format (yaml, csv, pdf)
    * @param filename - Optional custom filename (will use plan name if not provided)
+   * @param preferences - Optional user preferences for column visibility and order
    * @returns The full path to the exported file
    */
-  async export(plan: NetworkPlan, format: ExportFormat, filename?: string): Promise<string> {
+  async export(
+    plan: NetworkPlan,
+    format: ExportFormat,
+    filename?: string,
+    preferences?: Preferences,
+  ): Promise<string> {
     await this.ensureDirectoryExists();
 
     // Determine filename
@@ -65,13 +72,13 @@ export class ExportService {
     try {
       switch (format) {
         case 'yaml':
-          await this.exportToYaml(plan, filepath);
+          await this.exportToYaml(plan, filepath, preferences);
           break;
         case 'csv':
-          await this.exportToCsv(plan, filepath);
+          await this.exportToCsv(plan, filepath, preferences);
           break;
         case 'pdf':
-          await this.exportToPdf(plan, filepath);
+          await this.exportToPdf(plan, filepath, preferences);
           break;
         default:
           throw ErrorFactory.unsupportedFormat(format);
@@ -89,24 +96,36 @@ export class ExportService {
   /**
    * Export plan to YAML format
    */
-  private async exportToYaml(plan: NetworkPlan, filepath: string): Promise<void> {
-    const yamlContent = exportToYaml(plan);
+  private async exportToYaml(
+    plan: NetworkPlan,
+    filepath: string,
+    preferences?: Preferences,
+  ): Promise<void> {
+    const yamlContent = exportToYaml(plan, preferences);
     await fs.writeFile(filepath, yamlContent, 'utf-8');
   }
 
   /**
    * Export plan to CSV format
    */
-  private async exportToCsv(plan: NetworkPlan, filepath: string): Promise<void> {
-    const csvContent = exportToCsv(plan);
+  private async exportToCsv(
+    plan: NetworkPlan,
+    filepath: string,
+    preferences?: Preferences,
+  ): Promise<void> {
+    const csvContent = exportToCsv(plan, preferences);
     await fs.writeFile(filepath, csvContent, 'utf-8');
   }
 
   /**
    * Export plan to PDF format
    */
-  private async exportToPdf(plan: NetworkPlan, filepath: string): Promise<void> {
-    await generatePdfReport(plan, filepath);
+  private async exportToPdf(
+    plan: NetworkPlan,
+    filepath: string,
+    preferences?: Preferences,
+  ): Promise<void> {
+    await generatePdfReport(plan, filepath, undefined, preferences);
   }
 
   /**

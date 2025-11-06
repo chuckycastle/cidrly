@@ -54,11 +54,11 @@ describe('CSV Formatter', () => {
       expect(csv).toContain('required_hosts');
       expect(csv).toContain('planned_devices');
 
-      // Check data row has values
+      // Check data row has values (description is optional, can be empty)
       const lines = csv.split('\n');
       const dataLine = lines.find((line) => line.startsWith('Sales,'));
       expect(dataLine).toBeDefined();
-      expect(dataLine).toMatch(/Sales,20,25,\d+\.\d+\.\d+\.\d+,\d+,\d+,\d+,\d+,\d+/);
+      expect(dataLine).toMatch(/Sales,20,25,.*,\d+\.\d+\.\d+\.\d+,\d+,\d+,\d+,\d+,\d+/);
     });
 
     it('should include supernet summary when present', () => {
@@ -196,8 +196,9 @@ describe('CSV Formatter', () => {
 
       const csv = formatSubnetsToCsv(plan.subnets);
 
-      expect(csv).toContain('name,vlan,expected_devices,network_address,cidr_prefix');
-      expect(csv).toContain('usable_hosts,subnet_size,required_hosts,planned_devices');
+      // Check that all expected fields are present (order: configurable columns + extra fields)
+      expect(csv).toContain('name,vlan,expected_devices,description,network_address,cidr_prefix');
+      expect(csv).toContain('usable_hosts,planned_devices,subnet_size,required_hosts');
     });
   });
 

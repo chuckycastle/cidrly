@@ -6,12 +6,13 @@
 import fs from 'fs';
 import { Box, Text, useApp } from 'ink';
 import Spinner from 'ink-spinner';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createNetworkPlan, createSubnet } from '../../core/models/network-plan.js';
 import {
   validateDeviceCount,
   validateIpAddress,
   validatePlanName,
+  validateSubnetDescription,
   validateSubnetName,
   validateVlanId,
 } from '../../core/validators/validators.js';
@@ -32,6 +33,7 @@ import { useUIStore } from '../../store/uiStore.js';
 import { colors } from '../../themes/colors.js';
 import { parseDeviceCount, parseVlanId } from '../../utils/input-helpers.js';
 import { sortSubnets } from '../../utils/subnet-sorters.js';
+import { ColumnConfigDialog } from '../dialogs/ColumnConfigDialog.js';
 import { ConfirmDialog } from '../dialogs/ConfirmDialog.js';
 import { InputDialog } from '../dialogs/InputDialog.js';
 import { Modal } from '../dialogs/Modal.js';
@@ -76,6 +78,7 @@ type DialogType =
   | { type: 'preferences-base-ip' }
   | { type: 'preferences-saved-dir' }
   | { type: 'preferences-exports-dir' }
+  | { type: 'preferences-columns' }
   | { type: 'preferences-continue' };
 
 export const DashboardView: React.FC = () => {
@@ -112,8 +115,8 @@ export const DashboardView: React.FC = () => {
   const exportService = new ExportService(getDirectory('exports', preferences.exportsDir));
   const preferencesService = new PreferencesService();
 
-  // Column definitions (matching SubnetTable)
-  const columns: SortColumn[] = [
+  // Get visible columns in the user-defined order
+  const allColumnKeys: SortColumn[] = [
     'name',
     'vlan',
     'expected',
@@ -121,10 +124,36 @@ export const DashboardView: React.FC = () => {
     'cidr',
     'usable',
     'network',
+    'description',
   ];
+  const visibleSet = new Set(preferences.columnPreferences.visibleColumns);
+  const columns: SortColumn[] = preferences.columnPreferences.columnOrder.filter(
+    (col): col is SortColumn =>
+      allColumnKeys.includes(col as SortColumn) &&
+      (col === 'name' || visibleSet.has(col as SortColumn)),
+  );
 
   // Apply sorting to subnets
   const sortedSubnets = sortSubnets(subnets, sortColumn, sortDirection);
+
+  // Reset header selection when visible columns change
+  useEffect(() => {
+    if (selectedHeaderIndex >= columns.length) {
+      setSelectedHeaderIndex(Math.max(0, columns.length - 1));
+    }
+  }, [columns.length, selectedHeaderIndex]);
+
+  // Helper to get the selected subnet from sorted array and find its original index
+  const getSelectedSubnet = (): {
+    subnet: (typeof subnets)[number];
+    originalIndex: number;
+  } | null => {
+    const selectedSubnet = sortedSubnets[selectedIndex];
+    if (!selectedSubnet) return null;
+    const originalIndex = subnets.findIndex((s) => s.id === selectedSubnet.id);
+    if (originalIndex === -1) return null;
+    return { subnet: selectedSubnet, originalIndex };
+  };
 
   // Header mode navigation handlers
   const moveHeaderLeft = (): void => {
@@ -153,12 +182,12 @@ export const DashboardView: React.FC = () => {
   // Action handlers (need to be defined before keyboard shortcuts)
   const handleShowSubnetDetails = (): void => {
     if (!plan) return;
-    const subnet = subnets[selectedIndex];
-    if (!subnet) {
+    const selected = getSelectedSubnet();
+    if (!selected) {
       notify.error('No subnet selected');
       return;
     }
-    if (!subnet.subnetInfo) {
+    if (!selected.subnet.subnetInfo) {
       notify.error('Subnet has not been calculated yet');
       return;
     }
@@ -181,19 +210,33 @@ export const DashboardView: React.FC = () => {
               title: 'Add Subnet',
               label: 'Enter expected number of devices:',
               onSubmit: (expectedDevicesStr) => {
-                const vlanId = parseVlanId(vlanIdStr);
-                const expectedDevices = parseDeviceCount(expectedDevicesStr);
-                const subnet = createSubnet(name, vlanId, expectedDevices);
-                addSubnet(subnet);
-                if (plan) {
-                  const plannedDevices = Math.ceil(
-                    expectedDevices * (1 + plan.growthPercentage / 100),
-                  );
-                  notify.success(
-                    `Subnet "${name}" added! (Planning for ${plannedDevices} devices with ${plan.growthPercentage}% growth)`,
-                  );
-                }
-                setDialog({ type: 'none' });
+                setDialog({
+                  type: 'input',
+                  title: 'Add Subnet',
+                  label: 'Enter description (optional, press Enter to skip):',
+                  onSubmit: (description) => {
+                    const vlanId = parseVlanId(vlanIdStr);
+                    const expectedDevices = parseDeviceCount(expectedDevicesStr);
+                    const trimmedDescription = description.trim();
+                    const subnet = createSubnet(
+                      name,
+                      vlanId,
+                      expectedDevices,
+                      trimmedDescription || undefined,
+                    );
+                    addSubnet(subnet);
+                    if (plan) {
+                      const plannedDevices = Math.ceil(
+                        expectedDevices * (1 + plan.growthPercentage / 100),
+                      );
+                      notify.success(
+                        `Subnet "${name}" added! (Planning for ${plannedDevices} devices with ${plan.growthPercentage}% growth)`,
+                      );
+                    }
+                    setDialog({ type: 'none' });
+                  },
+                  validate: validateSubnetDescription,
+                });
               },
               validate: validateDeviceCount,
             });
@@ -207,11 +250,12 @@ export const DashboardView: React.FC = () => {
 
   const handleEditSubnet = (): void => {
     if (!plan || subnets.length === 0) return;
-    const subnet = subnets[selectedIndex];
-    if (!subnet) {
+    const selected = getSelectedSubnet();
+    if (!selected) {
       notify.error('No subnet selected');
       return;
     }
+    const { subnet, originalIndex } = selected;
     setDialog({
       type: 'input',
       title: 'Edit Subnet',
@@ -230,14 +274,25 @@ export const DashboardView: React.FC = () => {
               label: 'Enter expected number of devices:',
               defaultValue: subnet.expectedDevices.toString(),
               onSubmit: (expectedDevicesStr) => {
-                updateSubnet(
-                  selectedIndex,
-                  name,
-                  parseVlanId(vlanIdStr),
-                  parseDeviceCount(expectedDevicesStr),
-                );
-                notify.success(`Subnet "${name}" updated successfully!`);
-                setDialog({ type: 'none' });
+                setDialog({
+                  type: 'input',
+                  title: 'Edit Subnet',
+                  label: 'Enter description (optional, press Enter to skip):',
+                  defaultValue: subnet.description ?? '',
+                  onSubmit: (description) => {
+                    const trimmedDescription = description.trim();
+                    updateSubnet(
+                      originalIndex,
+                      name,
+                      parseVlanId(vlanIdStr),
+                      parseDeviceCount(expectedDevicesStr),
+                      trimmedDescription ? trimmedDescription : undefined,
+                    );
+                    notify.success(`Subnet "${name}" updated successfully!`);
+                    setDialog({ type: 'none' });
+                  },
+                  validate: validateSubnetDescription,
+                });
               },
               validate: validateDeviceCount,
             });
@@ -251,24 +306,25 @@ export const DashboardView: React.FC = () => {
 
   const handleDeleteSubnet = (): void => {
     if (!plan || subnets.length === 0) return;
-    const subnet = subnets[selectedIndex];
-    if (!subnet) {
+    const selected = getSelectedSubnet();
+    if (!selected) {
       notify.error('No subnet selected');
       return;
     }
+    const { subnet, originalIndex } = selected;
     setDialog({
       type: 'confirm',
       title: 'Delete Subnet',
       message: `Delete "${subnet.name}" (VLAN ${subnet.vlanId})?\n\nThis cannot be undone.`,
       onConfirm: (confirmed) => {
         if (confirmed) {
-          const removed = removeSubnet(selectedIndex);
+          const removed = removeSubnet(originalIndex);
           if (removed) {
-            // Adjust selected index
-            if (subnets.length === 0) {
+            // Adjust selected index in sorted view
+            if (sortedSubnets.length === 0) {
               setSelectedIndex(0);
-            } else if (selectedIndex >= subnets.length) {
-              setSelectedIndex(subnets.length - 1);
+            } else if (selectedIndex >= sortedSubnets.length) {
+              setSelectedIndex(sortedSubnets.length - 1);
             }
             notify.success(`Subnet "${removed.name}" deleted.`);
           }
@@ -452,6 +508,9 @@ export const DashboardView: React.FC = () => {
       case 'saved-dir':
         setDialog({ type: 'preferences-saved-dir' });
         break;
+      case 'columns':
+        setDialog({ type: 'preferences-columns' });
+        break;
       case 'exports-dir':
         setDialog({ type: 'preferences-exports-dir' });
         break;
@@ -494,7 +553,7 @@ export const DashboardView: React.FC = () => {
       setDialog({ type: 'loading', message: 'Exporting plan...' });
       try {
         const exportFormat = format as 'yaml' | 'csv' | 'pdf';
-        const filepath = await exportService.export(plan, exportFormat, filename);
+        const filepath = await exportService.export(plan, exportFormat, filename, preferences);
         notify.success(`Plan exported to ${filepath}`);
         setDialog({ type: 'none' });
       } catch (error) {
@@ -790,6 +849,8 @@ export const DashboardView: React.FC = () => {
           sortDirection={sortDirection}
           headerMode={headerMode}
           selectedHeaderIndex={selectedHeaderIndex}
+          visibleColumns={preferences.columnPreferences.visibleColumns}
+          columnOrder={preferences.columnPreferences.columnOrder}
         />
       )}
 
@@ -809,10 +870,10 @@ export const DashboardView: React.FC = () => {
           </Box>
         </Modal>
       )}
-      {dialog.type === 'info' && subnets[selectedIndex] && (
+      {dialog.type === 'info' && sortedSubnets[selectedIndex] && (
         <Modal>
           <SubnetInfoDialog
-            subnet={subnets[selectedIndex]}
+            subnet={sortedSubnets[selectedIndex]}
             onClose={() => setDialog({ type: 'none' })}
           />
         </Modal>
@@ -922,6 +983,10 @@ export const DashboardView: React.FC = () => {
               {
                 label: `Exports Dir (${preferences.exportsDir ? preferences.exportsDir.replace(process.env['HOME'] ?? '', '~') : '~/cidrly/exports'})`,
                 value: 'exports-dir',
+              },
+              {
+                label: 'Configure Columns',
+                value: 'columns',
               },
             ]}
             onSelect={handlePreferenceSelected}
@@ -1043,6 +1108,48 @@ export const DashboardView: React.FC = () => {
                   setPreferences(updatedPrefs);
                   handlePreferenceSaved(
                     `Exports directory ${dir.trim() ? `set to ${dir}` : 'reset to default'}`,
+                  );
+                } catch (error) {
+                  notify.error(
+                    `Failed to save preference: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                  );
+                  setDialog({ type: 'preferences-menu' });
+                }
+              })();
+            }}
+            onCancel={() => setDialog({ type: 'preferences-menu' })}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'preferences-columns' && (
+        <Modal>
+          <ColumnConfigDialog
+            visibleColumns={preferences.columnPreferences.visibleColumns}
+            columnOrder={preferences.columnPreferences.columnOrder}
+            onSave={(visibleColumns, columnOrder) => {
+              void (async (): Promise<void> => {
+                try {
+                  type ColumnKey =
+                    | 'name'
+                    | 'vlan'
+                    | 'expected'
+                    | 'planned'
+                    | 'cidr'
+                    | 'usable'
+                    | 'network'
+                    | 'description';
+                  const updatedPrefs = {
+                    ...preferences,
+                    columnPreferences: {
+                      ...preferences.columnPreferences,
+                      visibleColumns: visibleColumns as ColumnKey[],
+                      columnOrder,
+                    },
+                  };
+                  await preferencesService.savePreferences(updatedPrefs);
+                  setPreferences(updatedPrefs);
+                  handlePreferenceSaved(
+                    `Column configuration updated (${visibleColumns.length} columns visible)`,
                   );
                 } catch (error) {
                   notify.error(

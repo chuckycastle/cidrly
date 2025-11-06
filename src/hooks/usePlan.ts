@@ -57,7 +57,13 @@ export const usePlanState = (): { plan: NetworkPlan | null; planService: Network
 export const usePlanActions = (): {
   loadPlan: (plan: NetworkPlan) => void;
   addSubnet: (subnet: Subnet) => void;
-  updateSubnet: (index: number, name: string, vlanId: number, expectedDevices: number) => void;
+  updateSubnet: (
+    index: number,
+    name: string,
+    vlanId: number,
+    expectedDevices: number,
+    description?: string,
+  ) => void;
   removeSubnet: (index: number) => Subnet | null;
   calculatePlan: () => void;
   updateBaseIp: (newBaseIp: string) => void;

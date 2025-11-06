@@ -60,6 +60,14 @@ export const PLAN_NAME_RULES = {
 } as const;
 
 /**
+ * Subnet description validation rules
+ */
+export const SUBNET_DESCRIPTION_RULES = {
+  MIN_LENGTH: 0,
+  MAX_LENGTH: 200,
+} as const;
+
+/**
  * Filename validation rules
  */
 export const FILENAME_RULES = {

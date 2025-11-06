@@ -49,10 +49,12 @@ describe('YamlFormatter', () => {
       const yamlString = formatPlanToYaml(plan);
       const parsed = YAML.parse(yamlString);
 
-      expect(parsed.subnets[0].subnetInfo).toBeDefined();
-      expect(parsed.subnets[0].subnetInfo.networkAddress).toBe('10.0.0.0');
-      expect(parsed.subnets[0].subnetInfo.cidrPrefix).toBe(24);
-      expect(parsed.subnets[0].subnetInfo.usableHosts).toBe(254);
+      // New flattened structure - subnet info fields are at top level
+      expect(parsed.subnets[0].networkAddress).toBe('10.0.0.0');
+      expect(parsed.subnets[0].cidrPrefix).toBe(24);
+      expect(parsed.subnets[0].usableHosts).toBe(254);
+      expect(parsed.subnets[0].requiredHosts).toBe(102);
+      expect(parsed.subnets[0].subnetSize).toBe(256);
     });
 
     it('should include supernet when present', () => {

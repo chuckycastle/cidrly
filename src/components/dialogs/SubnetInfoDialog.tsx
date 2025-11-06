@@ -84,10 +84,17 @@ export const SubnetInfoDialog: React.FC<SubnetInfoDialogProps> = ({ subnet, onCl
       overflow="visible"
     >
       {/* Title and Subnet Name combined */}
-      <Box marginBottom={isShort ? 0 : 1}>
-        <Text bold>{colors.accent(subnet.name)}</Text>
-        <Text> </Text>
-        <Text>{colors.dim(`(VLAN ${subnet.vlanId})`)}</Text>
+      <Box marginBottom={isShort ? 0 : 1} flexDirection="column">
+        <Box>
+          <Text bold>{colors.accent(subnet.name)}</Text>
+          <Text> </Text>
+          <Text>{colors.dim(`(VLAN ${subnet.vlanId})`)}</Text>
+        </Box>
+        {subnet.description && (
+          <Box>
+            <Text>{colors.muted(subnet.description)}</Text>
+          </Box>
+        )}
       </Box>
 
       {/* Divider - hide on very short terminals */}

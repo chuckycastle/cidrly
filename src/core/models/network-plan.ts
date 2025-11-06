@@ -34,6 +34,7 @@ export interface Subnet {
   name: string;
   vlanId: number;
   expectedDevices: number;
+  description?: string;
   subnetInfo?: SubnetInfo;
 }
 
@@ -57,12 +58,18 @@ export function generateSubnetId(): string {
 /**
  * Create a new subnet
  */
-export function createSubnet(name: string, vlanId: number, expectedDevices: number): Subnet {
+export function createSubnet(
+  name: string,
+  vlanId: number,
+  expectedDevices: number,
+  description?: string,
+): Subnet {
   return {
     id: generateSubnetId(),
     name,
     vlanId,
     expectedDevices,
+    ...(description && { description }),
   };
 }
 
@@ -107,9 +114,14 @@ export function isValidSubnetName(name: string): boolean {
  */
 export function addSubnet(
   plan: NetworkPlan,
-  subnetData: { name: string; vlan: number; expectedDevices: number },
+  subnetData: { name: string; vlan: number; expectedDevices: number; description?: string },
 ): NetworkPlan {
-  const newSubnet = createSubnet(subnetData.name, subnetData.vlan, subnetData.expectedDevices);
+  const newSubnet = createSubnet(
+    subnetData.name,
+    subnetData.vlan,
+    subnetData.expectedDevices,
+    subnetData.description,
+  );
   return {
     ...plan,
     subnets: [...plan.subnets, newSubnet],
