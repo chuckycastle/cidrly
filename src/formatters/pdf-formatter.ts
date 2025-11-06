@@ -6,6 +6,7 @@
 import fs from 'fs';
 import PDFDocument from 'pdfkit';
 import type { NetworkPlan, Subnet } from '../core/models/network-plan.js';
+import type { Preferences } from '../schemas/preferences.schema.js';
 
 interface PDFOptions {
   margin: number;
@@ -46,6 +47,7 @@ export async function generatePdfReport(
   plan: NetworkPlan,
   filepath: string,
   options: PDFOptions = DEFAULT_OPTIONS,
+  preferences?: Preferences,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     try {
@@ -74,7 +76,7 @@ export async function generatePdfReport(
         renderSupernet(doc, plan.supernet, options);
       }
 
-      renderSubnetTable(doc, plan.subnets, options);
+      renderSubnetTable(doc, plan.subnets, options, preferences);
       renderFooter(doc, options);
 
       doc.end();
@@ -135,9 +137,85 @@ function renderMetadata(doc: PDFKit.PDFDocument, plan: NetworkPlan, options: PDF
 }
 
 /**
+ * Column configuration for PDF table
+ */
+type PdfColumnKey =
+  | 'name'
+  | 'vlan'
+  | 'expected'
+  | 'planned'
+  | 'cidr'
+  | 'usable'
+  | 'network'
+  | 'description';
+
+interface PdfColumn {
+  key: PdfColumnKey;
+  label: string;
+  width: number;
+  getValue: (subnet: Subnet) => string;
+}
+
+const PDF_COLUMNS: Record<PdfColumnKey, PdfColumn> = {
+  name: {
+    key: 'name',
+    label: 'Subnet Name',
+    width: 90,
+    getValue: (subnet) => subnet.name,
+  },
+  vlan: {
+    key: 'vlan',
+    label: 'VLAN',
+    width: 40,
+    getValue: (subnet) => String(subnet.vlanId),
+  },
+  expected: {
+    key: 'expected',
+    label: 'Devices',
+    width: 50,
+    getValue: (subnet) => String(subnet.expectedDevices),
+  },
+  planned: {
+    key: 'planned',
+    label: 'Planned',
+    width: 50,
+    getValue: (subnet) => String(subnet.subnetInfo?.plannedDevices ?? subnet.expectedDevices),
+  },
+  cidr: {
+    key: 'cidr',
+    label: 'CIDR',
+    width: 40,
+    getValue: (subnet) => (subnet.subnetInfo ? `/${subnet.subnetInfo.cidrPrefix}` : 'N/A'),
+  },
+  usable: {
+    key: 'usable',
+    label: 'Capacity',
+    width: 55,
+    getValue: (subnet) => String(subnet.subnetInfo?.usableHosts ?? 'N/A'),
+  },
+  network: {
+    key: 'network',
+    label: 'Network',
+    width: 90,
+    getValue: (subnet) => subnet.subnetInfo?.networkAddress ?? 'N/A',
+  },
+  description: {
+    key: 'description',
+    label: 'Description',
+    width: 100,
+    getValue: (subnet) => subnet.description ?? '',
+  },
+};
+
+/**
  * Render subnet allocation table
  */
-function renderSubnetTable(doc: PDFKit.PDFDocument, subnets: Subnet[], options: PDFOptions): void {
+function renderSubnetTable(
+  doc: PDFKit.PDFDocument,
+  subnets: Subnet[],
+  options: PDFOptions,
+  preferences?: Preferences,
+): void {
   doc
     .fontSize(options.fontSize.heading)
     .fillColor(options.colors.primary)
@@ -145,24 +223,36 @@ function renderSubnetTable(doc: PDFKit.PDFDocument, subnets: Subnet[], options: 
 
   doc.moveDown(0.5);
 
-  // Table configuration
-  const tableTop = doc.y;
-  const colWidths = {
-    name: 120,
-    vlan: 45,
-    devices: 60,
-    planned: 60,
-    capacity: 65,
-    network: 100,
-  };
+  // Determine which columns to display
+  let columns: PdfColumn[];
+  if (preferences?.columnPreferences) {
+    const { columnOrder, visibleColumns } = preferences.columnPreferences;
+    const visibleSet = new Set(visibleColumns);
+    columns = columnOrder
+      .filter(
+        (col): col is PdfColumnKey => col in PDF_COLUMNS && (col === 'name' || visibleSet.has(col)),
+      )
+      .map((col) => PDF_COLUMNS[col]);
+  } else {
+    // Default columns
+    columns = [
+      PDF_COLUMNS.name,
+      PDF_COLUMNS.vlan,
+      PDF_COLUMNS.expected,
+      PDF_COLUMNS.planned,
+      PDF_COLUMNS.usable,
+      PDF_COLUMNS.network,
+    ];
+  }
 
+  const tableTop = doc.y;
   const startX = options.margin;
   let currentY = tableTop;
 
   // Draw table header
   doc.fontSize(options.fontSize.body).font('Helvetica-Bold').fillColor(options.colors.text);
 
-  // Header background (reduced height for compact display)
+  // Header background
   doc
     .rect(startX, currentY, doc.page.width - 2 * options.margin, 16)
     .fill(options.colors.lightGray);
@@ -172,17 +262,10 @@ function renderSubnetTable(doc: PDFKit.PDFDocument, subnets: Subnet[], options: 
   // Header text
   let currentX = startX + 5;
   doc.fillColor(options.colors.text);
-  doc.text('Subnet Name', currentX, currentY, { width: colWidths.name });
-  currentX += colWidths.name;
-  doc.text('VLAN', currentX, currentY, { width: colWidths.vlan });
-  currentX += colWidths.vlan;
-  doc.text('Devices', currentX, currentY, { width: colWidths.devices });
-  currentX += colWidths.devices;
-  doc.text('Planned', currentX, currentY, { width: colWidths.planned });
-  currentX += colWidths.planned;
-  doc.text('Capacity', currentX, currentY, { width: colWidths.capacity });
-  currentX += colWidths.capacity;
-  doc.text('Network Address', currentX, currentY, { width: colWidths.network });
+  columns.forEach((col) => {
+    doc.text(col.label, currentX, currentY, { width: col.width });
+    currentX += col.width;
+  });
 
   currentY += 16;
   doc.font('Helvetica');
@@ -195,7 +278,7 @@ function renderSubnetTable(doc: PDFKit.PDFDocument, subnets: Subnet[], options: 
       currentY = options.margin;
     }
 
-    // Alternate row colors (reduced height for compact display)
+    // Alternate row colors
     if (index % 2 === 0) {
       doc
         .rect(startX, currentY, doc.page.width - 2 * options.margin, 14)
@@ -208,34 +291,15 @@ function renderSubnetTable(doc: PDFKit.PDFDocument, subnets: Subnet[], options: 
 
     doc.fontSize(options.fontSize.small);
 
-    // Subnet name
-    doc.text(subnet.name, currentX, currentY, {
-      width: colWidths.name - 10,
-      ellipsis: true,
+    // Render each column's value
+    columns.forEach((col) => {
+      const value = col.getValue(subnet);
+      doc.text(value, currentX, currentY, {
+        width: col.width - 5,
+        ellipsis: true,
+      });
+      currentX += col.width;
     });
-
-    // VLAN ID
-    currentX += colWidths.name;
-    doc.text(String(subnet.vlanId), currentX, currentY, { width: colWidths.vlan });
-
-    // Device count (required)
-    currentX += colWidths.vlan;
-    doc.text(String(subnet.expectedDevices), currentX, currentY, { width: colWidths.devices });
-
-    // Planned devices (after growth)
-    currentX += colWidths.devices;
-    const planned = subnet.subnetInfo?.plannedDevices ?? subnet.expectedDevices;
-    doc.text(String(planned), currentX, currentY, { width: colWidths.planned });
-
-    // Capacity (usable hosts)
-    currentX += colWidths.planned;
-    const capacity = subnet.subnetInfo?.usableHosts ?? 'N/A';
-    doc.text(String(capacity), currentX, currentY, { width: colWidths.capacity });
-
-    // Network address
-    currentX += colWidths.capacity;
-    const networkAddr = subnet.subnetInfo?.networkAddress ?? 'N/A';
-    doc.text(networkAddr, currentX, currentY, { width: colWidths.network });
 
     currentY += 14;
   });

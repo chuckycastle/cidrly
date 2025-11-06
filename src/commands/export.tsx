@@ -11,6 +11,7 @@ import { FILE_RULES } from '../infrastructure/config/validation-rules.js';
 import { FileSystemRepository } from '../repositories/index.js';
 import { ExportService, type ExportFormat } from '../services/export.service.js';
 import { FileService } from '../services/file.service.js';
+import { PreferencesService } from '../services/preferences.service.js';
 
 export const options = zod.object({
   plan: zod.string().describe('Plan file to export (e.g., my-plan.json)'),
@@ -47,6 +48,10 @@ export default function Export({ options }: Props): React.ReactElement {
 
         setPlanName(plan.name);
 
+        // Load preferences for column configuration
+        const preferencesService = new PreferencesService();
+        const preferences = await preferencesService.loadPreferences();
+
         // Export to specified format
         setStatus('exporting');
         const exportService = new ExportService();
@@ -54,6 +59,7 @@ export default function Export({ options }: Props): React.ReactElement {
           plan,
           options.format as ExportFormat,
           options.output,
+          preferences,
         );
         setFilepath(exportedPath);
 

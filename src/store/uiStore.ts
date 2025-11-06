@@ -12,7 +12,15 @@ export type ViewType = 'welcome' | 'dashboard' | 'detail' | 'help';
 export type NotificationPriority = 'low' | 'normal' | 'high';
 export type NotificationPosition = 'top-right' | 'bottom-right' | 'bottom-left' | 'top-center';
 
-export type SortColumn = 'name' | 'vlan' | 'expected' | 'planned' | 'network' | 'cidr' | 'usable';
+export type SortColumn =
+  | 'name'
+  | 'vlan'
+  | 'expected'
+  | 'planned'
+  | 'network'
+  | 'cidr'
+  | 'usable'
+  | 'description';
 export type SortDirection = 'asc' | 'desc';
 
 export interface Notification {

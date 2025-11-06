@@ -120,6 +120,25 @@ function sortByUsable(a: Subnet, b: Subnet, direction: SortDirection): number {
 }
 
 /**
+ * Sort subnets by description (string comparison)
+ * Subnets without description are sorted to the end
+ */
+function sortByDescription(a: Subnet, b: Subnet, direction: SortDirection): number {
+  const aDescription = a.description ?? '';
+  const bDescription = b.description ?? '';
+
+  // If both don't have description, maintain original order
+  if (!aDescription && !bDescription) return 0;
+  // If only a doesn't have description, sort it to the end
+  if (!aDescription) return 1;
+  // If only b doesn't have description, sort it to the end
+  if (!bDescription) return -1;
+
+  const comparison = aDescription.localeCompare(bDescription);
+  return direction === 'asc' ? comparison : -comparison;
+}
+
+/**
  * Sort subnets by the specified column and direction
  * @param subnets - Array of subnets to sort
  * @param column - Column to sort by
@@ -156,6 +175,8 @@ export function sortSubnets(
         return sortByCidr(a, b, direction);
       case 'usable':
         return sortByUsable(a, b, direction);
+      case 'description':
+        return sortByDescription(a, b, direction);
       default:
         return 0;
     }
@@ -183,6 +204,7 @@ export function getSortDescription(column: SortColumn | null, direction: SortDir
     network: 'Network',
     cidr: 'CIDR',
     usable: 'Usable',
+    description: 'Description',
   };
 
   const directionSymbol = direction === 'asc' ? '↑' : '↓';

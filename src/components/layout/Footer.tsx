@@ -76,7 +76,6 @@ export const Footer: React.FC<FooterProps> = React.memo(({ hasSubnets, hasCalcul
         { key: 'l', label: 'oad', enabled: true },
         { key: 'n', label: 'ew', enabled: true },
         { format: '(label)e(key)x(label)port', enabled: hasCalculation },
-        { format: '(label)i(key)m(label)port', enabled: true },
         { key: 'p', label: 'refs', enabled: true },
       ],
     },

@@ -155,6 +155,7 @@ export class NetworkPlanService {
    * @param name - New subnet name
    * @param vlanId - New VLAN ID
    * @param expectedDevices - New expected device count
+   * @param description - Optional subnet description
    */
   updateSubnet(
     plan: NetworkPlan,
@@ -162,6 +163,7 @@ export class NetworkPlanService {
     name: string,
     vlanId: number,
     expectedDevices: number,
+    description?: string,
   ): void {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
     if (!plan) {
@@ -183,7 +185,7 @@ export class NetworkPlanService {
       throw new ValidationError(`Subnet at index ${index} not found`, ErrorCode.NO_SUBNETS_DEFINED);
     }
     plan.subnets = plan.subnets.map((s, i) =>
-      i === index ? { ...s, name, vlanId, expectedDevices } : s,
+      i === index ? { ...s, name, vlanId, expectedDevices, description } : s,
     );
     plan.updatedAt = new Date();
 
