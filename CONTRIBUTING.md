@@ -344,5 +344,3 @@ If you have questions about contributing:
 - Check existing [Issues](https://github.com/chuckycastle/cidrly/issues)
 - Ask in a [new Question issue](https://github.com/chuckycastle/cidrly/issues/new?template=question.yml)
 - Review closed PRs for examples
-
-Thank you for contributing to cidrly!

@@ -36,7 +36,7 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
   - Affects: Edit, Delete, and Info dialogs
 
 - **Table Column Widths**
-  - Adjusted Network column width (15→17 chars) for better fit
+  - Adjusted Network column width (15→17 chars) to accommodate IP addresses
   - Adjusted Description column width (25→20 chars) for all 8 columns visible
   - Table now displays cleanly with all columns shown
 
@@ -135,7 +135,7 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 
 - **Closed as Won't Do** ([#32](https://github.com/chuckycastle/cidrly/issues/32))
   - Theme customization feature will not be implemented
-  - Rationale: Terminal emulators provide superior theme management
+  - Rationale: Terminal emulators provide theme management
   - Users should configure dark/light themes at terminal level
   - Keeps CLI tool focused on core network planning functionality
 
@@ -151,11 +151,11 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 
 ### Improved
 
-- **Repository Cleanup** - Enhanced ignore files and removed accidentally committed artifacts
+- **Repository Cleanup** - Updated ignore files and removed accidentally committed artifacts
   - Removed npm pack tarball (cidrly-0.1.6.tgz) from version control
   - Removed GitHub wiki clones (cidrly.wiki/, cidrly.wiki.backup/) from main repo
-  - Enhanced .gitignore with comprehensive patterns (yarn logs, OS files, temp files)
-  - Added .eslintignore for better linting performance
+  - Updated .gitignore with additional patterns (yarn logs, OS files, temp files)
+  - Added .eslintignore to skip non-source files during linting
   - Updated .prettierignore to prevent formatting generated files
 
 - **Test Coverage Strategy** - Implemented per-file coverage thresholds (Option 3)
@@ -191,13 +191,13 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 
 ### Changed
 
-- **Keyboard Shortcuts** - Context-aware multi-purpose key bindings with intelligent input detection
+- **Keyboard Shortcuts** - Context-aware multi-purpose key bindings
   - 'l' key is dual-purpose: Load plan (row mode) / Move right (header mode)
-  - 'q' key is multi-purpose with smart behavior:
+  - 'q' key is multi-purpose with context-aware behavior:
     - Quit app (row mode)
     - Exit header mode (header mode)
     - Close non-input dialogs (info, confirm, preferences, filepicker, select)
-    - Smart input dialog handling:
+    - Context-aware input dialog handling:
       - Closes dialogs where 'q' is invalid (e.g., IP address: only allows 0-9 and .)
       - Types 'q' in dialogs where it's valid (e.g., filenames, subnet names)
       - Uses `allowedChars` pattern to determine behavior automatically
@@ -231,7 +231,7 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
   - IP address sorting uses numeric comparison (not bitwise operators)
   - Sorts work on arrays up to thousands of subnets
   - Original array never mutated (immutable sorting)
-  - 22 comprehensive test cases covering all sort scenarios
+  - 22 test cases covering all sort scenarios
 
 ### Technical
 
@@ -262,7 +262,7 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 
 - **Example File Validation** - Fixed "plan validation failed" error when loading sample plans
   - Users upgrading from v0.1.6 had outdated example files in `~/cidrly/saved-plans/`
-  - Postinstall script now uses smart checksum detection to identify outdated examples
+  - Postinstall script now uses checksum detection to identify outdated examples
   - Old example files are automatically updated while preserving user-created plans
   - Closes [Issue #6](https://github.com/chuckycastle/cidrly/issues/6)
 
@@ -277,7 +277,7 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 
 ### Improved
 
-- **Smart Example Updates** - Enhanced postinstall script with intelligent file management
+- **Example File Updates** - Postinstall script with checksum-based file management
   - Detects outdated example files using SHA-256 checksums
   - Updates old examples (v0.1.6) to current versions automatically
   - Preserves user-created files (unknown checksums)
@@ -396,7 +396,7 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 ### Changed
 
 - **VLSM Display Order** - Subnets now display in optimized order (largest first) instead of original creation order
-  - Makes network allocation more intuitive and easier to understand
+  - Network allocation follows size-descending order
   - Sequential network addresses are now visually sequential in the table
   - Removed `sortOrder` field from Subnet interface (no longer needed)
 - **Service Layer Integration** - NetworkPlanService.calculatePlan() now uses calculateSubnetRanges()
