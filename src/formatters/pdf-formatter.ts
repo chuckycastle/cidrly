@@ -231,7 +231,7 @@ function renderSubnetTable(
     columns = columnOrder
       .filter(
         (col): col is PdfColumnKey =>
-          col in PDF_COLUMNS && (col === 'name' || visibleSet.has(col as string)),
+          col in PDF_COLUMNS && (col === 'name' || visibleSet.has(col)),
       )
       .map((col) => PDF_COLUMNS[col]);
   } else {
