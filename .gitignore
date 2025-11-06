@@ -60,6 +60,10 @@ NOTES.md
 TODO.md
 CLAUDE.md
 
+# AI coding assistant files
+.github/CURRENT_MILESTONE.md
+.github/CURRENT_MILESTONE.md.template
+
 # Docker (removed support)
 Dockerfile
 docker-compose.yml
