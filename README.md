@@ -88,6 +88,16 @@ See [examples/](examples/) for sample network plans:
 - `example-data-center.json` - Three-tier application infrastructure
 - `example-branch-office.json` - Small office network
 
+## Documentation
+
+Documentation is available on the [GitHub Wiki](https://github.com/chuckycastle/cidrly/wiki):
+
+- **[User Guide](https://github.com/chuckycastle/cidrly/wiki/User-Guide)** - Getting started, basic concepts, common workflows, and troubleshooting
+- **[Keyboard Shortcuts](https://github.com/chuckycastle/cidrly/wiki/Keyboard-Shortcuts)** - Complete reference for all keyboard shortcuts
+- **[Examples and Tutorials](https://github.com/chuckycastle/cidrly/wiki/Examples)** - Practical examples and step-by-step tutorials
+
+Access help in the dashboard by pressing `?`
+
 ## Roadmap
 
 Development roadmap is managed through GitHub:
