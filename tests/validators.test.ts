@@ -6,11 +6,21 @@ import {
   validateDeviceCount,
   validateIpAddress,
   validatePlanName,
+  validateSubnetDescription,
   validateSubnetName,
   validateVlanId,
+  ValidationError,
 } from '../src/core/validators/validators.js';
 
 describe('Validators', () => {
+  describe('ValidationError', () => {
+    it('should create error with correct name and message', () => {
+      const error = new ValidationError('Test error message');
+      expect(error.name).toBe('ValidationError');
+      expect(error.message).toBe('Test error message');
+      expect(error).toBeInstanceOf(Error);
+    });
+  });
   describe('validateSubnetName', () => {
     it('should accept valid subnet names', () => {
       expect(validateSubnetName('Engineering')).toBe(true);
@@ -56,6 +66,11 @@ describe('Validators', () => {
       expect(validateVlanId('4095')).toMatch(/between 1 and 4094/i);
       expect(validateVlanId('-1')).toMatch(/between 1 and 4094/i);
     });
+
+    it('should reject extremely long input (DoS protection)', () => {
+      expect(validateVlanId('1'.repeat(11))).toMatch(/too long/i);
+      expect(validateVlanId('12345678901')).toMatch(/too long/i);
+    });
   });
 
   describe('validateDeviceCount', () => {
@@ -82,6 +97,11 @@ describe('Validators', () => {
 
     it('should reject extremely large values', () => {
       expect(validateDeviceCount('16777215')).toMatch(/too large/i);
+    });
+
+    it('should reject extremely long input (DoS protection)', () => {
+      expect(validateDeviceCount('1'.repeat(16))).toMatch(/too long/i);
+      expect(validateDeviceCount('1234567890123456')).toMatch(/too long/i);
     });
   });
 
@@ -113,6 +133,11 @@ describe('Validators', () => {
       expect(validateIpAddress('192.168.001.1')).toMatch(/invalid leading zero/i);
       expect(validateIpAddress('010.0.0.0')).toMatch(/invalid leading zero/i);
     });
+
+    it('should reject extremely long input (DoS protection)', () => {
+      expect(validateIpAddress('1'.repeat(16))).toMatch(/too long/i);
+      expect(validateIpAddress('192.168.1.1.1.1.1')).toMatch(/too long/i);
+    });
   });
 
   describe('validatePlanName', () => {
@@ -134,6 +159,26 @@ describe('Validators', () => {
       expect(validatePlanName(' Corporate Network')).toMatch(/leading or trailing whitespace/i);
       expect(validatePlanName('Corporate Network ')).toMatch(/leading or trailing whitespace/i);
       expect(validatePlanName('  Campus Plan  ')).toMatch(/leading or trailing whitespace/i);
+    });
+  });
+
+  describe('validateSubnetDescription', () => {
+    it('should accept valid descriptions', () => {
+      expect(validateSubnetDescription('Main office network')).toBe(true);
+      expect(validateSubnetDescription('Guest WiFi for visitors')).toBe(true);
+    });
+
+    it('should accept empty descriptions (optional field)', () => {
+      expect(validateSubnetDescription('')).toBe(true);
+      expect(validateSubnetDescription('   ')).toBe(true);
+    });
+
+    it('should reject descriptions over 200 characters', () => {
+      expect(validateSubnetDescription('a'.repeat(201))).toMatch(/200 characters or less/i);
+    });
+
+    it('should accept descriptions at exactly 200 characters', () => {
+      expect(validateSubnetDescription('a'.repeat(200))).toBe(true);
     });
   });
 });
