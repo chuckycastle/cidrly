@@ -9,6 +9,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 For planned features and enhancements, see [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) and [Milestones](https://github.com/chuckycastle/cidrly/milestones).
 
+## [0.4.0] - 2025-11-08
+
+### Added
+
+- **Manual Network Address Editing** ([#56](https://github.com/chuckycastle/cidrly/issues/56))
+  - Edit network addresses for individual subnets with EditNetworkDialog
+  - Lock network addresses to prevent auto-calculation changes
+  - Visual indicators (\*) for locked subnets in table
+  - Validation prevents overlaps and invalid CIDR ranges
+  - Locked subnet count displayed in table header
+
+- **Auto-Fit Subnet Allocation** ([#57](https://github.com/chuckycastle/cidrly/issues/57))
+  - Automatically allocate subnets into available IP address blocks
+  - Best-fit bin-packing algorithm for efficient space utilization
+  - VLAN-ordered allocation (sorts by VLAN ID ascending, then size descending)
+  - AvailableBlocksDialog for specifying target IP ranges
+  - AutoFitPreviewDialog showing allocation results and utilization
+  - Multi-block parsing (e.g., "10.0.0.0/16, 192.168.0.0/20")
+
+- **ModifyDialog Menu** ([#56](https://github.com/chuckycastle/cidrly/issues/56), [#57](https://github.com/chuckycastle/cidrly/issues/57))
+  - Unified 'm' key for accessing subnet modification options
+  - Arrow key navigation between Manual Edit and Auto-Fit modes
+  - Consolidated workflow for manual and automated subnet editing
+
+- **Dynamic Column Widths**
+  - Name and Description columns expand automatically when other columns are hidden
+  - Flexible column system with configurable minimum widths
+  - Optimal space utilization based on visible columns
+  - Terminal width-aware responsive design
+
+- **106x31 Terminal Support** ([#58](https://github.com/chuckycastle/cidrly/issues/58))
+  - Reduced default table rows from 23 to 18
+  - Compact column widths optimized for 106-column terminals
+  - Description column expanded to 30 characters (was 18)
+  - Reduced vertical padding in Header and Footer components
+  - Simplified efficiency bar text display
+
+### Changed
+
+- **Footer Dynamic Positioning**
+  - Footer now dynamically repositions to bottom of terminal on resize
+  - Listens to terminal resize events for real-time updates
+  - Ensures footer stays visible regardless of terminal size
+
+- **Notification System Improvements**
+  - Notifications overlay at top of screen with solid background
+  - Only shows most recent notification (override mode)
+  - Centered display with cyan bracket borders
+  - No UI element shifting when notifications appear
+
+- **Column Width Optimization**
+  - Name: 20 → 17 characters
+  - VLAN: 6 → 4 characters
+  - Expected: 5 → 3 characters
+  - Planned: 6 → 4 characters
+  - Usable: 5 → 4 characters
+  - Network: 17 → 19 characters (accommodates lock indicator)
+  - Description: 20 → 30 characters
+  - Total width: 104 → 106 characters
+
+### Technical
+
+- **Enhanced Data Model**
+  - Added `networkLocked` boolean to Subnet interface
+  - Added `manualNetworkAddress` optional field to Subnet interface
+  - Network plan schema updated to support manual network addresses
+
+- **New Core Algorithms**
+  - Auto-fit bin-packing algorithm (best-fit decreasing)
+  - VLAN-ordered subnet sorting
+  - IP block parsing and validation
+  - Utilization calculation for allocated subnets
+
+- **New Components**
+  - EditNetworkDialog: Manual network address editing with CIDR validation
+  - AvailableBlocksDialog: Multi-block IP range input
+  - AutoFitPreviewDialog: Allocation preview with utilization metrics
+  - ModifyDialog: Subnet modification menu
+  - ErrorBoundary: React error boundary for crash handling
+
+- **Test Suite Updates**
+  - Auto-fit algorithm tests (11 tests)
+  - Block parser tests (8 tests)
+  - Subnet sorters tests for network column with CIDR prefixes
+  - Manual editing workflow tests
+
 ## [0.3.2] - 2025-11-06
 
 ### Added

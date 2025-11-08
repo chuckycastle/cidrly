@@ -4,6 +4,13 @@
  */
 
 import { detectOverlaps, type OverlapResult } from '../core/calculators/overlap-detector.js';
+import {
+  calculateBroadcast,
+  calculateHostMax,
+  calculateHostMin,
+  calculateSubnetSize,
+  calculateUsableHosts,
+} from '../core/calculators/subnet-calculator.js';
 import type { NetworkPlan, Subnet } from '../core/models/network-plan.js';
 import { calculateSubnetRanges } from '../core/models/network-plan.js';
 import { ErrorCode, ValidationError } from '../errors/network-plan-errors.js';
@@ -257,5 +264,123 @@ export class NetworkPlanService {
       }));
 
     return detectOverlaps(subnetsWithAddresses);
+  }
+
+  /**
+   * Set manual network address for a subnet and lock it
+   *
+   * @param plan - Network plan to modify
+   * @param index - Index of subnet to update
+   * @param networkAddress - Manual network address in CIDR format
+   * @param lock - Whether to lock the subnet to prevent recalculation
+   */
+  setManualNetworkAddress(
+    plan: NetworkPlan,
+    index: number,
+    networkAddress: string,
+    lock: boolean,
+  ): void {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
+    if (!plan) {
+      throw new ValidationError(
+        'Cannot set manual network address: Plan is null or undefined',
+        ErrorCode.NO_PLAN_LOADED,
+      );
+    }
+
+    if (index < 0 || index >= plan.subnets.length) {
+      throw new ValidationError(
+        `Cannot set manual network address: Index ${index} is out of bounds (0-${plan.subnets.length - 1})`,
+        ErrorCode.NO_SUBNETS_DEFINED,
+      );
+    }
+
+    const subnet = plan.subnets[index];
+    if (!subnet) {
+      throw new ValidationError(`Subnet at index ${index} not found`, ErrorCode.NO_SUBNETS_DEFINED);
+    }
+
+    // Parse network address to update subnetInfo
+    const parts = networkAddress.split('/');
+    const ipAddress = parts[0];
+    const cidrPrefix = parseInt(parts[1] || '24', 10);
+
+    if (!ipAddress || isNaN(cidrPrefix)) {
+      throw new ValidationError(
+        'Invalid network address format. Expected: x.x.x.x/prefix',
+        ErrorCode.INVALID_IP_ADDRESS,
+      );
+    }
+
+    // Calculate subnet information
+    const subnetSize = calculateSubnetSize(cidrPrefix);
+    const usableHosts = calculateUsableHosts(subnetSize);
+    const broadcastAddress = calculateBroadcast(networkAddress);
+    const hostMin = calculateHostMin(networkAddress);
+    const hostMax = calculateHostMax(networkAddress);
+
+    // Update subnet with manual network address
+    plan.subnets = plan.subnets.map((s, i) => {
+      if (i !== index) return s;
+
+      // Calculate or use existing subnet info fields
+      const existingInfo = s.subnetInfo || {
+        expectedDevices: s.expectedDevices,
+        plannedDevices: s.expectedDevices,
+        requiredHosts: s.expectedDevices + 2,
+        subnetSize,
+      };
+
+      return {
+        ...s,
+        manualNetworkAddress: networkAddress,
+        networkLocked: lock,
+        subnetInfo: {
+          expectedDevices: existingInfo.expectedDevices,
+          plannedDevices: existingInfo.plannedDevices,
+          requiredHosts: existingInfo.requiredHosts,
+          subnetSize: existingInfo.subnetSize,
+          cidrPrefix,
+          usableHosts,
+          networkAddress,
+          broadcastAddress,
+          usableHostRange: { first: hostMin, last: hostMax },
+          totalHosts: subnetSize,
+        },
+      };
+    });
+    plan.updatedAt = new Date();
+  }
+
+  /**
+   * Set network lock status for a subnet
+   *
+   * @param plan - Network plan to modify
+   * @param index - Index of subnet to update
+   * @param locked - Whether to lock the subnet
+   */
+  setNetworkLocked(plan: NetworkPlan, index: number, locked: boolean): void {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
+    if (!plan) {
+      throw new ValidationError(
+        'Cannot set network lock: Plan is null or undefined',
+        ErrorCode.NO_PLAN_LOADED,
+      );
+    }
+
+    if (index < 0 || index >= plan.subnets.length) {
+      throw new ValidationError(
+        `Cannot set network lock: Index ${index} is out of bounds (0-${plan.subnets.length - 1})`,
+        ErrorCode.NO_SUBNETS_DEFINED,
+      );
+    }
+
+    const subnet = plan.subnets[index];
+    if (!subnet) {
+      throw new ValidationError(`Subnet at index ${index} not found`, ErrorCode.NO_SUBNETS_DEFINED);
+    }
+
+    plan.subnets = plan.subnets.map((s, i) => (i === index ? { ...s, networkLocked: locked } : s));
+    plan.updatedAt = new Date();
   }
 }

@@ -7,6 +7,8 @@ import fs from 'fs';
 import { Box, Text, useApp } from 'ink';
 import Spinner from 'ink-spinner';
 import React, { useEffect, useState } from 'react';
+import type { AutoFitResult } from '../../core/calculators/auto-fit.js';
+import { autoFitSubnets } from '../../core/calculators/auto-fit.js';
 import { createNetworkPlan, createSubnet } from '../../core/models/network-plan.js';
 import {
   validateDeviceCount,
@@ -17,6 +19,7 @@ import {
   validateVlanId,
 } from '../../core/validators/validators.js';
 import { isFileOperationError } from '../../errors/index.js';
+import { useAutoSave } from '../../hooks/useAutoSave.js';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts.js';
 import { usePlan, usePlanActions, useSubnets } from '../../hooks/usePlan.js';
 import { useNotify, useSelection } from '../../hooks/useUI.js';
@@ -31,12 +34,18 @@ import { usePreferencesStore } from '../../store/preferencesStore.js';
 import type { SortColumn } from '../../store/uiStore.js';
 import { useUIStore } from '../../store/uiStore.js';
 import { colors } from '../../themes/colors.js';
+import type { AvailableBlock } from '../../utils/block-parser.js';
 import { parseDeviceCount, parseVlanId } from '../../utils/input-helpers.js';
 import { sortSubnets } from '../../utils/subnet-sorters.js';
+import { AutoFitPreviewDialog } from '../dialogs/AutoFitPreviewDialog.js';
+import { AvailableBlocksDialog } from '../dialogs/AvailableBlocksDialog.js';
 import { ColumnConfigDialog } from '../dialogs/ColumnConfigDialog.js';
 import { ConfirmDialog } from '../dialogs/ConfirmDialog.js';
+import { EditNetworkDialog } from '../dialogs/EditNetworkDialog.js';
 import { InputDialog } from '../dialogs/InputDialog.js';
 import { Modal } from '../dialogs/Modal.js';
+import { ModifyDialog } from '../dialogs/ModifyDialog.js';
+import { SaveOptionsDialog } from '../dialogs/SaveOptionsDialog.js';
 import { SelectDialog } from '../dialogs/SelectDialog.js';
 import { SubnetInfoDialog } from '../dialogs/SubnetInfoDialog.js';
 import { FilePicker } from '../widgets/FilePicker.js';
@@ -76,17 +85,34 @@ type DialogType =
   | { type: 'preferences-menu' }
   | { type: 'preferences-growth' }
   | { type: 'preferences-base-ip' }
+  | { type: 'preferences-directories' }
   | { type: 'preferences-saved-dir' }
   | { type: 'preferences-exports-dir' }
+  | { type: 'preferences-save-options' }
   | { type: 'preferences-columns' }
-  | { type: 'preferences-continue' };
+  | { type: 'preferences-continue' }
+  | { type: 'mod-menu' }
+  | { type: 'edit-network' }
+  | { type: 'auto-fit-blocks' }
+  | {
+      type: 'auto-fit-preview';
+      result: AutoFitResult;
+      blocks: AvailableBlock[];
+    };
 
 export const DashboardView: React.FC = () => {
   const { exit } = useApp();
   const plan = usePlan();
   const subnets = useSubnets();
-  const { addSubnet, updateSubnet, removeSubnet, calculatePlan, loadPlan, setGrowthPercentage } =
-    usePlanActions();
+  const {
+    addSubnet,
+    updateSubnet,
+    removeSubnet,
+    calculatePlan,
+    loadPlan,
+    setGrowthPercentage,
+    setManualNetworkAddress,
+  } = usePlanActions();
   const notify = useNotify();
   const {
     selectedIndex,
@@ -121,7 +147,6 @@ export const DashboardView: React.FC = () => {
     'vlan',
     'expected',
     'planned',
-    'cidr',
     'usable',
     'network',
     'description',
@@ -135,6 +160,18 @@ export const DashboardView: React.FC = () => {
 
   // Apply sorting to subnets
   const sortedSubnets = sortSubnets(subnets, sortColumn, sortDirection);
+
+  // Auto-save plan when changes are detected (if enabled in preferences)
+  useAutoSave({
+    plan,
+    fileService,
+    onError: (error) => {
+      notify.error(`Auto-save failed: ${error.message}`);
+    },
+    onSuccess: () => {
+      notify.success('Plan auto-saved', 'low');
+    },
+  });
 
   // Reset header selection when visible columns change
   useEffect(() => {
@@ -343,6 +380,71 @@ export const DashboardView: React.FC = () => {
     notify.success('Network plan calculated successfully!');
   };
 
+  const handleModManualEdit = (): void => {
+    setDialog({ type: 'edit-network' });
+  };
+
+  const handleModAutoFit = (): void => {
+    if (!plan || subnets.length === 0) {
+      notify.error('Please add at least one subnet before auto-fitting.');
+      return;
+    }
+    setDialog({ type: 'auto-fit-blocks' });
+  };
+
+  const handleAutoFitBlocksSubmit = (blocks: AvailableBlock[]): void => {
+    if (!plan || subnets.length === 0) {
+      notify.error('No subnets to allocate.');
+      setDialog({ type: 'none' });
+      return;
+    }
+
+    // Calculate plan first to get subnet info
+    calculatePlan();
+
+    // Filter out subnets without subnetInfo (shouldn't happen after calculate)
+    const subnetsWithInfo = plan.subnets.filter((s) => s.subnetInfo !== undefined);
+
+    // Run auto-fit algorithm (will sort by VLAN ID, then size)
+    const result = autoFitSubnets(subnetsWithInfo, blocks);
+
+    // Show preview
+    setDialog({
+      type: 'auto-fit-preview',
+      result,
+      blocks,
+    });
+  };
+
+  const handleAutoFitAccept = (result: AutoFitResult): void => {
+    if (!plan) {
+      notify.error('No plan loaded.');
+      setDialog({ type: 'none' });
+      return;
+    }
+
+    // Apply allocations to subnets
+    for (const allocation of result.allocations) {
+      const subnet = plan.subnets[allocation.subnetIndex];
+      if (subnet) {
+        subnet.subnetInfo = allocation.subnetInfo;
+        subnet.manualNetworkAddress = allocation.networkAddress;
+        subnet.networkLocked = true;
+      }
+    }
+
+    // Update plan timestamp
+    plan.updatedAt = new Date();
+
+    // Recalculate to update supernet
+    calculatePlan();
+
+    notify.success(
+      `Auto-fit complete! Allocated ${result.allocations.length} subnet(s) and locked them.`,
+    );
+    setDialog({ type: 'none' });
+  };
+
   const handleSavePlan = (): void => {
     if (!plan?.supernet) return;
     const defaultFilename = `${plan.name.replace(/\s+/g, '-').toLowerCase()}.json`;
@@ -505,14 +607,20 @@ export const DashboardView: React.FC = () => {
       case 'base-ip':
         setDialog({ type: 'preferences-base-ip' });
         break;
+      case 'directories':
+        setDialog({ type: 'preferences-directories' });
+        break;
       case 'saved-dir':
         setDialog({ type: 'preferences-saved-dir' });
         break;
-      case 'columns':
-        setDialog({ type: 'preferences-columns' });
-        break;
       case 'exports-dir':
         setDialog({ type: 'preferences-exports-dir' });
+        break;
+      case 'save-options':
+        setDialog({ type: 'preferences-save-options' });
+        break;
+      case 'columns':
+        setDialog({ type: 'preferences-columns' });
         break;
     }
   };
@@ -751,6 +859,15 @@ export const DashboardView: React.FC = () => {
         enabled: subnets.length > 0,
       },
       {
+        key: 'm',
+        description: 'Mod subnets (manual/auto-fit)',
+        handler: (): void => {
+          if (plan && subnets.length > 0) setDialog({ type: 'mod-menu' });
+        },
+        category: 'actions',
+        enabled: subnets.length > 0,
+      },
+      {
         key: 's',
         description: 'Save plan to file',
         handler: (): void => {
@@ -878,6 +995,30 @@ export const DashboardView: React.FC = () => {
           />
         </Modal>
       )}
+      {dialog.type === 'edit-network' && sortedSubnets[selectedIndex] && plan && (
+        <Modal>
+          <EditNetworkDialog
+            subnet={sortedSubnets[selectedIndex]}
+            baseNetwork={plan.baseIp}
+            existingSubnets={subnets}
+            onSubmit={(networkAddress, lock) => {
+              const subnet = sortedSubnets[selectedIndex];
+              if (!subnet?.subnetInfo) return;
+
+              // Update subnet in store with new network address and lock status
+              const subnetIndex = subnets.findIndex((s) => s.id === subnet.id);
+              if (subnetIndex !== -1) {
+                setManualNetworkAddress(subnetIndex, networkAddress, lock);
+                notify.success(
+                  `Network address updated to ${networkAddress}${lock ? ' (locked)' : ''}`,
+                );
+              }
+              setDialog({ type: 'none' });
+            }}
+            onCancel={() => setDialog({ type: 'none' })}
+          />
+        </Modal>
+      )}
       {dialog.type === 'input' && (
         <Modal>
           <InputDialog
@@ -977,12 +1118,12 @@ export const DashboardView: React.FC = () => {
               },
               { label: `Base IP (${preferences.baseIp})`, value: 'base-ip' },
               {
-                label: `Saved Plans Dir (${preferences.savedPlansDir ? preferences.savedPlansDir.replace(process.env['HOME'] ?? '', '~') : '~/cidrly/saved-plans'})`,
-                value: 'saved-dir',
+                label: 'Default Directories...',
+                value: 'directories',
               },
               {
-                label: `Exports Dir (${preferences.exportsDir ? preferences.exportsDir.replace(process.env['HOME'] ?? '', '~') : '~/cidrly/exports'})`,
-                value: 'exports-dir',
+                label: 'Save Options...',
+                value: 'save-options',
               },
               {
                 label: 'Configure Columns',
@@ -1061,6 +1202,25 @@ export const DashboardView: React.FC = () => {
           />
         </Modal>
       )}
+      {dialog.type === 'preferences-directories' && (
+        <Modal>
+          <SelectDialog
+            title="Default Directories"
+            items={[
+              {
+                label: `Saved Plans (${preferences.savedPlansDir ? preferences.savedPlansDir.replace(process.env['HOME'] ?? '', '~') : '~/cidrly/saved-plans'})`,
+                value: 'saved-dir',
+              },
+              {
+                label: `Exports (${preferences.exportsDir ? preferences.exportsDir.replace(process.env['HOME'] ?? '', '~') : '~/cidrly/exports'})`,
+                value: 'exports-dir',
+              },
+            ]}
+            onSelect={handlePreferenceSelected}
+            onCancel={() => setDialog({ type: 'preferences-menu' })}
+          />
+        </Modal>
+      )}
       {dialog.type === 'preferences-saved-dir' && (
         <Modal>
           <InputDialog
@@ -1083,11 +1243,11 @@ export const DashboardView: React.FC = () => {
                   notify.error(
                     `Failed to save preference: ${error instanceof Error ? error.message : 'Unknown error'}`,
                   );
-                  setDialog({ type: 'preferences-menu' });
+                  setDialog({ type: 'preferences-directories' });
                 }
               })();
             }}
-            onCancel={() => setDialog({ type: 'preferences-menu' })}
+            onCancel={() => setDialog({ type: 'preferences-directories' })}
           />
         </Modal>
       )}
@@ -1113,6 +1273,32 @@ export const DashboardView: React.FC = () => {
                   notify.error(
                     `Failed to save preference: ${error instanceof Error ? error.message : 'Unknown error'}`,
                   );
+                  setDialog({ type: 'preferences-directories' });
+                }
+              })();
+            }}
+            onCancel={() => setDialog({ type: 'preferences-directories' })}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'preferences-save-options' && (
+        <Modal>
+          <SaveOptionsDialog
+            autoSave={preferences.autoSave}
+            saveDelay={preferences.saveDelay}
+            onSubmit={(autoSave, saveDelay) => {
+              void (async (): Promise<void> => {
+                try {
+                  const updatedPrefs = { ...preferences, autoSave, saveDelay };
+                  await preferencesService.savePreferences(updatedPrefs);
+                  setPreferences(updatedPrefs);
+                  handlePreferenceSaved(
+                    `Save options updated: Auto-save ${autoSave ? 'enabled' : 'disabled'}, delay ${saveDelay}ms`,
+                  );
+                } catch (error) {
+                  notify.error(
+                    `Failed to save preferences: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                  );
                   setDialog({ type: 'preferences-menu' });
                 }
               })();
@@ -1134,7 +1320,6 @@ export const DashboardView: React.FC = () => {
                     | 'vlan'
                     | 'expected'
                     | 'planned'
-                    | 'cidr'
                     | 'usable'
                     | 'network'
                     | 'description';
@@ -1167,7 +1352,7 @@ export const DashboardView: React.FC = () => {
         <Modal>
           <ConfirmDialog
             title="Preferences"
-            message="Preference saved successfully!\n\nEdit another preference?"
+            message={`Preference saved successfully!\n\nEdit another preference?`}
             onConfirm={(result) => {
               if (result) {
                 setDialog({ type: 'preferences-menu' });
@@ -1200,6 +1385,32 @@ export const DashboardView: React.FC = () => {
             label="Filename:"
             defaultValue={`${plan.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.${dialog.format}`}
             onSubmit={(filename) => handleExportWithFilename(dialog.format, filename)}
+            onCancel={() => setDialog({ type: 'none' })}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'mod-menu' && (
+        <Modal>
+          <ModifyDialog
+            onSelectManualEdit={handleModManualEdit}
+            onSelectAutoFit={handleModAutoFit}
+            onCancel={() => setDialog({ type: 'none' })}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'auto-fit-blocks' && (
+        <Modal>
+          <AvailableBlocksDialog
+            onSubmit={handleAutoFitBlocksSubmit}
+            onCancel={() => setDialog({ type: 'none' })}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'auto-fit-preview' && (
+        <Modal>
+          <AutoFitPreviewDialog
+            result={dialog.result}
+            onAccept={() => handleAutoFitAccept(dialog.result)}
             onCancel={() => setDialog({ type: 'none' })}
           />
         </Modal>

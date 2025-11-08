@@ -51,7 +51,7 @@ export const Header: React.FC<HeaderProps> = React.memo(({ plan }) => {
   };
 
   return (
-    <Box flexDirection="column" paddingX={2} paddingY={1}>
+    <Box flexDirection="column" paddingX={2} paddingY={0}>
       {/* Title Bar - stack on very narrow screens */}
       {isVeryNarrow ? (
         <Box flexDirection="column">
@@ -86,7 +86,7 @@ export const Header: React.FC<HeaderProps> = React.memo(({ plan }) => {
         <Box
           flexDirection={isNarrow ? 'column' : 'row'}
           justifyContent={isNarrow ? 'flex-start' : 'space-between'}
-          marginTop={1}
+          marginTop={0}
         >
           <Box>
             <Text>{colors.muted('Base')}</Text>
@@ -114,22 +114,12 @@ export const Header: React.FC<HeaderProps> = React.memo(({ plan }) => {
         <Box
           flexDirection={isNarrow ? 'column' : 'row'}
           justifyContent={isNarrow ? 'flex-start' : 'space-between'}
-          marginTop={1}
+          marginTop={0}
         >
           <Box>
             <Text>{colors.muted('Efficiency')}</Text>
             <Text> </Text>
             <EfficiencyBar efficiency={plan.supernet.efficiency} />
-            <Text> </Text>
-            {!isVeryNarrow && (
-              <>
-                <Text>{colors.muted('(Supernet)')}</Text>
-                <Text> </Text>
-                <Text>{colors.dim('•')}</Text>
-                <Text> </Text>
-              </>
-            )}
-            <Text>{colors.muted(`Range: ${plan.supernet.rangeEfficiency.toFixed(1)}%`)}</Text>
             <Text> </Text>
             <Text>{colors.dim('•')}</Text>
             <Text> </Text>

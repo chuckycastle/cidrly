@@ -65,6 +65,7 @@ export const Footer: React.FC<FooterProps> = React.memo(({ hasSubnets, hasCalcul
       commands: [
         { key: 'a', label: 'dd', enabled: true },
         { key: 'e', label: 'dit', enabled: hasSubnets },
+        { key: 'm', label: 'od', enabled: hasSubnets && hasCalculation },
         { key: 'd', label: 'el', enabled: hasSubnets },
         { key: 'c', label: 'alc', enabled: hasSubnets },
       ],
@@ -139,18 +140,18 @@ export const Footer: React.FC<FooterProps> = React.memo(({ hasSubnets, hasCalcul
       { format: '(label)sor(key)t', enabled: hasSubnets },
       { key: 'a', label: 'dd', enabled: true },
       { key: 'e', label: 'dit', enabled: hasSubnets },
+      { key: 'm', label: 'od', enabled: hasSubnets && hasCalculation },
       { key: 'd', label: 'el', enabled: hasSubnets },
       { key: 'c', label: 'alc', enabled: hasSubnets },
       { key: 's', label: 'ave', enabled: hasCalculation },
       { key: 'l', label: 'oad', enabled: true },
       { format: '(label)e(key)x(label)port', enabled: hasCalculation },
-      { format: '(label)i(key)m(label)port', enabled: true },
       { key: 'p', label: 'refs', enabled: true },
       { key: 'q', label: 'uit', enabled: true },
     ];
 
     return (
-      <Box paddingX={2} paddingY={1} flexDirection="column">
+      <Box paddingX={2} paddingY={0} flexDirection="column">
         {/* Subtle top divider */}
         <Box marginBottom={0}>
           <Text>
@@ -174,7 +175,7 @@ export const Footer: React.FC<FooterProps> = React.memo(({ hasSubnets, hasCalcul
   // For narrow screens, wrap command groups into multiple rows
   if (isNarrow) {
     return (
-      <Box paddingX={2} paddingY={1} flexDirection="column">
+      <Box paddingX={2} paddingY={0} flexDirection="column">
         {/* Subtle top divider */}
         <Box marginBottom={0}>
           <Text>
@@ -214,7 +215,7 @@ export const Footer: React.FC<FooterProps> = React.memo(({ hasSubnets, hasCalcul
 
   // For wide screens, show all commands in one row
   return (
-    <Box paddingX={2} paddingY={1} flexDirection="column">
+    <Box paddingX={2} paddingY={0} flexDirection="column">
       {/* Subtle top divider */}
       <Box marginBottom={0}>
         <Text>{colors.dim(symbols.horizontalDivider.repeat(Math.max(0, terminalWidth - 4)))}</Text>

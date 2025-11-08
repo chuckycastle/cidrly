@@ -48,17 +48,25 @@ export const NotificationDisplay: React.FC<NotificationDisplayProps> = React.mem
     const priorityIndicator = getPriorityIndicator(notification.priority);
 
     return (
-      <Box borderStyle="round" paddingX={2} paddingY={0} flexDirection="column">
-        <Box>
-          {priorityIndicator && (
-            <>
-              <Text>{priorityIndicator.color(priorityIndicator.symbol)}</Text>
-              <Text> </Text>
-            </>
-          )}
-          <Text bold>{style.color(`${style.icon} `)}</Text>
-          <Text>{colors.slate(notification.message)}</Text>
-        </Box>
+      <Box paddingX={1} backgroundColor="black">
+        <Text backgroundColor="black" color="cyan">
+          [
+        </Text>
+        <Text backgroundColor="black"> </Text>
+        {priorityIndicator && (
+          <>
+            <Text backgroundColor="black">{priorityIndicator.color(priorityIndicator.symbol)}</Text>
+            <Text backgroundColor="black"> </Text>
+          </>
+        )}
+        <Text bold backgroundColor="black">
+          {style.color(`${style.icon} `)}
+        </Text>
+        <Text backgroundColor="black">{colors.slate(notification.message)}</Text>
+        <Text backgroundColor="black"> </Text>
+        <Text backgroundColor="black" color="cyan">
+          ]
+        </Text>
       </Box>
     );
   },

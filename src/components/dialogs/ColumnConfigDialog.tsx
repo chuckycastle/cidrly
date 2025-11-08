@@ -25,8 +25,7 @@ const COLUMN_OPTIONS: ColumnOption[] = [
   { key: 'vlan', label: 'VLAN' },
   { key: 'expected', label: 'Expected Devices' },
   { key: 'planned', label: 'Planned Devices' },
-  { key: 'cidr', label: 'CIDR Prefix' },
-  { key: 'usable', label: 'Usable Hosts' },
+  { key: 'usable', label: 'Capacity' },
   { key: 'network', label: 'Network Address' },
   { key: 'description', label: 'Description' },
 ];

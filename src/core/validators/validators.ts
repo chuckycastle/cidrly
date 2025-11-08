@@ -223,3 +223,170 @@ export function validateSubnetDescription(description: string): string | true {
 
   return true;
 }
+
+/**
+ * Validation result for manual network address editing
+ */
+export interface ManualNetworkValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+/**
+ * Validates a manually entered network address for a subnet
+ * @param networkAddress - Network address in CIDR format (e.g., "10.0.0.0/24")
+ * @param cidrPrefix - Expected CIDR prefix for the subnet
+ * @param baseNetwork - Base network IP for the plan
+ * @param existingSubnets - Array of existing subnets to check for overlaps
+ * @param currentSubnetId - ID of subnet being edited (to exclude from overlap check)
+ * @returns Validation result with errors and warnings
+ */
+export function validateManualNetworkAddress(
+  networkAddress: string,
+  cidrPrefix: number,
+  baseNetwork: string,
+  existingSubnets: Array<{
+    id: string;
+    subnetInfo?: { networkAddress?: string; cidrPrefix: number };
+  }>,
+  currentSubnetId: string,
+): ManualNetworkValidationResult {
+  const result: ManualNetworkValidationResult = {
+    valid: true,
+    errors: [],
+    warnings: [],
+  };
+
+  // Extract IP and prefix from input
+  const parts = networkAddress.split('/');
+  if (parts.length !== 2) {
+    result.valid = false;
+    result.errors.push('Network address must include CIDR prefix (e.g., "10.0.0.0/24")');
+    return result;
+  }
+
+  const ipAddress = parts[0];
+  const prefixStr = parts[1];
+
+  if (!ipAddress || !prefixStr) {
+    result.valid = false;
+    result.errors.push('Network address must include both IP and CIDR prefix');
+    return result;
+  }
+
+  const inputPrefix = parseInt(prefixStr, 10);
+
+  // Validate IP format
+  const ipValidation = validateIpAddress(ipAddress);
+  if (ipValidation !== true) {
+    result.valid = false;
+    result.errors.push(ipValidation);
+    return result;
+  }
+
+  // Validate CIDR prefix format
+  if (isNaN(inputPrefix) || inputPrefix < 8 || inputPrefix > 30) {
+    result.valid = false;
+    result.errors.push(`CIDR prefix must be between 8 and 30. Got: ${prefixStr}`);
+    return result;
+  }
+
+  // Warn if CIDR prefix doesn't match expected size
+  if (inputPrefix !== cidrPrefix) {
+    result.warnings.push(
+      `Network size (/${inputPrefix}) differs from calculated size (/${cidrPrefix}). This may result in insufficient capacity.`,
+    );
+  }
+
+  // Check network boundary alignment
+  const ipParts = ipAddress.split('.').map(Number);
+  const ipInt = (ipParts[0]! << 24) | (ipParts[1]! << 16) | (ipParts[2]! << 8) | ipParts[3]!;
+  const subnetMask = ~((1 << (32 - inputPrefix)) - 1);
+  const networkInt = ipInt & subnetMask;
+
+  if (ipInt !== networkInt) {
+    const correctNetwork = [
+      (networkInt >>> 24) & 255,
+      (networkInt >>> 16) & 255,
+      (networkInt >>> 8) & 255,
+      networkInt & 255,
+    ].join('.');
+
+    result.valid = false;
+    result.errors.push(
+      `Address not on /${inputPrefix} boundary. Network address should be ${correctNetwork}/${inputPrefix}`,
+    );
+    return result;
+  }
+
+  // Warn if outside base network range
+  const baseIpValidation = validateIpAddress(baseNetwork);
+  if (baseIpValidation === true) {
+    const baseParts = baseNetwork.split('.').map(Number);
+    const baseFirstOctet = baseParts[0];
+    const inputFirstOctet = ipParts[0];
+
+    if (inputFirstOctet !== baseFirstOctet) {
+      result.warnings.push(
+        `Network address (${ipAddress}) outside base network range (${baseNetwork}). Ensure this is intentional.`,
+      );
+    }
+  }
+
+  // Check for overlaps with existing subnets
+  for (const subnet of existingSubnets) {
+    // Skip the current subnet being edited
+    if (subnet.id === currentSubnetId) {
+      continue;
+    }
+
+    const existingAddr = subnet.subnetInfo?.networkAddress;
+    if (!existingAddr) {
+      continue;
+    }
+
+    // Parse existing network address
+    const existingParts = existingAddr.split('/');
+    if (existingParts.length !== 2) {
+      continue;
+    }
+
+    const existingIp = existingParts[0];
+    const existingPrefixStr = existingParts[1];
+
+    if (!existingIp || !existingPrefixStr) {
+      continue;
+    }
+
+    const existingPrefix = parseInt(existingPrefixStr, 10);
+
+    // Calculate ranges for both networks
+    const existingIpParts = existingIp.split('.').map(Number);
+    const existingIpInt =
+      (existingIpParts[0]! << 24) |
+      (existingIpParts[1]! << 16) |
+      (existingIpParts[2]! << 8) |
+      existingIpParts[3]!;
+    const existingMask = ~((1 << (32 - existingPrefix)) - 1);
+    const existingNetworkInt = existingIpInt & existingMask;
+    const existingBroadcastInt = existingNetworkInt | ~existingMask;
+
+    const newMask = ~((1 << (32 - inputPrefix)) - 1);
+    const newNetworkInt = ipInt & newMask;
+    const newBroadcastInt = newNetworkInt | ~newMask;
+
+    // Check for overlap
+    const overlaps =
+      (newNetworkInt >= existingNetworkInt && newNetworkInt <= existingBroadcastInt) ||
+      (newBroadcastInt >= existingNetworkInt && newBroadcastInt <= existingBroadcastInt) ||
+      (existingNetworkInt >= newNetworkInt && existingNetworkInt <= newBroadcastInt);
+
+    if (overlaps) {
+      result.valid = false;
+      result.errors.push(`Network overlaps with existing subnet at ${existingAddr}`);
+    }
+  }
+
+  return result;
+}

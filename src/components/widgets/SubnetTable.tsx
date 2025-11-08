@@ -34,61 +34,93 @@ export const SubnetTable: React.FC<SubnetTableProps> = React.memo(
   }) => {
     const terminalWidth = useTerminalWidth();
 
-    // All available columns
-    const allColumns: Array<{
+    // Base column widths (reduced to fit 106x31 terminal)
+    const baseColumns: Array<{
       key: SortColumn;
       label: string;
       width: number;
+      minWidth: number; // Minimum width
+      flexible: boolean; // Can grow with available space
       align: 'left' | 'right';
     }> = [
-      { key: 'name', label: 'Name', width: 20, align: 'left' },
-      { key: 'vlan', label: 'VLAN', width: 6, align: 'right' },
-      { key: 'expected', label: 'Exp', width: 5, align: 'right' },
-      { key: 'planned', label: 'Plan', width: 6, align: 'right' },
-      { key: 'cidr', label: 'CIDR', width: 6, align: 'right' },
-      { key: 'usable', label: 'Hosts', width: 7, align: 'right' },
-      { key: 'network', label: 'Network', width: 17, align: 'left' },
-      { key: 'description', label: 'Description', width: 20, align: 'left' },
+      { key: 'name', label: 'Name', width: 17, minWidth: 10, flexible: true, align: 'left' },
+      { key: 'vlan', label: 'VLAN', width: 4, minWidth: 4, flexible: false, align: 'right' },
+      { key: 'expected', label: 'Exp', width: 3, minWidth: 3, flexible: false, align: 'right' },
+      { key: 'planned', label: 'Plan', width: 4, minWidth: 4, flexible: false, align: 'right' },
+      { key: 'usable', label: 'Cap', width: 4, minWidth: 4, flexible: false, align: 'right' },
+      { key: 'network', label: 'Network', width: 19, minWidth: 19, flexible: false, align: 'left' },
+      {
+        key: 'description',
+        label: 'Description',
+        width: 30,
+        minWidth: 10,
+        flexible: true,
+        align: 'left',
+      },
     ];
 
-    // Filter and order columns based on preferences
-    const columns =
+    // Filter columns based on preferences
+    const filteredColumns =
       columnOrder && visibleColumns
         ? columnOrder
             .filter((key) => key === 'name' || visibleColumns.includes(key))
-            .map((key) => allColumns.find((col) => col.key === key))
+            .map((key) => baseColumns.find((col) => col.key === key))
             .filter((col): col is NonNullable<typeof col> => col !== undefined)
         : visibleColumns
-          ? allColumns.filter((col) => col.key === 'name' || visibleColumns.includes(col.key))
-          : allColumns;
+          ? baseColumns.filter((col) => col.key === 'name' || visibleColumns.includes(col.key))
+          : baseColumns;
 
-    // Helper to get the value for a specific column
-    const getColumnValue = (subnet: Subnet, columnKey: SortColumn): string => {
+    // Calculate dynamic widths based on visible columns
+    const columns = React.useMemo(() => {
+      // Calculate total fixed width (non-flexible columns + row prefix + dividers)
+      const rowPrefix = 1 + 1 + 2 + 3; // selector + space + row# + divider
+      const dividerWidth = (filteredColumns.length - 1) * 3; // " | " between columns
+
+      const fixedWidth = filteredColumns
+        .filter((col) => !col.flexible)
+        .reduce((sum, col) => sum + col.width, 0);
+
+      const flexibleColumns = filteredColumns.filter((col) => col.flexible);
+      const minFlexWidth = flexibleColumns.reduce((sum, col) => sum + col.minWidth, 0);
+
+      const usedWidth = rowPrefix + fixedWidth + minFlexWidth + dividerWidth;
+      const availableSpace = Math.max(0, terminalWidth - 4 - usedWidth); // -4 for paddingX
+
+      // Distribute available space equally among flexible columns
+      const extraPerColumn = Math.floor(availableSpace / Math.max(1, flexibleColumns.length));
+
+      return filteredColumns.map((col) => ({
+        ...col,
+        width: col.flexible ? col.minWidth + extraPerColumn : col.width,
+      }));
+    }, [filteredColumns, terminalWidth]);
+
+    // Helper to get the value for a specific column with dynamic width
+    const getColumnValue = (subnet: Subnet, columnKey: SortColumn, width: number): string => {
       switch (columnKey) {
         case 'name':
-          return subnet.name.substring(0, 20).padEnd(20);
+          return subnet.name.substring(0, width).padEnd(width);
         case 'vlan':
-          return subnet.vlanId.toString().padStart(6);
+          return subnet.vlanId.toString().padStart(width);
         case 'expected':
-          return subnet.expectedDevices.toString().padStart(5);
+          return subnet.expectedDevices.toString().padStart(width);
         case 'planned':
           return subnet.subnetInfo
-            ? subnet.subnetInfo.plannedDevices.toString().padStart(6)
-            : '--'.padStart(6);
-        case 'cidr':
-          return subnet.subnetInfo
-            ? `/${subnet.subnetInfo.cidrPrefix}`.padStart(6)
-            : 'N/A'.padStart(6);
+            ? subnet.subnetInfo.plannedDevices.toString().padStart(width)
+            : '--'.padStart(width);
         case 'usable':
           return subnet.subnetInfo
-            ? subnet.subnetInfo.usableHosts.toString().padStart(7)
-            : '--'.padStart(7);
-        case 'network':
-          return (subnet.subnetInfo?.networkAddress ?? 'Not calculated')
-            .substring(0, 17)
-            .padEnd(17);
+            ? subnet.subnetInfo.usableHosts.toString().padStart(width)
+            : '--'.padStart(width);
+        case 'network': {
+          const baseValue = subnet.subnetInfo?.networkAddress ?? 'Not calculated';
+          // Add lock indicator if network is locked
+          const lockIndicator = subnet.networkLocked ? '*' : '';
+          const displayValue = `${baseValue}${lockIndicator}`;
+          return displayValue.substring(0, width).padEnd(width);
+        }
         case 'description':
-          return (subnet.description ?? '').substring(0, 20).padEnd(20);
+          return (subnet.description ?? '').substring(0, width).padEnd(width);
         default:
           return '';
       }
@@ -191,12 +223,9 @@ export const SubnetTable: React.FC<SubnetTableProps> = React.memo(
                 <Text> {colors.dim(symbols.divider)} </Text>
                 {/* Dynamic columns */}
                 {columns.map((column, colIndex) => {
-                  const value = getColumnValue(subnet, column.key);
+                  const value = getColumnValue(subnet, column.key, column.width);
                   const hasData =
-                    column.key === 'planned' ||
-                    column.key === 'cidr' ||
-                    column.key === 'usable' ||
-                    column.key === 'network'
+                    column.key === 'planned' || column.key === 'usable' || column.key === 'network'
                       ? subnet.subnetInfo !== undefined
                       : true;
 

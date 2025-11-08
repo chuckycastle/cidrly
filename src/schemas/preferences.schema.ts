@@ -29,7 +29,7 @@ export const preferencesSchema = z.object({
   baseIp: z
     .string()
     .regex(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/, 'Must be a valid IP address')
-    .default('10.0.0.0'),
+    .default('192.0.2.0'),
 
   /**
    * Custom directory for saved plans (optional override)
@@ -49,67 +49,33 @@ export const preferencesSchema = z.object({
   version: z.number().default(1),
 
   /**
+   * Auto-save enabled
+   * When true, automatically saves plan after changes
+   */
+  autoSave: z.boolean().default(false),
+
+  /**
+   * Save debounce delay in milliseconds
+   * Prevents excessive disk writes by delaying saves
+   * Only applies when autoSave is enabled
+   */
+  saveDelay: z.number().min(100).max(5000).int().default(500),
+
+  /**
    * Column display preferences for subnet table
    */
   columnPreferences: z
     .object({
       visibleColumns: z
-        .array(
-          z.enum([
-            'name',
-            'vlan',
-            'expected',
-            'planned',
-            'cidr',
-            'usable',
-            'network',
-            'description',
-          ]),
-        )
-        .default([
-          'name',
-          'vlan',
-          'expected',
-          'planned',
-          'cidr',
-          'usable',
-          'network',
-          'description',
-        ]),
+        .array(z.enum(['name', 'vlan', 'expected', 'planned', 'usable', 'network', 'description']))
+        .default(['name', 'vlan', 'expected', 'planned', 'usable', 'network', 'description']),
       columnOrder: z
         .array(z.string())
-        .default([
-          'name',
-          'vlan',
-          'expected',
-          'planned',
-          'cidr',
-          'usable',
-          'network',
-          'description',
-        ]),
+        .default(['name', 'vlan', 'expected', 'planned', 'usable', 'network', 'description']),
     })
     .default({
-      visibleColumns: [
-        'name',
-        'vlan',
-        'expected',
-        'planned',
-        'cidr',
-        'usable',
-        'network',
-        'description',
-      ],
-      columnOrder: [
-        'name',
-        'vlan',
-        'expected',
-        'planned',
-        'cidr',
-        'usable',
-        'network',
-        'description',
-      ],
+      visibleColumns: ['name', 'vlan', 'expected', 'planned', 'usable', 'network', 'description'],
+      columnOrder: ['name', 'vlan', 'expected', 'planned', 'usable', 'network', 'description'],
     }),
 });
 
@@ -123,31 +89,15 @@ export type Preferences = z.infer<typeof preferencesSchema>;
  */
 export const defaultPreferences: Preferences = {
   growthPercentage: 100,
-  baseIp: '10.0.0.0',
+  baseIp: '192.0.2.0',
   savedPlansDir: undefined,
   exportsDir: undefined,
   version: 1,
+  autoSave: false,
+  saveDelay: 500,
   columnPreferences: {
-    visibleColumns: [
-      'name',
-      'vlan',
-      'expected',
-      'planned',
-      'cidr',
-      'usable',
-      'network',
-      'description',
-    ],
-    columnOrder: [
-      'name',
-      'vlan',
-      'expected',
-      'planned',
-      'cidr',
-      'usable',
-      'network',
-      'description',
-    ],
+    visibleColumns: ['name', 'vlan', 'expected', 'planned', 'usable', 'network', 'description'],
+    columnOrder: ['name', 'vlan', 'expected', 'planned', 'usable', 'network', 'description'],
   },
 };
 

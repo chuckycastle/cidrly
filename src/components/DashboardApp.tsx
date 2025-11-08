@@ -6,11 +6,12 @@
 import { Box, Text } from 'ink';
 import React from 'react';
 import { useCurrentView } from '../hooks/useUI.js';
+import { ErrorBoundary } from './ErrorBoundary.js';
 import { Layout } from './layout/Layout.js';
 import { DashboardView } from './views/DashboardView.js';
 import { WelcomeView } from './views/WelcomeView.js';
 
-export const DashboardApp: React.FC = () => {
+const DashboardAppContent: React.FC = () => {
   const currentView = useCurrentView();
 
   // Welcome view (no layout)
@@ -50,5 +51,13 @@ export const DashboardApp: React.FC = () => {
         </Box>
       )}
     </Layout>
+  );
+};
+
+export const DashboardApp: React.FC = () => {
+  return (
+    <ErrorBoundary>
+      <DashboardAppContent />
+    </ErrorBoundary>
   );
 };

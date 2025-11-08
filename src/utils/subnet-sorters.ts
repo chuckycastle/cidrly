@@ -8,11 +8,13 @@ import type { SortColumn, SortDirection } from '../store/uiStore.js';
 
 /**
  * Convert an IP address string to a number for comparison
- * @param ip - IP address string (e.g., "10.0.1.0")
+ * @param ip - IP address string (e.g., "10.0.1.0" or "10.0.1.0/24")
  * @returns Numeric representation of the IP address
  */
 function ipToNumber(ip: string): number {
-  const parts = ip.split('.').map(Number);
+  // Strip CIDR prefix if present (e.g., "10.1.241.0/24" -> "10.1.241.0")
+  const ipOnly = ip.split('/')[0] ?? ip;
+  const parts = ipOnly.split('.').map(Number);
   // Use multiplication instead of bitwise operators to avoid signed integer issues
   return (
     (parts[0] ?? 0) * 16777216 + (parts[1] ?? 0) * 65536 + (parts[2] ?? 0) * 256 + (parts[3] ?? 0)
@@ -78,25 +80,6 @@ function sortByNetwork(a: Subnet, b: Subnet, direction: SortDirection): number {
   if (!bNetwork) return -1;
 
   const comparison = ipToNumber(aNetwork) - ipToNumber(bNetwork);
-  return direction === 'asc' ? comparison : -comparison;
-}
-
-/**
- * Sort subnets by CIDR prefix (numeric comparison)
- * Subnets without subnetInfo are sorted to the end
- */
-function sortByCidr(a: Subnet, b: Subnet, direction: SortDirection): number {
-  const aCidr = a.subnetInfo?.cidrPrefix ?? -1;
-  const bCidr = b.subnetInfo?.cidrPrefix ?? -1;
-
-  // If both don't have subnetInfo, maintain original order
-  if (aCidr === -1 && bCidr === -1) return 0;
-  // If only a doesn't have subnetInfo, sort it to the end
-  if (aCidr === -1) return 1;
-  // If only b doesn't have subnetInfo, sort it to the end
-  if (bCidr === -1) return -1;
-
-  const comparison = aCidr - bCidr;
   return direction === 'asc' ? comparison : -comparison;
 }
 
@@ -171,8 +154,6 @@ export function sortSubnets(
         return sortByPlanned(a, b, direction);
       case 'network':
         return sortByNetwork(a, b, direction);
-      case 'cidr':
-        return sortByCidr(a, b, direction);
       case 'usable':
         return sortByUsable(a, b, direction);
       case 'description':
@@ -202,8 +183,7 @@ export function getSortDescription(column: SortColumn | null, direction: SortDir
     expected: 'Expected',
     planned: 'Planned',
     network: 'Network',
-    cidr: 'CIDR',
-    usable: 'Usable',
+    usable: 'Cap',
     description: 'Description',
   };
 

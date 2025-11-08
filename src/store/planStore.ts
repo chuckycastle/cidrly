@@ -28,6 +28,8 @@ interface PlanState {
   calculatePlan: () => void;
   updateBaseIp: (newBaseIp: string) => void;
   setGrowthPercentage: (growthPercentage: number) => void;
+  setManualNetworkAddress: (index: number, networkAddress: string, lock: boolean) => void;
+  setNetworkLocked: (index: number, locked: boolean) => void;
   clearPlan: () => void;
 }
 
@@ -94,6 +96,22 @@ const usePlanStoreBase = create<PlanState>()(
       const { plan, planService } = get();
       if (plan) {
         planService.setGrowthPercentage(plan, growthPercentage);
+        set({ plan: { ...plan } });
+      }
+    },
+
+    setManualNetworkAddress: (index: number, networkAddress: string, lock: boolean): void => {
+      const { plan, planService } = get();
+      if (plan) {
+        planService.setManualNetworkAddress(plan, index, networkAddress, lock);
+        set({ plan: { ...plan } });
+      }
+    },
+
+    setNetworkLocked: (index: number, locked: boolean): void => {
+      const { plan, planService } = get();
+      if (plan) {
+        planService.setNetworkLocked(plan, index, locked);
         set({ plan: { ...plan } });
       }
     },

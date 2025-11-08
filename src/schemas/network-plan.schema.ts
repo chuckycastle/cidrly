@@ -42,6 +42,8 @@ const SubnetSchema = z.object({
   expectedDevices: z.number().int().min(DEVICE_COUNT_RULES.MIN).max(DEVICE_COUNT_RULES.MAX),
   description: z.string().max(SUBNET_DESCRIPTION_RULES.MAX_LENGTH).optional(),
   subnetInfo: SubnetInfoSchema.optional(),
+  networkLocked: z.boolean().optional().default(false),
+  manualNetworkAddress: z.string().optional(),
 });
 
 /**
@@ -83,6 +85,13 @@ const NetworkPlanSchema = z.object({
     .min(PREFERENCES_RULES.GROWTH_PERCENTAGE_MIN)
     .max(PREFERENCES_RULES.GROWTH_PERCENTAGE_MAX)
     .default(100), // Default to 100% for old plans
+  allocationMode: z.enum(['vlsm', 'flsm']).optional().default('vlsm'),
+  minimumSubnetMask: z
+    .number()
+    .int()
+    .min(CIDR_RULES.ABSOLUTE_MIN)
+    .max(CIDR_RULES.ABSOLUTE_MAX)
+    .optional(),
   supernet: SupernetSchema.optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),

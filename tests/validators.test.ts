@@ -5,6 +5,7 @@
 import {
   validateDeviceCount,
   validateIpAddress,
+  validateManualNetworkAddress,
   validatePlanName,
   validateSubnetDescription,
   validateSubnetName,
@@ -266,6 +267,242 @@ describe('Validators', () => {
 
     it('should accept descriptions at exactly 200 characters', () => {
       expect(validateSubnetDescription('a'.repeat(200))).toBe(true);
+    });
+  });
+
+  describe('validateManualNetworkAddress', () => {
+    const existingSubnets = [
+      {
+        id: 'subnet-1',
+        subnetInfo: {
+          networkAddress: '10.0.0.0/24',
+          cidrPrefix: 24,
+        },
+      },
+      {
+        id: 'subnet-2',
+        subnetInfo: {
+          networkAddress: '10.0.1.0/24',
+          cidrPrefix: 24,
+        },
+      },
+    ];
+
+    it('should accept valid network address', () => {
+      const result = validateManualNetworkAddress(
+        '10.0.2.0/24',
+        24,
+        '10.0.0.0',
+        existingSubnets,
+        'subnet-3',
+      );
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+      expect(result.warnings).toHaveLength(0);
+    });
+
+    it('should reject network address without CIDR prefix', () => {
+      const result = validateManualNetworkAddress(
+        '10.0.2.0',
+        24,
+        '10.0.0.0',
+        existingSubnets,
+        'subnet-3',
+      );
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]).toMatch(/must include CIDR prefix/i);
+    });
+
+    it('should reject network address with invalid IP', () => {
+      const result = validateManualNetworkAddress(
+        '10.0.256.0/24',
+        24,
+        '10.0.0.0',
+        existingSubnets,
+        'subnet-3',
+      );
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]).toMatch(/Octet 3 must be between 0 and 255/i);
+    });
+
+    it('should reject CIDR prefix outside valid range', () => {
+      const result = validateManualNetworkAddress(
+        '10.0.2.0/7',
+        24,
+        '10.0.0.0',
+        existingSubnets,
+        'subnet-3',
+      );
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]).toMatch(/CIDR prefix must be between 8 and 30/i);
+    });
+
+    it('should reject CIDR prefix too large', () => {
+      const result = validateManualNetworkAddress(
+        '10.0.2.0/31',
+        24,
+        '10.0.0.0',
+        existingSubnets,
+        'subnet-3',
+      );
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]).toMatch(/CIDR prefix must be between 8 and 30/i);
+    });
+
+    it('should warn if CIDR prefix differs from calculated size', () => {
+      const result = validateManualNetworkAddress(
+        '10.0.2.0/25',
+        24,
+        '10.0.0.0',
+        existingSubnets,
+        'subnet-3',
+      );
+      expect(result.valid).toBe(true);
+      expect(result.warnings[0]).toMatch(/Network size.*differs from calculated size/i);
+    });
+
+    it('should reject address not on network boundary', () => {
+      const result = validateManualNetworkAddress(
+        '10.0.2.5/24',
+        24,
+        '10.0.0.0',
+        existingSubnets,
+        'subnet-3',
+      );
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]).toMatch(/not on.*boundary/i);
+      expect(result.errors[0]).toMatch(/10\.0\.2\.0/);
+    });
+
+    it('should warn if address outside base network range', () => {
+      const result = validateManualNetworkAddress(
+        '172.16.0.0/24',
+        24,
+        '10.0.0.0',
+        existingSubnets,
+        'subnet-3',
+      );
+      expect(result.valid).toBe(true);
+      expect(result.warnings[0]).toMatch(/outside base network range/i);
+    });
+
+    it('should reject overlapping network addresses', () => {
+      const result = validateManualNetworkAddress(
+        '10.0.0.0/24',
+        24,
+        '10.0.0.0',
+        existingSubnets,
+        'subnet-3',
+      );
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]).toMatch(/overlaps with existing subnet/i);
+    });
+
+    it('should reject partially overlapping network addresses', () => {
+      const result = validateManualNetworkAddress(
+        '10.0.0.128/25',
+        25,
+        '10.0.0.0',
+        existingSubnets,
+        'subnet-3',
+      );
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]).toMatch(/overlaps with existing subnet/i);
+    });
+
+    it('should allow editing current subnet without overlap error', () => {
+      const result = validateManualNetworkAddress(
+        '10.0.0.0/24',
+        24,
+        '10.0.0.0',
+        existingSubnets,
+        'subnet-1', // Editing subnet-1, so overlap with itself is allowed
+      );
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should handle subnets without subnetInfo', () => {
+      const subnetsWithMissing = [
+        ...existingSubnets,
+        {
+          id: 'subnet-4',
+          subnetInfo: undefined,
+        },
+      ];
+      const result = validateManualNetworkAddress(
+        '10.0.2.0/24',
+        24,
+        '10.0.0.0',
+        subnetsWithMissing,
+        'subnet-3',
+      );
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should handle malformed existing subnet addresses', () => {
+      const subnetsWithMalformed = [
+        ...existingSubnets,
+        {
+          id: 'subnet-4',
+          subnetInfo: {
+            networkAddress: 'invalid-address',
+            cidrPrefix: 24,
+          },
+        },
+      ];
+      const result = validateManualNetworkAddress(
+        '10.0.2.0/24',
+        24,
+        '10.0.0.0',
+        subnetsWithMalformed,
+        'subnet-3',
+      );
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should detect overlap with larger existing subnet', () => {
+      const subnetsWithLarger = [
+        {
+          id: 'subnet-large',
+          subnetInfo: {
+            networkAddress: '10.0.0.0/16',
+            cidrPrefix: 16,
+          },
+        },
+      ];
+      const result = validateManualNetworkAddress(
+        '10.0.1.0/24',
+        24,
+        '10.0.0.0',
+        subnetsWithLarger,
+        'subnet-new',
+      );
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]).toMatch(/overlaps with existing subnet/i);
+    });
+
+    it('should detect overlap with smaller existing subnet', () => {
+      const subnetsWithSmaller = [
+        {
+          id: 'subnet-small',
+          subnetInfo: {
+            networkAddress: '10.0.0.128/25',
+            cidrPrefix: 25,
+          },
+        },
+      ];
+      const result = validateManualNetworkAddress(
+        '10.0.0.0/24',
+        24,
+        '10.0.0.0',
+        subnetsWithSmaller,
+        'subnet-new',
+      );
+      expect(result.valid).toBe(false);
+      expect(result.errors[0]).toMatch(/overlaps with existing subnet/i);
     });
   });
 });

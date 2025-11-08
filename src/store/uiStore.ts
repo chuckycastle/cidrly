@@ -18,7 +18,6 @@ export type SortColumn =
   | 'expected'
   | 'planned'
   | 'network'
-  | 'cidr'
   | 'usable'
   | 'description';
 export type SortDirection = 'asc' | 'desc';

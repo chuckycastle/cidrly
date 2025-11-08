@@ -69,6 +69,14 @@ function buildSubnetObject(
     subnetObj['subnetSize'] = subnet.subnetInfo.subnetSize;
   }
 
+  // Add manual editing fields if present
+  if (subnet.networkLocked) {
+    subnetObj['networkLocked'] = true;
+  }
+  if (subnet.manualNetworkAddress) {
+    subnetObj['manualNetworkAddress'] = subnet.manualNetworkAddress;
+  }
+
   return subnetObj;
 }
 

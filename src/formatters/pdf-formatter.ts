@@ -198,7 +198,7 @@ const PDF_COLUMNS: Record<PdfColumnKey, PdfColumn> = {
   },
   usable: {
     key: 'usable',
-    label: 'Capacity',
+    label: 'Cap',
     width: 55,
     getValue: (subnet) => String(subnet.subnetInfo?.usableHosts ?? 'N/A'),
   },
@@ -206,7 +206,10 @@ const PDF_COLUMNS: Record<PdfColumnKey, PdfColumn> = {
     key: 'network',
     label: 'Network',
     width: 90,
-    getValue: (subnet) => subnet.subnetInfo?.networkAddress ?? 'N/A',
+    getValue: (subnet) => {
+      const addr = subnet.subnetInfo?.networkAddress ?? 'N/A';
+      return subnet.networkLocked ? `${addr}*` : addr;
+    },
   },
   description: {
     key: 'description',
@@ -355,9 +358,20 @@ function renderSupernet(
  * Render footer at bottom of current page
  */
 function renderFooter(doc: PDFKit.PDFDocument, options: PDFOptions): void {
-  doc.moveDown(2);
+  doc.moveDown(1);
 
   const tableWidth = doc.page.width - 2 * options.margin;
+
+  // Add legend for locked subnets
+  doc
+    .fontSize(options.fontSize.small)
+    .fillColor(options.colors.secondary)
+    .text('* = Locked network address (manual allocation)', options.margin, doc.y, {
+      width: tableWidth,
+      align: 'left',
+    });
+
+  doc.moveDown(1);
 
   doc
     .fontSize(options.fontSize.small)

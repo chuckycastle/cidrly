@@ -111,6 +111,8 @@ const COLUMN_FIELD_MAPPING = {
 const EXTRA_CSV_FIELDS = {
   subnet_size: (subnet: Subnet) => subnet.subnetInfo?.subnetSize.toString() ?? '',
   required_hosts: (subnet: Subnet) => subnet.subnetInfo?.requiredHosts.toString() ?? '',
+  network_locked: (subnet: Subnet) => (subnet.networkLocked ? 'true' : 'false'),
+  manual_network_address: (subnet: Subnet) => subnet.manualNetworkAddress ?? '',
 } as const;
 
 type ColumnKey = keyof typeof COLUMN_FIELD_MAPPING;
@@ -156,7 +158,7 @@ function formatSubnetRows(
   // Build header row
   const headers: string[] = orderedColumns.map((col) => COLUMN_FIELD_MAPPING[col].header);
   // Add extra fields that are always exported
-  headers.push('subnet_size', 'required_hosts');
+  headers.push('subnet_size', 'required_hosts', 'network_locked', 'manual_network_address');
   rows.push(headers.join(','));
 
   // Build data rows
@@ -165,6 +167,8 @@ function formatSubnetRows(
     // Add extra field values
     values.push(EXTRA_CSV_FIELDS.subnet_size(subnet));
     values.push(EXTRA_CSV_FIELDS.required_hosts(subnet));
+    values.push(EXTRA_CSV_FIELDS.network_locked(subnet));
+    values.push(EXTRA_CSV_FIELDS.manual_network_address(subnet));
     rows.push(values.join(','));
   });
 

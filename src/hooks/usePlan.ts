@@ -68,6 +68,8 @@ export const usePlanActions = (): {
   calculatePlan: () => void;
   updateBaseIp: (newBaseIp: string) => void;
   setGrowthPercentage: (growthPercentage: number) => void;
+  setManualNetworkAddress: (index: number, networkAddress: string, lock: boolean) => void;
+  setNetworkLocked: (index: number, locked: boolean) => void;
   clearPlan: () => void;
 } => {
   const loadPlan = usePlanStore.use.loadPlan();
@@ -77,6 +79,8 @@ export const usePlanActions = (): {
   const calculatePlan = usePlanStore.use.calculatePlan();
   const updateBaseIp = usePlanStore.use.updateBaseIp();
   const setGrowthPercentage = usePlanStore.use.setGrowthPercentage();
+  const setManualNetworkAddress = usePlanStore.use.setManualNetworkAddress();
+  const setNetworkLocked = usePlanStore.use.setNetworkLocked();
   const clearPlan = usePlanStore.use.clearPlan();
 
   return {
@@ -87,6 +91,8 @@ export const usePlanActions = (): {
     calculatePlan,
     updateBaseIp,
     setGrowthPercentage,
+    setManualNetworkAddress,
+    setNetworkLocked,
     clearPlan,
   };
 };

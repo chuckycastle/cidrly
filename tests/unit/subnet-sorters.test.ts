@@ -265,58 +265,34 @@ describe('subnet-sorters', () => {
       expect(sorted[1].subnetInfo?.networkAddress).toBe('10.0.2.0');
       expect(sorted[2].subnetInfo).toBeUndefined();
     });
-  });
 
-  describe('sortByCidr', () => {
-    it('should sort subnets by CIDR prefix in ascending order', () => {
+    it('should sort network addresses with CIDR prefixes correctly', () => {
       const subnets: Subnet[] = [
         createSubnet('1', 'Network A', 10, 50, {
           plannedDevices: 100,
-          networkAddress: '10.0.0.0',
+          networkAddress: '10.1.242.0/24',
           cidrPrefix: 24,
           usableHosts: 254,
         }),
         createSubnet('2', 'Network B', 20, 25, {
           plannedDevices: 50,
-          networkAddress: '10.0.1.0',
-          cidrPrefix: 27,
-          usableHosts: 30,
+          networkAddress: '10.1.241.0/24',
+          cidrPrefix: 24,
+          usableHosts: 254,
         }),
         createSubnet('3', 'Network C', 30, 10, {
           plannedDevices: 20,
-          networkAddress: '10.0.2.0',
-          cidrPrefix: 26,
-          usableHosts: 62,
+          networkAddress: '10.1.241.128/25',
+          cidrPrefix: 25,
+          usableHosts: 126,
         }),
       ];
 
-      const sorted = sortSubnets(subnets, 'cidr', 'asc');
+      const sorted = sortSubnets(subnets, 'network', 'asc');
 
-      expect(sorted[0].subnetInfo?.cidrPrefix).toBe(24);
-      expect(sorted[1].subnetInfo?.cidrPrefix).toBe(26);
-      expect(sorted[2].subnetInfo?.cidrPrefix).toBe(27);
-    });
-
-    it('should sort subnets by CIDR prefix in descending order', () => {
-      const subnets: Subnet[] = [
-        createSubnet('1', 'Network A', 10, 50, {
-          plannedDevices: 100,
-          networkAddress: '10.0.0.0',
-          cidrPrefix: 24,
-          usableHosts: 254,
-        }),
-        createSubnet('2', 'Network B', 20, 25, {
-          plannedDevices: 50,
-          networkAddress: '10.0.1.0',
-          cidrPrefix: 26,
-          usableHosts: 62,
-        }),
-      ];
-
-      const sorted = sortSubnets(subnets, 'cidr', 'desc');
-
-      expect(sorted[0].subnetInfo?.cidrPrefix).toBe(26);
-      expect(sorted[1].subnetInfo?.cidrPrefix).toBe(24);
+      expect(sorted[0].subnetInfo?.networkAddress).toBe('10.1.241.0/24');
+      expect(sorted[1].subnetInfo?.networkAddress).toBe('10.1.241.128/25');
+      expect(sorted[2].subnetInfo?.networkAddress).toBe('10.1.242.0/24');
     });
   });
 
@@ -497,8 +473,7 @@ describe('subnet-sorters', () => {
       expect(getSortDescription('expected', 'asc')).toBe('Expected ↑');
       expect(getSortDescription('planned', 'asc')).toBe('Planned ↑');
       expect(getSortDescription('network', 'asc')).toBe('Network ↑');
-      expect(getSortDescription('cidr', 'asc')).toBe('CIDR ↑');
-      expect(getSortDescription('usable', 'asc')).toBe('Usable ↑');
+      expect(getSortDescription('usable', 'asc')).toBe('Cap ↑');
       expect(getSortDescription('description', 'asc')).toBe('Description ↑');
     });
 
@@ -508,8 +483,7 @@ describe('subnet-sorters', () => {
       expect(getSortDescription('expected', 'desc')).toBe('Expected ↓');
       expect(getSortDescription('planned', 'desc')).toBe('Planned ↓');
       expect(getSortDescription('network', 'desc')).toBe('Network ↓');
-      expect(getSortDescription('cidr', 'desc')).toBe('CIDR ↓');
-      expect(getSortDescription('usable', 'desc')).toBe('Usable ↓');
+      expect(getSortDescription('usable', 'desc')).toBe('Cap ↓');
       expect(getSortDescription('description', 'desc')).toBe('Description ↓');
     });
   });

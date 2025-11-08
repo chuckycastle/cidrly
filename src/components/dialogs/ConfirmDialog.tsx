@@ -52,7 +52,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({ title, message, on
       {/* Message */}
       <Box marginBottom={1} flexDirection="column">
         {message.split('\n').map((line, index) => (
-          <Text key={index}>{colors.muted(line)}</Text>
+          <Text key={index}>{line ? colors.muted(line) : ' '}</Text>
         ))}
       </Box>
 

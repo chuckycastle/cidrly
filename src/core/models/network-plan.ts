@@ -36,6 +36,8 @@ export interface Subnet {
   expectedDevices: number;
   description?: string;
   subnetInfo?: SubnetInfo;
+  networkLocked: boolean;
+  manualNetworkAddress?: string;
 }
 
 export interface NetworkPlan {
@@ -70,6 +72,7 @@ export function createSubnet(
     vlanId,
     expectedDevices,
     ...(description && { description }),
+    networkLocked: false,
   };
 }
 
@@ -147,6 +150,8 @@ export function removeSubnet(plan: NetworkPlan, subnetId: string): NetworkPlan {
  * Subnets are returned sorted by size (largest first) for optimal display
  * Returns a new plan with calculated subnet information
  *
+ * Respects locked subnets: Subnets with networkLocked=true keep their manual addresses
+ *
  * @param plan - Network plan to calculate subnet ranges for
  */
 export function calculateSubnetRanges(plan: NetworkPlan): NetworkPlan {
@@ -154,15 +159,19 @@ export function calculateSubnetRanges(plan: NetworkPlan): NetworkPlan {
     return plan;
   }
 
-  // Step 1: Calculate subnet information for each subnet using plan's growth percentage
-  const subnetsWithInfo = plan.subnets.map((subnet) => ({
+  // Step 1: Separate locked and unlocked subnets
+  const lockedSubnets = plan.subnets.filter((subnet) => subnet.networkLocked);
+  const unlockedSubnets = plan.subnets.filter((subnet) => !subnet.networkLocked);
+
+  // Step 2: Calculate subnet information for unlocked subnets using plan's growth percentage
+  const unlockedWithInfo = unlockedSubnets.map((subnet) => ({
     ...subnet,
     subnetInfo: calculateSubnet(subnet.expectedDevices, plan.growthPercentage),
   }));
 
-  // Step 2: Sort by subnet size DESCENDING for optimal allocation
+  // Step 3: Sort unlocked subnets by size DESCENDING for optimal allocation
   // Larger subnets first minimizes wasted space due to boundary alignment
-  const sortedSubnets = [...subnetsWithInfo].sort((a, b) => {
+  const sortedUnlocked = [...unlockedWithInfo].sort((a, b) => {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive check for optional chaining
     const sizeA = a.subnetInfo?.subnetSize || 0;
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive check for optional chaining
@@ -170,26 +179,28 @@ export function calculateSubnetRanges(plan: NetworkPlan): NetworkPlan {
     return sizeB - sizeA; // Descending order
   });
 
-  // Step 3: Allocate network addresses to sorted subnets
-  const sortedSubnetInfos = sortedSubnets
+  // Step 4: Allocate network addresses to unlocked subnets only
+  const unlockedSubnetInfos = sortedUnlocked
     .map((s) => s.subnetInfo)
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime type guard
     .filter((info): info is NonNullable<typeof info> => info !== undefined);
 
-  const allocatedInfos = allocateSubnetAddresses(plan.baseIp, sortedSubnetInfos);
+  const allocatedInfos = allocateSubnetAddresses(plan.baseIp, unlockedSubnetInfos);
 
-  // Step 4: Return subnets in optimized order (sorted by size) with allocated addresses
-  const finalSubnets = sortedSubnets.map((subnet, index) => ({
+  // Step 5: Combine unlocked subnets with new addresses and locked subnets with preserved addresses
+  const unlockedWithAddresses = sortedUnlocked.map((subnet, index) => ({
     ...subnet,
     subnetInfo: allocatedInfos[index],
   }));
 
-  // Step 5: Calculate supernet from allocated subnets
-  const allocatedSubnetInfos = finalSubnets
+  const finalSubnets = [...unlockedWithAddresses, ...lockedSubnets];
+
+  // Step 6: Calculate supernet from all allocated subnets
+  const allSubnetInfos = finalSubnets
     .map((s) => s.subnetInfo)
     .filter((info): info is NonNullable<typeof info> => info !== undefined);
 
-  const supernet = calculateSupernet(allocatedSubnetInfos);
+  const supernet = calculateSupernet(allSubnetInfos);
 
   // Generate supernet network address
   const supernetAddress = generateNetworkAddress(plan.baseIp, supernet.cidrPrefix);
