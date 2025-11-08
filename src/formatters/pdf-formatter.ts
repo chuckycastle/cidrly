@@ -198,8 +198,8 @@ const PDF_COLUMNS: Record<PdfColumnKey, PdfColumn> = {
   },
   usable: {
     key: 'usable',
-    label: 'Cap',
-    width: 55,
+    label: 'Max\nHosts',
+    width: 65,
     getValue: (subnet) => String(subnet.subnetInfo?.usableHosts ?? 'N/A'),
   },
   network: {
@@ -264,28 +264,46 @@ function renderSubnetTable(
   // Draw table header
   doc.fontSize(options.fontSize.body).font('Helvetica-Bold').fillColor(options.colors.text);
 
+  // Calculate header height (support multi-line headers like "Max\nHosts")
+  const headerHeight = 28; // Increased from 20 to accommodate 2-line headers
+
   // Header background
   doc
-    .rect(startX, currentY, doc.page.width - 2 * options.margin, 16)
+    .rect(startX, currentY, doc.page.width - 2 * options.margin, headerHeight)
     .fill(options.colors.lightGray);
 
   currentY += 3;
 
-  // Header text
+  // Header text (supports line breaks for multi-word headers like "Max\nHosts")
   let currentX = startX + 5;
   doc.fillColor(options.colors.text);
   columns.forEach((col) => {
-    doc.text(col.label, currentX, currentY, { width: col.width });
+    doc.text(col.label, currentX, currentY, {
+      width: col.width - 5,
+      align: 'left',
+      lineBreak: true,
+    });
     currentX += col.width;
   });
 
-  currentY += 16;
+  currentY += headerHeight;
   doc.font('Helvetica');
 
   // Draw table rows
   subnets.forEach((subnet, index) => {
+    // Calculate row height based on content (support multi-line text)
+    const cellValues = columns.map((col) => col.getValue(subnet));
+    const maxLines = Math.max(
+      ...cellValues.map((val) => {
+        const lines = String(val).split('\n').length;
+        const wrappedLines = Math.ceil(String(val).length / 20); // Rough estimate
+        return Math.max(lines, wrappedLines);
+      }),
+    );
+    const rowHeight = Math.max(14, maxLines * 10 + 4);
+
     // Check if we need a new page
-    if (currentY > doc.page.height - options.margin - 50) {
+    if (currentY > doc.page.height - options.margin - rowHeight - 20) {
       doc.addPage();
       currentY = options.margin;
     }
@@ -293,7 +311,7 @@ function renderSubnetTable(
     // Alternate row colors
     if (index % 2 === 0) {
       doc
-        .rect(startX, currentY, doc.page.width - 2 * options.margin, 14)
+        .rect(startX, currentY, doc.page.width - 2 * options.margin, rowHeight)
         .fill('#f8fafc')
         .fillColor(options.colors.text);
     }
@@ -303,17 +321,18 @@ function renderSubnetTable(
 
     doc.fontSize(options.fontSize.small);
 
-    // Render each column's value
+    // Render each column's value (with text wrapping instead of ellipsis)
     columns.forEach((col) => {
       const value = col.getValue(subnet);
       doc.text(value, currentX, currentY, {
         width: col.width - 5,
-        ellipsis: true,
+        ellipsis: false,
+        lineBreak: true,
       });
       currentX += col.width;
     });
 
-    currentY += 14;
+    currentY += rowHeight;
   });
 
   doc.moveDown(0.5);
@@ -342,7 +361,7 @@ function renderSupernet(
     `Network: ${supernet.networkAddress}/${supernet.cidrPrefix}`,
     `Total: ${supernet.totalSize}`,
     `Used: ${supernet.usedSize}`,
-    `Efficiency: ${supernet.efficiency.toFixed(2)}%`,
+    `Utilization: ${supernet.utilization.toFixed(2)}%`,
     `Range: ${supernet.rangeEfficiency.toFixed(2)}%`,
   ].join('  •  ');
 

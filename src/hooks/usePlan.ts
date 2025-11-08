@@ -141,7 +141,7 @@ export const useSubnets = (): Subnet[] => {
  * ```tsx
  * const supernet = useSupernet();
  * if (supernet) {
- *   console.log('Efficiency:', supernet.efficiency);
+ *   console.log('Utilization:', supernet.utilization);
  * }
  * ```
  */

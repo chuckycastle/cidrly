@@ -189,7 +189,7 @@ describe('Subnet Calculator', () => {
       expect(result.cidrPrefix).toBe(26);
       expect(result.totalSize).toBe(64);
       expect(result.usedSize).toBe(64);
-      expect(result.efficiency).toBe(100);
+      expect(result.utilization).toBe(100);
     });
 
     it('should calculate supernet for multiple subnets (default 100%)', () => {
@@ -204,7 +204,7 @@ describe('Subnet Calculator', () => {
       expect(result.usedSize).toBe(totalUsed);
       expect(result.cidrPrefix).toBe(23); // /23 gives 512 addresses
       expect(result.totalSize).toBe(512);
-      expect(result.efficiency).toBeCloseTo(68.75, 2); // 352/512 = 68.75%
+      expect(result.utilization).toBeCloseTo(68.75, 2); // 352/512 = 68.75%
     });
 
     it('should calculate supernet with different growth percentages', () => {
@@ -219,7 +219,7 @@ describe('Subnet Calculator', () => {
       expect(result.usedSize).toBe(totalUsed);
       expect(result.cidrPrefix).toBe(24); // /24 gives 256 addresses
       expect(result.totalSize).toBe(256);
-      expect(result.efficiency).toBeCloseTo(87.5, 2); // 224/256 = 87.5%
+      expect(result.utilization).toBeCloseTo(87.5, 2); // 224/256 = 87.5%
     });
 
     it('should throw error for empty subnet list', () => {

@@ -28,7 +28,7 @@ describe('VLSM Optimization Algorithm', () => {
 
       // Verify supernet efficiency
       expect(calculated.supernet).toBeDefined();
-      const efficiency = calculated.supernet!.efficiency;
+      const efficiency = calculated.supernet!.utilization;
 
       // With optimization and 50% rule:
       // Used: 256 + 32 + 16 = 304 addresses
@@ -99,7 +99,7 @@ describe('VLSM Optimization Algorithm', () => {
 
       expect(calculated.subnets[0].subnetInfo?.networkAddress).toBe('10.0.0.0/25');
       expect(calculated.supernet).toBeDefined();
-      expect(calculated.supernet!.efficiency).toBe(100); // Perfect efficiency for single subnet
+      expect(calculated.supernet!.utilization).toBe(100); // Perfect efficiency for single subnet
     });
 
     test('should handle all subnets with same size', () => {
@@ -120,7 +120,7 @@ describe('VLSM Optimization Algorithm', () => {
 
       // Verify good efficiency - 3 * 32 = 96, next power of 2 is 128
       // Efficiency: 96/128 = 75%
-      expect(calculated.supernet!.efficiency).toBe(75);
+      expect(calculated.supernet!.utilization).toBe(75);
     });
 
     test('should sort any input order to optimized order', () => {
@@ -167,7 +167,7 @@ describe('VLSM Optimization Algorithm', () => {
 
       // Optimization should still achieve good efficiency
       expect(calculated.supernet).toBeDefined();
-      const efficiency = calculated.supernet!.efficiency;
+      const efficiency = calculated.supernet!.utilization;
 
       // Should achieve reasonable efficiency
       // Used: 256 + 64 + 32 + 8 = 360
@@ -204,7 +204,7 @@ describe('VLSM Optimization Algorithm', () => {
 
       // Verify efficiency is improved
       expect(calculated.supernet).toBeDefined();
-      const efficiency = calculated.supernet!.efficiency;
+      const efficiency = calculated.supernet!.utilization;
       expect(efficiency).toBeGreaterThanOrEqual(65);
     });
 
@@ -224,7 +224,7 @@ describe('VLSM Optimization Algorithm', () => {
         expect(subnet.subnetInfo?.networkAddress).toMatch(/^192\.168\.1\./);
       });
 
-      expect(calculated.supernet!.efficiency).toBeGreaterThanOrEqual(70);
+      expect(calculated.supernet!.utilization).toBeGreaterThanOrEqual(70);
     });
   });
 
@@ -255,7 +255,7 @@ describe('VLSM Optimization Algorithm', () => {
       //   10.0.2.0/28 (16 addresses)
       //   Used: 304, Range: 528, Efficiency: ~57.6%
 
-      const optimizedEfficiency = calculated.supernet!.efficiency;
+      const optimizedEfficiency = calculated.supernet!.utilization;
 
       // Optimized should achieve ~59.375% efficiency
       expect(optimizedEfficiency).toBeGreaterThanOrEqual(59);

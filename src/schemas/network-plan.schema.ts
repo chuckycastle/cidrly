@@ -62,15 +62,26 @@ const IpAddressSchema = z
 
 /**
  * Supernet schema - validates calculated supernet information
+ * Supports both new 'utilization' field and legacy 'efficiency' field for backward compatibility
  */
-const SupernetSchema = z.object({
-  cidrPrefix: z.number().int().min(CIDR_RULES.ABSOLUTE_MIN).max(CIDR_RULES.ABSOLUTE_MAX),
-  totalSize: z.number().int().positive(),
-  usedSize: z.number().int().positive(),
-  efficiency: z.number().min(0).max(100),
-  rangeEfficiency: z.number().min(0).max(100).default(100), // Default to 100% for old plans
-  networkAddress: z.string(),
-});
+const SupernetSchema = z
+  .object({
+    cidrPrefix: z.number().int().min(CIDR_RULES.ABSOLUTE_MIN).max(CIDR_RULES.ABSOLUTE_MAX),
+    totalSize: z.number().int().positive(),
+    usedSize: z.number().int().positive(),
+    utilization: z.number().min(0).optional(), // New field (can exceed 100%)
+    efficiency: z.number().min(0).optional(), // Legacy field for backward compatibility
+    rangeEfficiency: z.number().min(0).max(100).default(100), // Default to 100% for old plans
+    networkAddress: z.string(),
+  })
+  .transform((data) => {
+    // Migration: if old 'efficiency' exists but 'utilization' doesn't, copy it over
+    if (data.efficiency !== undefined && data.utilization === undefined) {
+      return { ...data, utilization: data.efficiency };
+    }
+    // If utilization exists, ensure we have it (new format)
+    return { ...data, utilization: data.utilization ?? 0 };
+  });
 
 /**
  * NetworkPlan schema - validates complete network plan
@@ -96,6 +107,26 @@ const NetworkPlanSchema = z.object({
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
+
+/**
+ * Quick check if data looks like a cidrly plan (without full validation)
+ * Useful for filtering .json files to see if they're cidrly plans
+ * @param data - Unknown data to check
+ * @returns true if data has the basic structure of a cidrly plan
+ */
+export function looksLikeCidrlyPlan(data: unknown): boolean {
+  if (typeof data !== 'object' || data === null) {
+    return false;
+  }
+
+  const obj = data as Record<string, unknown>;
+  return (
+    typeof obj.name === 'string' &&
+    typeof obj.baseIp === 'string' &&
+    typeof obj.supernet === 'object' &&
+    Array.isArray(obj.subnets)
+  );
+}
 
 /**
  * Parse and validate a network plan from unknown data

@@ -51,10 +51,10 @@ describe('FileSystemRepository', () => {
       expect(fs.existsSync(result)).toBe(true);
     });
 
-    it('should save plan with auto-added .json extension', async () => {
+    it('should save plan with auto-added .cidr extension', async () => {
       const result = await repository.save(testPlan, 'test-plan');
 
-      expect(result).toContain('test-plan.json');
+      expect(result).toContain('test-plan.cidr');
       expect(fs.existsSync(result)).toBe(true);
     });
 

@@ -46,7 +46,7 @@ function formatSupernetHeaders(plan: NetworkPlan): string[] {
   headers.push(`# supernet.cidrPrefix: ${supernet.cidrPrefix}`);
   headers.push(`# supernet.totalSize: ${supernet.totalSize}`);
   headers.push(`# supernet.usedSize: ${supernet.usedSize}`);
-  headers.push(`# supernet.efficiency: ${supernet.efficiency.toFixed(2)}`);
+  headers.push(`# supernet.utilization: ${supernet.utilization.toFixed(2)}`);
   headers.push(`# supernet.rangeEfficiency: ${supernet.rangeEfficiency.toFixed(2)}`);
 
   return headers;
@@ -79,7 +79,7 @@ const COLUMN_FIELD_MAPPING = {
     getValue: (subnet: Subnet) => subnet.vlanId.toString(),
   },
   expected: {
-    header: 'expected_devices',
+    header: 'devices',
     getValue: (subnet: Subnet) => subnet.expectedDevices.toString(),
   },
   description: {
@@ -98,11 +98,11 @@ const COLUMN_FIELD_MAPPING = {
     getValue: (subnet: Subnet) => subnet.subnetInfo?.cidrPrefix.toString() ?? '',
   },
   usable: {
-    header: 'usable_hosts',
+    header: 'max_hosts',
     getValue: (subnet: Subnet) => subnet.subnetInfo?.usableHosts.toString() ?? '',
   },
   planned: {
-    header: 'planned_devices',
+    header: 'planned',
     getValue: (subnet: Subnet) => subnet.subnetInfo?.plannedDevices.toString() ?? '',
   },
 } as const;

@@ -68,7 +68,6 @@ cidrly view --plan=my-network.json
 
 ### Actions
 
-- `i` - Show subnet details
 - `Enter` - Show subnet details (row mode) / Sort column (header mode)
 - `Space` - Sort selected column (header mode only)
 - `a` - Add subnet
@@ -100,8 +99,6 @@ Documentation is available on the [GitHub Wiki](https://github.com/chuckycastle/
 - **[User Guide](https://github.com/chuckycastle/cidrly/wiki/User-Guide)** - Getting started, basic concepts, common workflows, and troubleshooting
 - **[Keyboard Shortcuts](https://github.com/chuckycastle/cidrly/wiki/Keyboard-Shortcuts)** - Complete reference for all keyboard shortcuts
 - **[Examples and Tutorials](https://github.com/chuckycastle/cidrly/wiki/Examples)** - Practical examples and step-by-step tutorials
-
-Access help in the dashboard by pressing `?`
 
 ## Contributing
 

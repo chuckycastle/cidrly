@@ -29,7 +29,7 @@ describe('YamlFormatter', () => {
       expect(parsed.subnets).toHaveLength(1);
       expect(parsed.subnets[0].name).toBe('Engineering');
       expect(parsed.subnets[0].vlanId).toBe(10);
-      expect(parsed.subnets[0].expectedDevices).toBe(50);
+      expect(parsed.subnets[0].devices).toBe(50);
     });
 
     it('should include subnet info when present', () => {
@@ -52,7 +52,7 @@ describe('YamlFormatter', () => {
       // New flattened structure - subnet info fields are at top level
       expect(parsed.subnets[0].networkAddress).toBe('10.0.0.0');
       expect(parsed.subnets[0].cidrPrefix).toBe(24);
-      expect(parsed.subnets[0].usableHosts).toBe(254);
+      expect(parsed.subnets[0].maxHosts).toBe(254);
       expect(parsed.subnets[0].requiredHosts).toBe(102);
       expect(parsed.subnets[0].subnetSize).toBe(256);
     });
@@ -64,7 +64,7 @@ describe('YamlFormatter', () => {
         cidrPrefix: 16,
         totalSize: 65536,
         usedSize: 1024,
-        efficiency: 1.56,
+        utilization: 1.56,
         rangeEfficiency: 100,
       };
 
@@ -74,7 +74,7 @@ describe('YamlFormatter', () => {
       expect(parsed.supernet).toBeDefined();
       expect(parsed.supernet.networkAddress).toBe('10.0.0.0');
       expect(parsed.supernet.cidrPrefix).toBe(16);
-      expect(parsed.supernet.efficiency).toBe(1.56);
+      expect(parsed.supernet.utilization).toBe(1.56);
     });
 
     it('should include metadata with timestamps', () => {
@@ -142,7 +142,7 @@ describe('YamlFormatter', () => {
         cidrPrefix: 16,
         totalSize: 65536,
         usedSize: 1024,
-        efficiency: 1.56,
+        utilization: 1.56,
         rangeEfficiency: 100,
       };
 

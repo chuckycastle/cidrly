@@ -50,7 +50,7 @@ describe('NetworkPlanService', () => {
       expect(plan.supernet).toBeDefined();
       expect(plan.supernet?.cidrPrefix).toBeDefined();
       expect(plan.supernet?.totalSize).toBeDefined();
-      expect(plan.supernet?.efficiency).toBeDefined();
+      expect(plan.supernet?.utilization).toBeDefined();
     });
 
     it('should allocate network addresses', () => {
