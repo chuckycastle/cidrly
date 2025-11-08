@@ -27,8 +27,12 @@ export class FileService {
 
   constructor(private readonly baseDirectory: string) {
     // Ensure base directory exists
-    if (!fs.existsSync(this.baseDirectory)) {
+    try {
       fs.mkdirSync(this.baseDirectory, { recursive: true });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+        throw error;
+      }
     }
   }
 
@@ -89,8 +93,12 @@ export class FileService {
 
       // Ensure parent directory exists
       const dirPath = path.dirname(filepath);
-      if (!fs.existsSync(dirPath)) {
+      try {
         fs.mkdirSync(dirPath, { recursive: true });
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+          throw error;
+        }
       }
 
       // Write the file
@@ -123,13 +131,16 @@ export class FileService {
       // Resolve user path (supports filenames, relative paths, absolute paths, ~ paths)
       const filepath = resolveUserPath(finalFilename, this.baseDirectory);
 
-      // Check if file exists
-      if (!fs.existsSync(filepath)) {
-        throw ErrorFactory.fileNotFound(filepath);
-      }
-
       // Read the file
-      const fileContent = fs.readFileSync(filepath, 'utf-8');
+      let fileContent: string;
+      try {
+        fileContent = fs.readFileSync(filepath, 'utf-8');
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          throw ErrorFactory.fileNotFound(filepath);
+        }
+        throw error;
+      }
 
       // Parse and validate using Zod schema
       const loadedPlan = parseNetworkPlan(JSON.parse(fileContent), filepath);
@@ -157,12 +168,16 @@ export class FileService {
     }
 
     try {
-      // Ensure directory exists
-      if (!fs.existsSync(this.baseDirectory)) {
-        return [];
+      // Read directory
+      let files: string[];
+      try {
+        files = fs.readdirSync(this.baseDirectory);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          return [];
+        }
+        throw error;
       }
-
-      const files = fs.readdirSync(this.baseDirectory);
       const planFiles = files.filter((f) => f.endsWith('.cidr') || f.endsWith('.json'));
 
       const savedPlans: SavedPlanFile[] = planFiles.map((filename) => {
@@ -209,13 +224,15 @@ export class FileService {
         throw ErrorFactory.pathTraversalDetected(filepath);
       }
 
-      // Check if file exists
-      if (!fs.existsSync(filepath)) {
-        throw ErrorFactory.fileNotFound(filepath);
-      }
-
       // Delete the file
-      fs.unlinkSync(filepath);
+      try {
+        fs.unlinkSync(filepath);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          throw ErrorFactory.fileNotFound(filepath);
+        }
+        throw error;
+      }
 
       // Invalidate cache after modifying filesystem
       this.invalidateCache();

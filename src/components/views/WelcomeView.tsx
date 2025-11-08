@@ -38,10 +38,6 @@ export const WelcomeView: React.FC = () => {
   const getSavedPlans = (directoryPath?: string): Array<{ label: string; value: string }> => {
     const targetPath = directoryPath ?? path.resolve(process.cwd(), FILE_RULES.SAVED_PLANS_DIR);
 
-    if (!fs.existsSync(targetPath)) {
-      return [];
-    }
-
     try {
       const files = fs.readdirSync(targetPath);
       return files
@@ -91,14 +87,18 @@ export const WelcomeView: React.FC = () => {
   // Handle loading existing plan
   const handleLoadPlan = (filepath: string): void => {
     try {
-      if (!fs.existsSync(filepath)) {
-        setState({ type: 'error', message: 'File not found' });
-        setTimeout(() => setState({ type: 'initial' }), 2000);
-        return;
-      }
-
       // Check if path is a directory
-      const stats = fs.statSync(filepath);
+      let stats;
+      try {
+        stats = fs.statSync(filepath);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          setState({ type: 'error', message: 'File not found' });
+          setTimeout(() => setState({ type: 'initial' }), 2000);
+          return;
+        }
+        throw error;
+      }
       if (stats.isDirectory()) {
         // List .cidrly.json files in the directory
         const files = getSavedPlans(filepath);
