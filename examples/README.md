@@ -103,7 +103,7 @@ Shows how much address space is used relative to the smallest containing superne
 - **60-80%**: Reasonable utilization
 - **80-95%**: Tight packing, minimal waste
 - **95-100%**: Near-perfect fit within supernet
-- **> 100%**: Over-allocated, requires larger supernet
+- **> 100%**: Exceeds smallest supernet capacity (e.g., 118.8% = needs 18.8% more space, requires larger supernet)
 
 ### Range Efficiency
 
