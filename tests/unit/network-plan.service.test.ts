@@ -304,4 +304,171 @@ describe('NetworkPlanService', () => {
       expect(plan.updatedAt.getTime()).toBeGreaterThanOrEqual(originalTime.getTime());
     });
   });
+
+  describe('setManualNetworkAddress', () => {
+    it('should throw error if plan is null', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect(() => service.setManualNetworkAddress(null as any, 0, '10.0.0.0/24', true)).toThrow(
+        ValidationError,
+      );
+    });
+
+    it('should throw error if index is out of bounds', () => {
+      const plan = createNetworkPlan('Test Plan');
+      plan.subnets.push(createSubnet('Engineering', 10, 50));
+
+      expect(() => service.setManualNetworkAddress(plan, 5, '10.0.0.0/24', true)).toThrow(
+        ValidationError,
+      );
+      expect(() => service.setManualNetworkAddress(plan, 5, '10.0.0.0/24', true)).toThrow(
+        'Index 5 is out of bounds',
+      );
+    });
+
+    it('should throw error for invalid network address format', () => {
+      const plan = createNetworkPlan('Test Plan');
+      plan.subnets.push(createSubnet('Engineering', 10, 50));
+
+      expect(() => service.setManualNetworkAddress(plan, 0, 'invalid', true)).toThrow(Error);
+      expect(() => service.setManualNetworkAddress(plan, 0, 'invalid', true)).toThrow(
+        'Invalid network address format',
+      );
+    });
+
+    it('should set manual network address and lock subnet', () => {
+      const plan = createNetworkPlan('Test Plan');
+      plan.subnets.push(createSubnet('Engineering', 10, 50));
+
+      service.setManualNetworkAddress(plan, 0, '10.0.1.0/24', true);
+
+      expect(plan.subnets[0].manualNetworkAddress).toBe('10.0.1.0/24');
+      expect(plan.subnets[0].networkLocked).toBe(true);
+      expect(plan.subnets[0].subnetInfo?.networkAddress).toBe('10.0.1.0/24');
+      expect(plan.subnets[0].subnetInfo?.cidrPrefix).toBe(24);
+    });
+
+    it('should set manual network address without locking', () => {
+      const plan = createNetworkPlan('Test Plan');
+      plan.subnets.push(createSubnet('Engineering', 10, 50));
+
+      service.setManualNetworkAddress(plan, 0, '10.0.2.0/25', false);
+
+      expect(plan.subnets[0].manualNetworkAddress).toBe('10.0.2.0/25');
+      expect(plan.subnets[0].networkLocked).toBe(false);
+      expect(plan.subnets[0].subnetInfo?.cidrPrefix).toBe(25);
+    });
+
+    it('should calculate correct subnet info for manual address', () => {
+      const plan = createNetworkPlan('Test Plan');
+      plan.subnets.push(createSubnet('Engineering', 10, 50));
+
+      service.setManualNetworkAddress(plan, 0, '192.168.1.0/26', true);
+
+      const subnetInfo = plan.subnets[0].subnetInfo;
+      expect(subnetInfo?.networkAddress).toBe('192.168.1.0/26');
+      expect(subnetInfo?.broadcastAddress).toBe('192.168.1.63');
+      expect(subnetInfo?.usableHostRange.first).toBe('192.168.1.1');
+      expect(subnetInfo?.usableHostRange.last).toBe('192.168.1.62');
+      expect(subnetInfo?.totalHosts).toBe(64);
+      expect(subnetInfo?.usableHosts).toBe(62);
+    });
+
+    it('should preserve existing subnet info fields', () => {
+      const plan = createNetworkPlan('Test Plan');
+      const subnet = createSubnet('Engineering', 10, 50);
+      plan.subnets.push(subnet);
+
+      // First calculate to set expectedDevices and plannedDevices
+      service.calculatePlan(plan);
+      const originalExpected = plan.subnets[0].subnetInfo?.expectedDevices;
+      const originalPlanned = plan.subnets[0].subnetInfo?.plannedDevices;
+
+      // Then set manual network address
+      service.setManualNetworkAddress(plan, 0, '10.0.3.0/24', true);
+
+      expect(plan.subnets[0].subnetInfo?.expectedDevices).toBe(originalExpected);
+      expect(plan.subnets[0].subnetInfo?.plannedDevices).toBe(originalPlanned);
+    });
+
+    it('should update plan updatedAt timestamp', () => {
+      const plan = createNetworkPlan('Test Plan');
+      plan.subnets.push(createSubnet('Engineering', 10, 50));
+      const originalTime = plan.updatedAt;
+
+      service.setManualNetworkAddress(plan, 0, '10.0.4.0/24', true);
+
+      expect(plan.updatedAt.getTime()).toBeGreaterThanOrEqual(originalTime.getTime());
+    });
+
+    it('should handle /30 network address for point-to-point', () => {
+      const plan = createNetworkPlan('Test Plan');
+      plan.subnets.push(createSubnet('Point-to-Point', 10, 2));
+
+      service.setManualNetworkAddress(plan, 0, '10.0.5.0/30', true);
+
+      expect(plan.subnets[0].subnetInfo?.cidrPrefix).toBe(30);
+      expect(plan.subnets[0].subnetInfo?.totalHosts).toBe(4);
+      expect(plan.subnets[0].subnetInfo?.usableHosts).toBe(2);
+    });
+
+    it('should create subnet info if it does not exist', () => {
+      const plan = createNetworkPlan('Test Plan');
+      const subnet = createSubnet('Engineering', 10, 50);
+      plan.subnets.push(subnet);
+
+      // Don't call calculatePlan, so subnetInfo is undefined
+      expect(subnet.subnetInfo).toBeUndefined();
+
+      service.setManualNetworkAddress(plan, 0, '10.0.6.0/24', true);
+
+      expect(plan.subnets[0].subnetInfo).toBeDefined();
+      expect(plan.subnets[0].subnetInfo?.expectedDevices).toBe(50);
+      expect(plan.subnets[0].subnetInfo?.networkAddress).toBe('10.0.6.0/24');
+    });
+  });
+
+  describe('setNetworkLocked', () => {
+    it('should throw error if plan is null', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect(() => service.setNetworkLocked(null as any, 0, true)).toThrow(ValidationError);
+    });
+
+    it('should throw error if index is out of bounds', () => {
+      const plan = createNetworkPlan('Test Plan');
+      plan.subnets.push(createSubnet('Engineering', 10, 50));
+
+      expect(() => service.setNetworkLocked(plan, 5, true)).toThrow(ValidationError);
+      expect(() => service.setNetworkLocked(plan, 5, true)).toThrow('Index 5 is out of bounds');
+    });
+
+    it('should lock a subnet', () => {
+      const plan = createNetworkPlan('Test Plan');
+      plan.subnets.push(createSubnet('Engineering', 10, 50));
+
+      service.setNetworkLocked(plan, 0, true);
+
+      expect(plan.subnets[0].networkLocked).toBe(true);
+    });
+
+    it('should unlock a subnet', () => {
+      const plan = createNetworkPlan('Test Plan');
+      const subnet = createSubnet('Engineering', 10, 50);
+      subnet.networkLocked = true;
+      plan.subnets.push(subnet);
+
+      service.setNetworkLocked(plan, 0, false);
+
+      expect(plan.subnets[0].networkLocked).toBe(false);
+    });
+
+    it('should update plan updatedAt timestamp', () => {
+      const plan = createNetworkPlan('Test Plan');
+      plan.subnets.push(createSubnet('Engineering', 10, 50));
+      const originalTime = plan.updatedAt;
+
+      service.setNetworkLocked(plan, 0, true);
+
+      expect(plan.updatedAt.getTime()).toBeGreaterThanOrEqual(originalTime.getTime());
+    });
+  });
 });
