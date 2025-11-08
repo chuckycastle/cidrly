@@ -121,10 +121,10 @@ export function looksLikeCidrlyPlan(data: unknown): boolean {
 
   const obj = data as Record<string, unknown>;
   return (
-    typeof obj.name === 'string' &&
-    typeof obj.baseIp === 'string' &&
-    typeof obj.supernet === 'object' &&
-    Array.isArray(obj.subnets)
+    typeof obj['name'] === 'string' &&
+    typeof obj['baseIp'] === 'string' &&
+    typeof obj['supernet'] === 'object' &&
+    Array.isArray(obj['subnets'])
   );
 }
 
