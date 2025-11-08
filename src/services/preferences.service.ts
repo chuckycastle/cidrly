@@ -35,8 +35,12 @@ export class PreferencesService {
    * Ensure the preferences directory exists
    */
   private ensureDirectoryExists(): void {
-    if (!fs.existsSync(this.preferencesDir)) {
+    try {
       fs.mkdirSync(this.preferencesDir, { recursive: true });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+        throw error;
+      }
     }
   }
 
@@ -46,8 +50,12 @@ export class PreferencesService {
    */
   private validateAndCreateDirectory(dirPath: string): void {
     const expandedPath = dirPath.replace(/^~/, os.homedir());
-    if (!fs.existsSync(expandedPath)) {
+    try {
       fs.mkdirSync(expandedPath, { recursive: true });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+        throw error;
+      }
     }
   }
 
@@ -57,11 +65,6 @@ export class PreferencesService {
    */
   async loadPreferences(): Promise<Preferences> {
     try {
-      // If file doesn't exist, return defaults
-      if (!fs.existsSync(this.preferencesFile)) {
-        return defaultPreferences;
-      }
-
       // Read and parse the file
       const fileContent = fs.readFileSync(this.preferencesFile, 'utf-8');
       const data = JSON.parse(fileContent) as unknown;

@@ -47,11 +47,16 @@ function normalizePath(filePath: string): string {
  */
 function isSymbolicLink(filePath: string): boolean {
   try {
-    // Check if the file itself exists and is a symlink
-    if (fs.existsSync(filePath)) {
+    // Check if the file itself is a symlink
+    try {
       const stats = fs.lstatSync(filePath);
       if (stats.isSymbolicLink()) {
         return true;
+      }
+    } catch (error) {
+      // If file doesn't exist, check parent paths
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw error;
       }
     }
 
@@ -64,10 +69,15 @@ function isSymbolicLink(filePath: string): boolean {
 
       currentPath = currentPath ? path.join(currentPath, part) : part;
 
-      if (fs.existsSync(currentPath)) {
+      try {
         const stats = fs.lstatSync(currentPath);
         if (stats.isSymbolicLink()) {
           return true;
+        }
+      } catch (error) {
+        // Path component doesn't exist, continue checking
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          throw error;
         }
       }
     }

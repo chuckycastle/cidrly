@@ -471,12 +471,19 @@ export const DashboardView: React.FC = () => {
             const finalPath = directoryPath ? `${directoryPath}/${filename}` : filename;
 
             // Check if user entered a directory (no extension and exists as directory)
-            if (!directoryPath && fs.existsSync(finalPath)) {
-              const stats = fs.statSync(finalPath);
-              if (stats.isDirectory()) {
-                notify.info('Please enter a filename for this directory');
-                handleSavePlan(finalPath); // Recurse with directory path
-                return;
+            if (!directoryPath) {
+              try {
+                const stats = fs.statSync(finalPath);
+                if (stats.isDirectory()) {
+                  notify.info('Please enter a filename for this directory');
+                  handleSavePlan(finalPath); // Recurse with directory path
+                  return;
+                }
+              } catch (error) {
+                // Path doesn't exist or is not accessible, continue with save
+                if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+                  throw error;
+                }
               }
             }
 
@@ -559,15 +566,19 @@ export const DashboardView: React.FC = () => {
     setDialog({ type: 'loading', message: 'Loading plan...' });
 
     try {
-      if (!fs.existsSync(filepath)) {
-        notify.error('File not found. Please try a different path.');
-        // Return to custom path input instead of closing
-        handleLoadCustomPath();
-        return;
-      }
-
       // Check if path is a directory
-      const stats = fs.statSync(filepath);
+      let stats;
+      try {
+        stats = fs.statSync(filepath);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          notify.error('File not found. Please try a different path.');
+          // Return to custom path input instead of closing
+          handleLoadCustomPath();
+          return;
+        }
+        throw error;
+      }
       if (stats.isDirectory()) {
         // List .cidr and .json files in the directory
         const files = fs
@@ -676,12 +687,19 @@ export const DashboardView: React.FC = () => {
             const finalPath = directoryPath ? `${directoryPath}/${filename}` : filename;
 
             // Check if user entered a directory (no extension and exists as directory)
-            if (!directoryPath && fs.existsSync(finalPath)) {
-              const stats = fs.statSync(finalPath);
-              if (stats.isDirectory()) {
-                notify.info('Please enter a filename for this directory');
-                handleSaveAndCreateNew(finalPath); // Recurse with directory path
-                return;
+            if (!directoryPath) {
+              try {
+                const stats = fs.statSync(finalPath);
+                if (stats.isDirectory()) {
+                  notify.info('Please enter a filename for this directory');
+                  handleSaveAndCreateNew(finalPath); // Recurse with directory path
+                  return;
+                }
+              } catch (error) {
+                // Path doesn't exist or is not accessible, continue with save
+                if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+                  throw error;
+                }
               }
             }
 
@@ -785,17 +803,24 @@ export const DashboardView: React.FC = () => {
         const finalPath = directoryPath ? `${directoryPath}/${filename}` : filename;
 
         // Check if user entered a directory (no extension and exists as directory)
-        if (!directoryPath && fs.existsSync(finalPath)) {
-          const stats = fs.statSync(finalPath);
-          if (stats.isDirectory()) {
-            notify.info('Please enter a filename for this directory');
-            // Recurse with directory path
-            setDialog({
-              type: 'export-filename',
-              format,
-              directoryPath: finalPath,
-            });
-            return;
+        if (!directoryPath) {
+          try {
+            const stats = fs.statSync(finalPath);
+            if (stats.isDirectory()) {
+              notify.info('Please enter a filename for this directory');
+              // Recurse with directory path
+              setDialog({
+                type: 'export-filename',
+                format,
+                directoryPath: finalPath,
+              });
+              return;
+            }
+          } catch (error) {
+            // Path doesn't exist or is not accessible, continue with export
+            if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+              throw error;
+            }
           }
         }
 
