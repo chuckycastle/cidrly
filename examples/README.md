@@ -44,7 +44,7 @@ Sample network plans demonstrating common architectures.
 
 **Demonstrates:**
 
-- 93.8% supernet efficiency
+- 93.8% supernet utilization (tight packing)
 - Tier-based network segregation
 - Small management and backup networks
 - Optimal CIDR allocation for data center use
@@ -66,7 +66,7 @@ Sample network plans demonstrating common architectures.
 
 **Demonstrates:**
 
-- 118.8% supernet efficiency
+- 118.8% supernet utilization (requires larger supernet)
 - VoIP network segregation
 - Multiple small networks (/28, /29)
 - Typical branch office architecture
@@ -95,14 +95,15 @@ cidrly view --plan=examples/example-branch-office.json
 
 ## Understanding the Plans
 
-### Supernet Efficiency
+### Supernet Utilization
 
-Shows how well subnets fit into the smallest containing supernet:
+Shows how much address space is used relative to the smallest containing supernet:
 
-- **< 60%**: Loose packing, larger IP block needed
-- **60-80%**: Good efficiency, reasonable utilization
-- **80-95%**: Excellent packing, minimal waste
-- **> 95%**: Near-perfect utilization
+- **< 60%**: Loose packing, significant unused space
+- **60-80%**: Reasonable utilization
+- **80-95%**: Tight packing, minimal waste
+- **95-100%**: Near-perfect fit within supernet
+- **> 100%**: Over-allocated, requires larger supernet
 
 ### Range Efficiency
 
@@ -146,7 +147,7 @@ Use the data center example to see:
 
 - Tight address packing
 - Smaller subnet sizes (/26-/28)
-- High supernet efficiency (93.8%)
+- 93.8% supernet utilization
 
 ### Mixed Requirements
 
@@ -162,8 +163,8 @@ Use the campus example to see:
 Use the branch office example to see:
 
 - Very small subnets (/28-/29)
-- Efficient use of limited address space
-- Over-allocation possibility (118.8%)
+- Limited address space allocation
+- Over-allocation example (118.8% utilization)
 
 ## Creating Your Own
 
@@ -188,7 +189,7 @@ Use these examples to test cidrly features:
 - Delete and recalculate
 - Base IP changes
 - VLSM optimization
-- Efficiency calculations
+- Utilization calculations
 
 ## Questions?
 
