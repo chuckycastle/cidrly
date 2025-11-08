@@ -11,7 +11,7 @@ import { exportToCsv } from '../formatters/csv-formatter.js';
 import { generatePdfReport } from '../formatters/pdf-formatter.js';
 import { exportToYaml } from '../formatters/yaml-formatter.js';
 import { FILE_RULES } from '../infrastructure/config/validation-rules.js';
-import { sanitizeFilePath, validateFilename } from '../infrastructure/security/security-utils.js';
+import { resolveUserPath, validateFilename } from '../infrastructure/security/security-utils.js';
 import type { Preferences } from '../schemas/preferences.schema.js';
 
 export type ExportFormat = 'yaml' | 'csv' | 'pdf';
@@ -59,14 +59,19 @@ export class ExportService {
       ? this.ensureExtension(filename, extension)
       : `${this.sanitizePlanName(plan.name)}${extension}`;
 
-    // Validate filename
-    const validation = validateFilename(finalFilename);
-    if (validation !== true) {
-      throw ErrorFactory.invalidFilename(finalFilename, validation);
+    // Only validate filename portion (not full paths)
+    // If it contains path separators, extract just the filename for validation
+    const filenamePortion = finalFilename.includes('/')
+      ? (finalFilename.split('/').pop() ?? finalFilename)
+      : finalFilename;
+
+    const filenameValidation = validateFilename(filenamePortion);
+    if (filenameValidation !== true) {
+      throw ErrorFactory.invalidFilename(filenamePortion, filenameValidation);
     }
 
-    // Build safe file path
-    const filepath = sanitizeFilePath(finalFilename, this.exportsDirectory);
+    // Resolve user path (supports filenames, relative paths, absolute paths, ~ paths)
+    const filepath = resolveUserPath(finalFilename, this.exportsDirectory);
 
     // Route to appropriate formatter
     try {

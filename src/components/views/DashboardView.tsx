@@ -30,6 +30,7 @@ import { ExportService } from '../../services/export.service.js';
 import type { SavedPlanFile } from '../../services/file.service.js';
 import { FileService } from '../../services/file.service.js';
 import { PreferencesService } from '../../services/preferences.service.js';
+import { usePlanStore } from '../../store/planStore.js';
 import { usePreferencesStore } from '../../store/preferencesStore.js';
 import type { SortColumn } from '../../store/uiStore.js';
 import { useUIStore } from '../../store/uiStore.js';
@@ -81,7 +82,7 @@ type DialogType =
   | { type: 'new-plan-name' }
   | { type: 'new-plan-ip'; name: string }
   | { type: 'export-format-select' }
-  | { type: 'export-filename'; format: string }
+  | { type: 'export-filename'; format: string; directoryPath?: string }
   | { type: 'preferences-menu' }
   | { type: 'preferences-growth' }
   | { type: 'preferences-base-ip' }
@@ -104,6 +105,8 @@ export const DashboardView: React.FC = () => {
   const { exit } = useApp();
   const plan = usePlan();
   const subnets = useSubnets();
+  const currentFilename = usePlanStore.use.currentFilename();
+  const setCurrentFilename = usePlanStore.use.setCurrentFilename();
   const {
     addSubnet,
     updateSubnet,
@@ -164,6 +167,7 @@ export const DashboardView: React.FC = () => {
   // Auto-save plan when changes are detected (if enabled in preferences)
   useAutoSave({
     plan,
+    currentFilename,
     fileService,
     onError: (error) => {
       notify.error(`Auto-save failed: ${error.message}`);
@@ -445,20 +449,47 @@ export const DashboardView: React.FC = () => {
     setDialog({ type: 'none' });
   };
 
-  const handleSavePlan = (): void => {
+  const handleSavePlan = (directoryPath?: string): void => {
     if (!plan?.supernet) return;
-    const defaultFilename = `${plan.name.replace(/\s+/g, '-').toLowerCase()}.json`;
+    // Use current filename if available, otherwise "untitled"
+    const baseName = currentFilename ? currentFilename.replace(/\.(cidr|json)$/, '') : 'untitled';
+    const defaultFilename = `${baseName}.cidr`;
+    const label = directoryPath
+      ? `Filename (will save to ${directoryPath}):`
+      : 'File path (from ~/cidrly/saved-plans or absolute path):';
+
     setDialog({
       type: 'input',
       title: 'Save Plan',
-      label: 'File path (from ~/cidrly/saved-plans or absolute path):',
+      label,
       defaultValue: defaultFilename,
       onSubmit: (filename) => {
         void (async (): Promise<void> => {
           setDialog({ type: 'loading', message: 'Saving plan...' });
           try {
-            const filepath = await repository.save(plan, filename);
+            // If we have a directory path, join it with the filename
+            const finalPath = directoryPath ? `${directoryPath}/${filename}` : filename;
+
+            // Check if user entered a directory (no extension and exists as directory)
+            if (!directoryPath && fs.existsSync(finalPath)) {
+              const stats = fs.statSync(finalPath);
+              if (stats.isDirectory()) {
+                notify.info('Please enter a filename for this directory');
+                handleSavePlan(finalPath); // Recurse with directory path
+                return;
+              }
+            }
+
+            const filepath = await repository.save(plan, finalPath);
+
+            // Update plan name to match saved filename (without extension)
+            const savedFilename = filepath.split('/').pop() ?? finalPath;
+            const planName = savedFilename.replace(/\.(cidr|json)$/, '');
+            plan.name = planName;
+
+            setCurrentFilename(savedFilename); // Track filename for auto-save
             notify.success(`Plan saved to ${filepath}`);
+            setDialog({ type: 'none' });
           } catch (error) {
             if (isFileOperationError(error)) {
               notify.error(error.getUserMessage());
@@ -467,8 +498,9 @@ export const DashboardView: React.FC = () => {
                 `Failed to save: ${error instanceof Error ? error.message : 'Unknown error'}`,
               );
             }
+            // Return to save dialog to allow retry
+            handleSavePlan(directoryPath);
           }
-          setDialog({ type: 'none' });
         })();
       },
     });
@@ -528,15 +560,72 @@ export const DashboardView: React.FC = () => {
 
     try {
       if (!fs.existsSync(filepath)) {
-        notify.error('File not found');
-        setDialog({ type: 'none' });
+        notify.error('File not found. Please try a different path.');
+        // Return to custom path input instead of closing
+        handleLoadCustomPath();
         return;
       }
 
+      // Check if path is a directory
+      const stats = fs.statSync(filepath);
+      if (stats.isDirectory()) {
+        // List .cidr and .json files in the directory
+        const files = fs
+          .readdirSync(filepath)
+          .filter((file) => file.endsWith('.cidr') || file.endsWith('.json'))
+          .map((file) => ({
+            filename: file,
+            path: `${filepath}/${file}`,
+            modifiedAt: fs.statSync(`${filepath}/${file}`).mtime,
+          }));
+
+        if (files.length === 0) {
+          notify.error('No .cidr or .json files found in directory. Try a different path.');
+          // Return to custom path input instead of closing
+          handleLoadCustomPath();
+          return;
+        }
+
+        // Show file picker with files from this directory
+        const filesWithCustomOption: SavedPlanFile[] = [
+          ...files,
+          {
+            filename: '→ Enter custom path...',
+            path: '__custom__',
+            modifiedAt: new Date(),
+          },
+        ];
+
+        setDialog({
+          type: 'filepicker',
+          title: `Load Plan from ${filepath.split('/').pop() ?? filepath}`,
+          files: filesWithCustomOption,
+          onSelect: (selectedPath: string) => {
+            if (selectedPath === '__custom__') {
+              handleLoadCustomPath();
+            } else {
+              handleLoadSelectedPlan(selectedPath);
+            }
+          },
+        });
+        return;
+      }
+
+      // It's a file - load it
       const fileContent = fs.readFileSync(filepath, 'utf-8');
       const loadedPlan = parseNetworkPlan(JSON.parse(fileContent), filepath);
+
+      // Extract filename from path (without extension) for display and auto-save tracking
+      const filename = filepath.split('/').pop() ?? filepath;
+      const planName = filename.replace(/\.(cidr|json)$/, '');
+
+      // Update plan name to match filename (without extension)
+      loadedPlan.name = planName;
       loadPlan(loadedPlan);
-      notify.success(`Plan "${loadedPlan.name}" loaded successfully!`);
+
+      setCurrentFilename(filename);
+
+      notify.success(`Plan "${planName}" loaded successfully!`);
       setDialog({ type: 'none' });
     } catch (error) {
       if (isFileOperationError(error)) {
@@ -546,7 +635,8 @@ export const DashboardView: React.FC = () => {
           `Failed to load plan: ${error instanceof Error ? error.message : 'Unknown error'}`,
         );
       }
-      setDialog({ type: 'none' });
+      // Return to custom path input to allow retry
+      handleLoadCustomPath();
     }
   };
 
@@ -560,23 +650,49 @@ export const DashboardView: React.FC = () => {
     }
   };
 
-  const handleSaveAndCreateNew = (): void => {
+  const handleSaveAndCreateNew = (directoryPath?: string): void => {
     if (!plan?.supernet) {
       setDialog({ type: 'new-plan-name' });
       return;
     }
 
-    const defaultFilename = `${plan.name.replace(/\s+/g, '-').toLowerCase()}.json`;
+    // Use current filename if available, otherwise "untitled"
+    const baseName = currentFilename ? currentFilename.replace(/\.(cidr|json)$/, '') : 'untitled';
+    const defaultFilename = `${baseName}.cidr`;
+    const label = directoryPath
+      ? `Filename (will save to ${directoryPath}):`
+      : 'File path (from ~/cidrly/saved-plans or absolute path):';
+
     setDialog({
       type: 'input',
       title: 'Save Plan',
-      label: 'File path (from ~/cidrly/saved-plans or absolute path):',
+      label,
       defaultValue: defaultFilename,
       onSubmit: (filename) => {
         void (async (): Promise<void> => {
           setDialog({ type: 'loading', message: 'Saving plan...' });
           try {
-            const filepath = await repository.save(plan, filename);
+            // If we have a directory path, join it with the filename
+            const finalPath = directoryPath ? `${directoryPath}/${filename}` : filename;
+
+            // Check if user entered a directory (no extension and exists as directory)
+            if (!directoryPath && fs.existsSync(finalPath)) {
+              const stats = fs.statSync(finalPath);
+              if (stats.isDirectory()) {
+                notify.info('Please enter a filename for this directory');
+                handleSaveAndCreateNew(finalPath); // Recurse with directory path
+                return;
+              }
+            }
+
+            const filepath = await repository.save(plan, finalPath);
+
+            // Update plan name to match saved filename (without extension)
+            const savedFilename = filepath.split('/').pop() ?? finalPath;
+            const planName = savedFilename.replace(/\.(cidr|json)$/, '');
+            plan.name = planName;
+
+            setCurrentFilename(savedFilename); // Track filename for auto-save
             notify.success(`Plan saved to ${filepath}`);
             // Continue to new plan creation
             setDialog({ type: 'new-plan-name' });
@@ -588,7 +704,8 @@ export const DashboardView: React.FC = () => {
                 `Failed to save: ${error instanceof Error ? error.message : 'Unknown error'}`,
               );
             }
-            setDialog({ type: 'none' });
+            // Return to save dialog to allow retry
+            handleSaveAndCreateNew(directoryPath);
           }
         })();
       },
@@ -651,7 +768,11 @@ export const DashboardView: React.FC = () => {
     });
   };
 
-  const handleExportWithFilename = (format: string, filename: string): void => {
+  const handleExportWithFilename = (
+    format: string,
+    filename: string,
+    directoryPath?: string,
+  ): void => {
     if (!plan) {
       setDialog({ type: 'none' });
       return;
@@ -660,8 +781,26 @@ export const DashboardView: React.FC = () => {
     void (async (): Promise<void> => {
       setDialog({ type: 'loading', message: 'Exporting plan...' });
       try {
+        // If we have a directory path, join it with the filename
+        const finalPath = directoryPath ? `${directoryPath}/${filename}` : filename;
+
+        // Check if user entered a directory (no extension and exists as directory)
+        if (!directoryPath && fs.existsSync(finalPath)) {
+          const stats = fs.statSync(finalPath);
+          if (stats.isDirectory()) {
+            notify.info('Please enter a filename for this directory');
+            // Recurse with directory path
+            setDialog({
+              type: 'export-filename',
+              format,
+              directoryPath: finalPath,
+            });
+            return;
+          }
+        }
+
         const exportFormat = format as 'yaml' | 'csv' | 'pdf';
-        const filepath = await exportService.export(plan, exportFormat, filename, preferences);
+        const filepath = await exportService.export(plan, exportFormat, finalPath, preferences);
         notify.success(`Plan exported to ${filepath}`);
         setDialog({ type: 'none' });
       } catch (error) {
@@ -672,7 +811,12 @@ export const DashboardView: React.FC = () => {
             `Failed to export: ${error instanceof Error ? error.message : 'Unknown error'}`,
           );
         }
-        setDialog({ type: 'none' });
+        // Return to filename input dialog on error for retry
+        setDialog({
+          type: 'export-filename',
+          format,
+          directoryPath,
+        });
       }
     })();
   };
@@ -818,15 +962,6 @@ export const DashboardView: React.FC = () => {
         enabled: headerMode,
       },
       // Actions (row mode only)
-      {
-        key: 'i',
-        description: 'Show subnet details',
-        handler: (): void => {
-          if (plan && subnets.length > 0 && !headerMode) handleShowSubnetDetails();
-        },
-        category: 'actions',
-        enabled: subnets.length > 0 && !headerMode,
-      },
       {
         key: 'a',
         description: 'Add new subnet',
@@ -1097,10 +1232,17 @@ export const DashboardView: React.FC = () => {
             label="Base IP address:"
             defaultValue={preferences.baseIp}
             onSubmit={(baseIp) => {
-              const newPlan = createNetworkPlan(dialog.name, baseIp);
-              loadPlan(newPlan);
-              notify.success(`Plan "${dialog.name}" created successfully!`);
-              setDialog({ type: 'none' });
+              try {
+                const newPlan = createNetworkPlan(dialog.name, baseIp);
+                loadPlan(newPlan);
+                notify.success(`Plan "${dialog.name}" created successfully!`);
+                setDialog({ type: 'none' });
+              } catch (error) {
+                notify.error(
+                  `Failed to create plan: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                );
+                // Keep dialog open for retry
+              }
             }}
             onCancel={() => setDialog({ type: 'new-plan-name' })}
             validate={validateIpAddress}
@@ -1382,10 +1524,16 @@ export const DashboardView: React.FC = () => {
         <Modal>
           <InputDialog
             title="Export Plan"
-            label="Filename:"
+            label={
+              dialog.directoryPath
+                ? `Filename (will export to ${dialog.directoryPath}):`
+                : 'File path (from ~/cidrly/exports or absolute path):'
+            }
             defaultValue={`${plan.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.${dialog.format}`}
-            onSubmit={(filename) => handleExportWithFilename(dialog.format, filename)}
-            onCancel={() => setDialog({ type: 'none' })}
+            onSubmit={(filename) =>
+              handleExportWithFilename(dialog.format, filename, dialog.directoryPath)
+            }
+            onCancel={() => setDialog({ type: 'export-format-select' })}
           />
         </Modal>
       )}

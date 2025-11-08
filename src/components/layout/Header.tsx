@@ -8,6 +8,7 @@ import React from 'react';
 import packageJson from '../../../package.json' with { type: 'json' };
 import type { NetworkPlan } from '../../core/models/network-plan.js';
 import { useTerminalWidth } from '../../hooks/useTerminalWidth.js';
+import { usePreferencesStore } from '../../store/preferencesStore.js';
 import { colors, symbols } from '../../themes/colors.js';
 import { EfficiencyBar } from '../widgets/EfficiencyBar.js';
 
@@ -17,35 +18,27 @@ export interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = React.memo(({ plan }) => {
   const terminalWidth = useTerminalWidth();
+  const autoSaveEnabled = usePreferencesStore.use.preferences().autoSave;
 
   // Define layout breakpoints
   const isNarrow = terminalWidth < 80;
   const isVeryNarrow = terminalWidth < 60;
 
-  const getPlanStatus = (): React.ReactElement => {
-    if (plan.supernet) {
+  const getAutoSaveStatus = (): React.ReactElement => {
+    if (autoSaveEnabled) {
       return (
         <>
           <Text>{colors.success(symbols.success)}</Text>
           <Text> </Text>
-          <Text>{colors.success('Calculated')}</Text>
-        </>
-      );
-    }
-    if (plan.subnets.length > 0) {
-      return (
-        <>
-          <Text>{colors.warning(symbols.pending)}</Text>
-          <Text> </Text>
-          <Text>{colors.warning('Draft')}</Text>
+          <Text>{colors.success('Auto-save ON')}</Text>
         </>
       );
     }
     return (
       <>
-        <Text>{colors.empty(symbols.pending)}</Text>
+        <Text>{colors.error(symbols.error)}</Text>
         <Text> </Text>
-        <Text>{colors.empty('Empty')}</Text>
+        <Text>{colors.error('Auto-save OFF')}</Text>
       </>
     );
   };
@@ -64,7 +57,7 @@ export const Header: React.FC<HeaderProps> = React.memo(({ plan }) => {
             <Text> </Text>
             <Text>{colors.slate(plan.name)}</Text>
           </Box>
-          <Box>{getPlanStatus()}</Box>
+          <Box>{getAutoSaveStatus()}</Box>
         </Box>
       ) : (
         <Box justifyContent="space-between">
@@ -77,7 +70,7 @@ export const Header: React.FC<HeaderProps> = React.memo(({ plan }) => {
             <Text> </Text>
             <Text>{colors.slate(plan.name)}</Text>
           </Box>
-          <Box>{getPlanStatus()}</Box>
+          <Box>{getAutoSaveStatus()}</Box>
         </Box>
       )}
 
@@ -117,9 +110,9 @@ export const Header: React.FC<HeaderProps> = React.memo(({ plan }) => {
           marginTop={0}
         >
           <Box>
-            <Text>{colors.muted('Efficiency')}</Text>
+            <Text>{colors.muted('Utilization')}</Text>
             <Text> </Text>
-            <EfficiencyBar efficiency={plan.supernet.efficiency} />
+            <EfficiencyBar efficiency={plan.supernet.utilization} />
             <Text> </Text>
             <Text>{colors.dim('•')}</Text>
             <Text> </Text>

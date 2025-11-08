@@ -120,8 +120,8 @@ describe('Network Plan Helpers', () => {
 
       expect(calculated.supernet).toBeDefined();
       expect(calculated.supernet?.cidrPrefix).toBeDefined();
-      expect(calculated.supernet?.efficiency).toBeGreaterThan(0);
-      expect(calculated.supernet?.efficiency).toBeLessThanOrEqual(100);
+      expect(calculated.supernet?.utilization).toBeGreaterThan(0);
+      expect(calculated.supernet?.utilization).toBeLessThanOrEqual(100);
       expect(calculated.supernet?.networkAddress).toBeDefined();
     });
 

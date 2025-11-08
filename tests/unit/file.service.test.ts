@@ -60,15 +60,15 @@ describe('FileService', () => {
       await expect(service.savePlan(plan, '   ')).rejects.toThrow('Filename cannot be empty');
     });
 
-    it('should add .json extension if not present', async () => {
+    it('should add .cidr extension if not present', async () => {
       const plan = createNetworkPlan('Test Plan');
       const filepath = await service.savePlan(plan, 'myplan');
 
-      expect(filepath).toContain('myplan.json');
+      expect(filepath).toContain('myplan.cidr');
       expect(fs.existsSync(filepath)).toBe(true);
     });
 
-    it('should not double-add .json extension', async () => {
+    it('should accept .json extension for backward compatibility', async () => {
       const plan = createNetworkPlan('Test Plan');
       const filepath = await service.savePlan(plan, 'myplan.json');
 

@@ -24,7 +24,7 @@ export interface Supernet {
   cidrPrefix: number;
   totalSize: number;
   usedSize: number;
-  efficiency: number;
+  utilization: number;
   rangeEfficiency: number;
   networkAddress: string;
 }

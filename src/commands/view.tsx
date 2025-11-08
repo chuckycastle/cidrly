@@ -53,7 +53,9 @@ function SubnetRow({ subnet, isLast }: { subnet: Subnet; isLast: boolean }): Rea
 
 function PlanView({ plan }: { plan: NetworkPlan }): React.ReactElement {
   const calculatedCount = plan.subnets.filter((s) => s.subnetInfo?.networkAddress).length;
-  const efficiency = plan.supernet?.efficiency ? `${plan.supernet.efficiency.toFixed(1)}%` : 'N/A';
+  const utilization = plan.supernet?.utilization
+    ? `${plan.supernet.utilization.toFixed(1)}%`
+    : 'N/A';
 
   return (
     <Box flexDirection="column">
@@ -78,8 +80,8 @@ function PlanView({ plan }: { plan: NetworkPlan }): React.ReactElement {
               {calculatedCount}/{plan.subnets.length}
             </Text>
             <Text dimColor> │ </Text>
-            <Text dimColor>Efficiency: </Text>
-            <Text color="cyan">{efficiency}</Text>
+            <Text dimColor>Utilization: </Text>
+            <Text color="cyan">{utilization}</Text>
           </Text>
         </Box>
       </Box>

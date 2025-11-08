@@ -68,13 +68,19 @@ export class FileService {
       throw ErrorFactory.invalidFilename('', 'Filename cannot be empty');
     }
 
-    // Add .json extension if not present
-    const finalFilename = filename.endsWith('.json') ? filename : `${filename}.json`;
+    // Add .cidr extension if no valid extension present
+    const hasValidExtension = filename.endsWith('.cidr') || filename.endsWith('.json');
+    const finalFilename = hasValidExtension ? filename : `${filename}.cidr`;
 
-    // Validate the final filename (including extension)
-    const filenameValidation = validateFilename(finalFilename);
+    // Only validate filename portion (not full paths)
+    // If it contains path separators, extract just the filename for validation
+    const filenamePortion = finalFilename.includes('/')
+      ? (finalFilename.split('/').pop() ?? finalFilename)
+      : finalFilename;
+
+    const filenameValidation = validateFilename(filenamePortion);
     if (filenameValidation !== true) {
-      throw ErrorFactory.invalidFilename(finalFilename, filenameValidation);
+      throw ErrorFactory.invalidFilename(filenamePortion, filenameValidation);
     }
 
     try {
@@ -157,9 +163,9 @@ export class FileService {
       }
 
       const files = fs.readdirSync(this.baseDirectory);
-      const jsonFiles = files.filter((f) => f.endsWith('.json'));
+      const planFiles = files.filter((f) => f.endsWith('.cidr') || f.endsWith('.json'));
 
-      const savedPlans: SavedPlanFile[] = jsonFiles.map((filename) => {
+      const savedPlans: SavedPlanFile[] = planFiles.map((filename) => {
         const filepath = path.join(this.baseDirectory, filename);
         const stats = fs.statSync(filepath);
 

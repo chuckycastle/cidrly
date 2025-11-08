@@ -1,6 +1,6 @@
 {
   "name": "cidrly",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Network architecture and design planning CLI tool",
   "type": "module",
   "preferGlobal": true,

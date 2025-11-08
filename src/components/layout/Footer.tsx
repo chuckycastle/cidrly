@@ -57,7 +57,6 @@ export const Footer: React.FC<FooterProps> = React.memo(({ hasSubnets, hasCalcul
       commands: [
         { key: '↑↓', label: 'nav', enabled: hasSubnets },
         { format: '(label)sor(key)t', enabled: hasSubnets },
-        { key: 'i', label: 'nfo', enabled: hasSubnets },
       ],
     },
     // Actions

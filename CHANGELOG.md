@@ -9,6 +9,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 For planned features and enhancements, see [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) and [Milestones](https://github.com/chuckycastle/cidrly/milestones).
 
+## [0.4.1] - 2025-11-08
+
+### Fixed
+
+- **Directory Path Support** ([#65](https://github.com/chuckycastle/cidrly/issues/65))
+  - Accept directory paths in load, save, and export workflows
+  - Recursive prompting for filename when directory is entered
+  - Filter `.cidr` and `.json` files in load directory selection
+  - Path resolution with `resolveUserPath()` utility
+
+- **Plan Name Sync After Save** ([#63](https://github.com/chuckycastle/cidrly/issues/63))
+  - Dashboard header updates immediately after save operation
+  - Plan name reflects saved filename
+  - Current filename tracked in state
+
+- **Welcome Screen Custom Path** ([#62](https://github.com/chuckycastle/cidrly/issues/62))
+  - Added "→ Enter custom path..." option to load plan menu
+  - Custom path dialog for absolute and relative paths
+  - Full path input support with validation
+
+- **Input Whitespace Trimming** ([#66](https://github.com/chuckycastle/cidrly/issues/66))
+  - All text inputs trim leading/trailing whitespace
+  - InputDialog applies trimming globally
+  - Prevents path issues from accidental spaces
+
+- **Unified Error Recovery** (This release)
+  - Export flow keeps dialog open on errors
+  - New plan flow keeps dialog open on errors
+  - Consistent error recovery across save/load/export/new workflows
+
+### Changed
+
+- **Export Column Headers** ([#64](https://github.com/chuckycastle/cidrly/issues/64))
+  - CSV: `expected_devices` → `devices`, `usable_hosts` → `max_hosts`, `planned_devices` → `planned`
+  - YAML: `expectedDevices` → `devices`, `usableHosts` → `maxHosts`, `plannedDevices` → `planned`
+  - PDF: "Max Hosts" displays on two lines with increased header height
+  - PDF: Dynamic row heights for text wrapping
+  - PDF: Fixed text cut-off in table cells
+
+- **Auto-Save Status Indicator** ([#68](https://github.com/chuckycastle/cidrly/issues/68))
+  - Replaced "Calculated" indicator with auto-save status
+  - Shows "Auto-save ON" (green) or "Auto-save OFF" (red)
+  - Reads from preferences in real-time
+
+- **Supernet Utilization Terminology** ([#59](https://github.com/chuckycastle/cidrly/issues/59))
+  - Renamed "Supernet Efficiency" to "Supernet Utilization"
+  - Updated NetworkPlan model field name
+  - Updated header display text
+
+### Removed
+
+- **Unused Keyboard Shortcuts** ([#67](https://github.com/chuckycastle/cidrly/issues/67), [#61](https://github.com/chuckycastle/cidrly/issues/61))
+  - Removed 'i' shortcut from documentation
+  - Cleaned up README keyboard shortcuts section
+
+### Technical
+
+- **Path Handling Improvements**
+  - ExportService uses `resolveUserPath()` like save/load services
+  - Directory detection in save/load/export workflows
+  - Filename validation separated from full path validation
+
+- **PDF Formatting Enhancements**
+  - Header height increased to 28px for multi-line text
+  - Dynamic row height calculation based on content
+  - Text wrapping with `lineBreak: true` instead of ellipsis
+
+- **Test Updates**
+  - Updated CSV formatter tests for new headers
+  - Updated YAML formatter tests for new field names
+  - All 514 tests passing
+
+### Distribution
+
+- **Homebrew Formula Updates**
+  - Created `scripts/update-homebrew-formula.sh` automation
+  - Created `docs/HOMEBREW_RELEASE.md` documentation
+  - Fixed checksum mismatch in formula
+
 ## [0.4.0] - 2025-11-08
 
 ### Added
@@ -673,7 +752,9 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 - **PATCH** version for backwards-compatible bug fixes
 - **Pre-release** suffixes: `-alpha`, `-beta`, `-rc` for pre-release versions
 
-[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/chuckycastle/cidrly/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/chuckycastle/cidrly/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/chuckycastle/cidrly/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/chuckycastle/cidrly/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/chuckycastle/cidrly/compare/v0.2.2...v0.3.0

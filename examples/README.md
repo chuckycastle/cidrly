@@ -17,7 +17,7 @@ Sample network plans demonstrating common architectures.
 - Guest WiFi (VLAN 50): 50 devices → /25
 
 **Supernet:** 10.100.0.0/21 (2048 addresses)
-**Efficiency:** 59.4% supernet, 100% range
+**Utilization:** 59.4% supernet, 100% range
 
 **Demonstrates:**
 
@@ -40,7 +40,7 @@ Sample network plans demonstrating common architectures.
 - Backup Network (VLAN 150): 5 devices → /28
 
 **Supernet:** 172.16.0.0/24 (256 addresses)
-**Efficiency:** 93.8% supernet, 100% range
+**Utilization:** 93.8% supernet, 100% range
 
 **Demonstrates:**
 
@@ -62,7 +62,7 @@ Sample network plans demonstrating common architectures.
 - Servers (VLAN 50): 3 devices → /29
 
 **Supernet:** 192.168.10.0/25 (128 addresses)
-**Efficiency:** 118.8% supernet, 100% range
+**Utilization:** 118.8% supernet, 100% range
 
 **Demonstrates:**
 
@@ -136,7 +136,7 @@ Feel free to experiment with these plans:
 1. **Load an example**
 2. **Add more subnets** (press `a`)
 3. **Recalculate** (press `c`)
-4. **See how efficiency changes**
+4. **See how utilization changes**
 5. **Save your modified version** (press `s`)
 
 ## Common Patterns

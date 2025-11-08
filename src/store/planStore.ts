@@ -13,9 +13,11 @@ interface PlanState {
   // State
   plan: NetworkPlan | null;
   planService: NetworkPlanService;
+  currentFilename: string | null; // Track the last saved filename for auto-save
 
   // Actions
   loadPlan: (plan: NetworkPlan) => void;
+  setCurrentFilename: (filename: string | null) => void;
   addSubnet: (subnet: Subnet) => void;
   updateSubnet: (
     index: number,
@@ -38,10 +40,15 @@ const usePlanStoreBase = create<PlanState>()(
     // Initial state
     plan: null,
     planService: new NetworkPlanService(),
+    currentFilename: null,
 
     // Actions
     loadPlan: (plan: NetworkPlan): void => {
       set({ plan });
+    },
+
+    setCurrentFilename: (filename: string | null): void => {
+      set({ currentFilename: filename });
     },
 
     addSubnet: (subnet: Subnet): void => {
@@ -119,6 +126,7 @@ const usePlanStoreBase = create<PlanState>()(
     clearPlan: (): void => {
       set((state) => {
         state.plan = null;
+        state.currentFilename = null;
       });
     },
   })),

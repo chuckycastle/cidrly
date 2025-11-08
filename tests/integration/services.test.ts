@@ -225,7 +225,7 @@ describe('Services Integration', () => {
         originalSubnetInfo?.networkAddress,
       );
       expect(loadedPlan.supernet?.cidrPrefix).toBe(originalSupernet?.cidrPrefix);
-      expect(loadedPlan.supernet?.efficiency).toBe(originalSupernet?.efficiency);
+      expect(loadedPlan.supernet?.utilization).toBe(originalSupernet?.utilization);
     });
 
     it('should preserve timestamps through save/load', async () => {

@@ -11,6 +11,7 @@ import { debouncedWithFlush } from '../utils/debounce.js';
 
 interface UseAutoSaveOptions {
   plan: NetworkPlan | null;
+  currentFilename: string | null; // Filename to save to (not plan.name)
   fileService: FileService;
   onError?: (error: Error) => void;
   onSuccess?: () => void;
@@ -24,17 +25,25 @@ interface UseAutoSaveOptions {
  * @example
  * ```tsx
  * const plan = usePlanStore.use.plan();
+ * const currentFilename = usePlanStore.use.currentFilename();
  * const fileService = useMemo(() => new FileService(baseDir), [baseDir]);
  *
  * useAutoSave({
  *   plan,
+ *   currentFilename,
  *   fileService,
  *   onError: (err) => showNotification(err.message, 'error'),
  *   onSuccess: () => showNotification('Plan auto-saved', 'success', { priority: 'low' }),
  * });
  * ```
  */
-export function useAutoSave({ plan, fileService, onError, onSuccess }: UseAutoSaveOptions): void {
+export function useAutoSave({
+  plan,
+  currentFilename,
+  fileService,
+  onError,
+  onSuccess,
+}: UseAutoSaveOptions): void {
   const preferences = usePreferencesStore.use.preferences();
   const debouncedSaveRef = useRef<
     (((plan: NetworkPlan) => void) & { flush: () => void; cancel: () => void }) | null
@@ -42,14 +51,15 @@ export function useAutoSave({ plan, fileService, onError, onSuccess }: UseAutoSa
   const lastSavedPlanRef = useRef<string | null>(null);
 
   // Create debounced save function
-  useEffect(() => {
-    if (!preferences.autoSave) {
+  useEffect((): (() => void) | undefined => {
+    if (!preferences.autoSave || !currentFilename) {
       return;
     }
 
     const savePlan = async (planToSave: NetworkPlan): Promise<void> => {
       try {
-        await fileService.savePlan(planToSave, planToSave.name);
+        // Use currentFilename to prevent duplicate file bug
+        await fileService.savePlan(planToSave, currentFilename);
         lastSavedPlanRef.current = JSON.stringify(planToSave);
         onSuccess?.();
       } catch (error) {
@@ -63,7 +73,14 @@ export function useAutoSave({ plan, fileService, onError, onSuccess }: UseAutoSa
       // Cleanup: flush any pending saves when component unmounts
       debouncedSaveRef.current?.flush();
     };
-  }, [preferences.autoSave, preferences.saveDelay, fileService, onError, onSuccess]);
+  }, [
+    preferences.autoSave,
+    preferences.saveDelay,
+    currentFilename,
+    fileService,
+    onError,
+    onSuccess,
+  ]);
 
   // Watch for plan changes and trigger auto-save
   useEffect(() => {

@@ -231,18 +231,18 @@ export function calculateSubnet(
  * Uses binary aggregation to find optimal CIDR prefix
  *
  * @param subnetInfos - Array of subnet specifications with calculated sizes
- * @returns Supernet summary with size, efficiency metrics
+ * @returns Supernet summary with size and utilization metrics
  *
  * @remarks
  * **Supernet Calculation Algorithm:**
  * Determines the minimum CIDR block needed to accommodate all subnets.
  *
- * **Efficiency Metrics:**
- * - `efficiency`: Percentage of supernet actually used by subnets
+ * **Utilization Metrics:**
+ * - `utilization`: Percentage of supernet actually used by subnets (can exceed 100%)
  * - `rangeEfficiency`: Percentage of allocated IP range used (accounts for gaps)
  *
  * **Edge Cases:**
- * - Gaps between subnets reduce range efficiency but not total efficiency
+ * - Gaps between subnets reduce range efficiency but not total utilization
  * - Subnets without network addresses default to 100% range efficiency
  *
  * @example
@@ -258,7 +258,7 @@ export function calculateSubnet(
  * //   cidrPrefix: 23,           // /23 supernet (512 addresses)
  * //   totalSize: 512,           // Total supernet capacity
  * //   usedSize: 384,            // Actually used (256 + 128)
- * //   efficiency: 75.0,         // 384/512 = 75%
+ * //   utilization: 75.0,        // 384/512 = 75%
  * //   rangeEfficiency: 100.0    // If no gaps
  * // }
  * ```
@@ -269,7 +269,7 @@ export function calculateSupernet(subnetInfos: SubnetInfo[]): {
   cidrPrefix: number;
   totalSize: number;
   usedSize: number;
-  efficiency: number;
+  utilization: number;
   rangeEfficiency: number;
 } {
   if (subnetInfos.length === 0) {
@@ -287,7 +287,7 @@ export function calculateSupernet(subnetInfos: SubnetInfo[]): {
 
   const cidrPrefix = calculateCIDR(hostBits);
   const totalSize = calculateSubnetSize(cidrPrefix);
-  const efficiency = (totalAddresses / totalSize) * 100;
+  const utilization = (totalAddresses / totalSize) * 100;
 
   // Calculate range efficiency (how efficiently addresses are packed in allocated range)
   let rangeEfficiency = 100; // Default to 100% if no addresses allocated yet
@@ -323,7 +323,7 @@ export function calculateSupernet(subnetInfos: SubnetInfo[]): {
     cidrPrefix,
     totalSize,
     usedSize: totalAddresses,
-    efficiency,
+    utilization,
     rangeEfficiency,
   };
 }

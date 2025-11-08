@@ -63,14 +63,17 @@ export const InputDialog: React.FC<InputDialogProps> = ({
   };
 
   const handleSubmit = (): void => {
+    // Trim whitespace from input before validation and submission
+    const trimmedValue = value.trim();
+
     if (validate) {
-      const result = validate(value);
+      const result = validate(trimmedValue);
       if (result !== true) {
         setError(typeof result === 'string' ? result : 'Invalid input');
         return;
       }
     }
-    onSubmit(value);
+    onSubmit(trimmedValue);
   };
 
   return (

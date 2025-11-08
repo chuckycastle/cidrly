@@ -9,48 +9,49 @@ import path from 'path';
 import React, { useState } from 'react';
 import packageJson from '../../../package.json' with { type: 'json' };
 import { createNetworkPlan } from '../../core/models/network-plan.js';
-import { validateIpAddress, validatePlanName } from '../../core/validators/validators.js';
+import { validateIpAddress } from '../../core/validators/validators.js';
 import { isFileOperationError } from '../../errors/index.js';
 import { usePlanActions } from '../../hooks/usePlan.js';
 import { useNavigation, useNotify } from '../../hooks/useUI.js';
 import { FILE_RULES } from '../../infrastructure/config/validation-rules.js';
 import { parseNetworkPlan } from '../../schemas/network-plan.schema.js';
+import { usePlanStore } from '../../store/planStore.js';
 import { colors } from '../../themes/colors.js';
 import { InputDialog } from '../dialogs/InputDialog.js';
 import { SelectDialog } from '../dialogs/SelectDialog.js';
 
 type WelcomeState =
   | { type: 'initial' }
-  | { type: 'create-name' }
   | { type: 'create-ip' }
-  | { type: 'load-select' }
+  | { type: 'load-select'; directoryPath?: string }
+  | { type: 'load-custom-path' }
   | { type: 'error'; message: string };
 
 export const WelcomeView: React.FC = () => {
   const [state, setState] = useState<WelcomeState>({ type: 'initial' });
-  const [planName, setPlanName] = useState('');
   const { loadPlan } = usePlanActions();
+  const setCurrentFilename = usePlanStore.use.setCurrentFilename();
   const { goToDashboard } = useNavigation();
   const notify = useNotify();
 
-  // Get saved plans
-  const getSavedPlans = (): Array<{ label: string; value: string }> => {
-    const savedPlansPath = path.resolve(process.cwd(), FILE_RULES.SAVED_PLANS_DIR);
+  // Get saved plans from specified directory or default
+  const getSavedPlans = (directoryPath?: string): Array<{ label: string; value: string }> => {
+    const targetPath = directoryPath ?? path.resolve(process.cwd(), FILE_RULES.SAVED_PLANS_DIR);
 
-    if (!fs.existsSync(savedPlansPath)) {
+    if (!fs.existsSync(targetPath)) {
       return [];
     }
 
     try {
-      const files = fs.readdirSync(savedPlansPath);
+      const files = fs.readdirSync(targetPath);
       return files
-        .filter((file) => file.endsWith('.json'))
+        .filter((file) => file.endsWith('.cidr') || file.endsWith('.json'))
         .map((file) => {
-          const label = file.replace('.json', '');
+          const label = file.replace(/\.(cidr|json)$/, '');
           const truncatedLabel = label.length > 35 ? label.substring(0, 32) + '...' : label;
           return {
             label: truncatedLabel,
-            value: path.join(savedPlansPath, file),
+            value: path.join(targetPath, file),
           };
         });
     } catch {
@@ -61,33 +62,30 @@ export const WelcomeView: React.FC = () => {
   // Handle action selection
   const handleActionSelect = (action: string): void => {
     if (action === 'new') {
-      setState({ type: 'create-name' });
+      // Skip plan name input - will default to "Untitled" and match filename on save
+      setState({ type: 'create-ip' });
     } else if (action === 'load') {
-      const savedPlans = getSavedPlans();
-      if (savedPlans.length === 0) {
-        setState({
-          type: 'error',
-          message: 'No saved plans found in ~/cidrly/saved-plans. Creating new plan instead.',
-        });
-        setTimeout(() => setState({ type: 'create-name' }), 2000);
-      } else {
-        setState({ type: 'load-select' });
-      }
+      // Always show load dialog, even if no saved plans (custom path option available)
+      setState({ type: 'load-select' });
     }
-  };
-
-  // Handle plan name input
-  const handlePlanNameSubmit = (name: string): void => {
-    setPlanName(name);
-    setState({ type: 'create-ip' });
   };
 
   // Handle base IP input and create plan
   const handleBaseIpSubmit = (baseIp: string): void => {
-    const plan = createNetworkPlan(planName, baseIp);
+    // Plan name defaults to "Untitled" - will be updated to match filename on first save
+    const plan = createNetworkPlan('Untitled', baseIp);
     loadPlan(plan);
-    notify.success(`Plan "${planName}" created successfully!`);
+    notify.success(`Plan created successfully!`);
     goToDashboard();
+  };
+
+  // Handle loading existing plan selection
+  const handleLoadPlanSelect = (filepath: string): void => {
+    if (filepath === '__custom__') {
+      setState({ type: 'load-custom-path' });
+      return;
+    }
+    handleLoadPlan(filepath);
   };
 
   // Handle loading existing plan
@@ -99,10 +97,38 @@ export const WelcomeView: React.FC = () => {
         return;
       }
 
+      // Check if path is a directory
+      const stats = fs.statSync(filepath);
+      if (stats.isDirectory()) {
+        // List .cidrly.json files in the directory
+        const files = getSavedPlans(filepath);
+
+        if (files.length === 0) {
+          setState({ type: 'error', message: 'No .cidr or .json files found in directory' });
+          setTimeout(() => setState({ type: 'load-select' }), 2000);
+          return;
+        }
+
+        // Update the select dialog to show files from this directory
+        setState({ type: 'load-select', directoryPath: filepath });
+        return;
+      }
+
+      // It's a file - load it
       const fileContent = fs.readFileSync(filepath, 'utf-8');
       const plan = parseNetworkPlan(JSON.parse(fileContent), filepath);
+
+      // Extract filename from path (without extension) for display and auto-save tracking
+      const filename = filepath.split('/').pop() ?? filepath;
+      const planName = filename.replace(/\.(cidr|json)$/, '');
+
+      // Update plan name to match filename (without extension)
+      plan.name = planName;
       loadPlan(plan);
-      notify.success(`Plan "${plan.name}" loaded successfully!`);
+
+      setCurrentFilename(filename);
+
+      notify.success(`Plan "${planName}" loaded successfully!`);
       goToDashboard();
     } catch (error) {
       if (isFileOperationError(error)) {
@@ -143,34 +169,39 @@ export const WelcomeView: React.FC = () => {
         />
       )}
 
-      {state.type === 'create-name' && (
-        <InputDialog
-          title="Create New Plan"
-          helperText="Plans save to ~/cidrly/saved-plans"
-          label="Plan name"
-          onSubmit={handlePlanNameSubmit}
-          onCancel={() => setState({ type: 'initial' })}
-          validate={validatePlanName}
-        />
-      )}
-
       {state.type === 'create-ip' && (
         <InputDialog
           title="Create New Plan"
           label="Base IP address"
           defaultValue="10.0.0.0"
           onSubmit={handleBaseIpSubmit}
-          onCancel={() => setState({ type: 'create-name' })}
+          onCancel={() => setState({ type: 'initial' })}
           validate={validateIpAddress}
         />
       )}
 
       {state.type === 'load-select' && (
         <SelectDialog
-          title="Load Existing Plan"
-          items={getSavedPlans()}
-          onSelect={handleLoadPlan}
+          title={
+            state.directoryPath
+              ? `Load Plan from ${state.directoryPath.split('/').pop() ?? state.directoryPath}`
+              : 'Load Existing Plan'
+          }
+          items={[
+            ...getSavedPlans(state.directoryPath),
+            { label: '→ Enter custom path...', value: '__custom__' },
+          ]}
+          onSelect={handleLoadPlanSelect}
           onCancel={() => setState({ type: 'initial' })}
+        />
+      )}
+
+      {state.type === 'load-custom-path' && (
+        <InputDialog
+          title="Load Plan"
+          label="File path (from ~/cidrly/saved-plans or absolute path):"
+          onSubmit={handleLoadPlan}
+          onCancel={() => setState({ type: 'load-select' })}
         />
       )}
 

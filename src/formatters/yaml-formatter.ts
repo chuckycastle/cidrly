@@ -13,15 +13,15 @@ import type { Preferences } from '../schemas/preferences.schema.js';
 const COLUMN_FIELD_MAPPING = {
   name: (subnet: Subnet) => ({ name: subnet.name }),
   vlan: (subnet: Subnet) => ({ vlanId: subnet.vlanId }),
-  expected: (subnet: Subnet) => ({ expectedDevices: subnet.expectedDevices }),
+  expected: (subnet: Subnet) => ({ devices: subnet.expectedDevices }),
   description: (subnet: Subnet) => (subnet.description ? { description: subnet.description } : {}),
   network: (subnet: Subnet) =>
     subnet.subnetInfo ? { networkAddress: subnet.subnetInfo.networkAddress } : {},
   cidr: (subnet: Subnet) => (subnet.subnetInfo ? { cidrPrefix: subnet.subnetInfo.cidrPrefix } : {}),
   usable: (subnet: Subnet) =>
-    subnet.subnetInfo ? { usableHosts: subnet.subnetInfo.usableHosts } : {},
+    subnet.subnetInfo ? { maxHosts: subnet.subnetInfo.usableHosts } : {},
   planned: (subnet: Subnet) =>
-    subnet.subnetInfo ? { plannedDevices: subnet.subnetInfo.plannedDevices } : {},
+    subnet.subnetInfo ? { planned: subnet.subnetInfo.plannedDevices } : {},
 } as const;
 
 type ColumnKey = keyof typeof COLUMN_FIELD_MAPPING;
@@ -107,7 +107,7 @@ export function formatPlanToYaml(plan: NetworkPlan, preferences?: Preferences): 
         cidrPrefix: plan.supernet.cidrPrefix,
         totalSize: plan.supernet.totalSize,
         usedSize: plan.supernet.usedSize,
-        efficiency: plan.supernet.efficiency,
+        utilization: plan.supernet.utilization,
         rangeEfficiency: plan.supernet.rangeEfficiency,
       },
     }),

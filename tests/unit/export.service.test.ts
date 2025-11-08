@@ -139,7 +139,7 @@ describe('ExportService', () => {
       const content = fs.readFileSync(filepath, 'utf-8');
       expect(content).toContain('# Plan Metadata');
       expect(content).toContain('# name: Test Plan');
-      expect(content).toContain('name,vlan,expected_devices');
+      expect(content).toContain('name,vlan,devices');
       expect(content).toContain('Engineering,10,50');
     });
   });

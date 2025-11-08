@@ -33,7 +33,7 @@ describe('CSV Formatter', () => {
 
       // Check subnet allocation section
       expect(csv).toContain('# Subnet Allocation');
-      expect(csv).toContain('name,vlan,expected_devices');
+      expect(csv).toContain('name,vlan,devices');
       expect(csv).toContain('Engineering,10,50');
     });
 
@@ -49,10 +49,10 @@ describe('CSV Formatter', () => {
       // Check all subnet fields are present
       expect(csv).toContain('network_address');
       expect(csv).toContain('cidr_prefix');
-      expect(csv).toContain('usable_hosts');
+      expect(csv).toContain('max_hosts');
       expect(csv).toContain('subnet_size');
       expect(csv).toContain('required_hosts');
-      expect(csv).toContain('planned_devices');
+      expect(csv).toContain('planned');
 
       // Check data row has values (description is optional, can be empty)
       const lines = csv.split('\n');
@@ -77,7 +77,7 @@ describe('CSV Formatter', () => {
       expect(csv).toContain('# supernet.cidrPrefix:');
       expect(csv).toContain('# supernet.totalSize:');
       expect(csv).toContain('# supernet.usedSize:');
-      expect(csv).toContain('# supernet.efficiency:');
+      expect(csv).toContain('# supernet.utilization:');
       expect(csv).toContain('# supernet.rangeEfficiency:');
     });
 
@@ -182,7 +182,7 @@ describe('CSV Formatter', () => {
       expect(csv).not.toContain('# baseIp:');
 
       // Should contain header and data
-      expect(csv).toContain('name,vlan,expected_devices');
+      expect(csv).toContain('name,vlan,devices');
       expect(csv).toContain('Engineering,10,50');
       expect(csv).toContain('Sales,20,30');
     });
@@ -197,8 +197,8 @@ describe('CSV Formatter', () => {
       const csv = formatSubnetsToCsv(plan.subnets);
 
       // Check that all expected fields are present (order: configurable columns + extra fields)
-      expect(csv).toContain('name,vlan,expected_devices,description,network_address,cidr_prefix');
-      expect(csv).toContain('usable_hosts,planned_devices,subnet_size,required_hosts');
+      expect(csv).toContain('name,vlan,devices,description,network_address,cidr_prefix');
+      expect(csv).toContain('max_hosts,planned,subnet_size,required_hosts');
     });
   });
 
@@ -258,7 +258,7 @@ describe('CSV Formatter', () => {
       expect(csv).toContain('# name: Empty Plan');
 
       // Should have header but no data rows
-      expect(csv).toContain('name,vlan,expected_devices');
+      expect(csv).toContain('name,vlan,devices');
 
       const lines = csv.split('\n');
       const dataLines = lines.filter(
