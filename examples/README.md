@@ -44,7 +44,7 @@ Sample network plans demonstrating common architectures.
 
 **Demonstrates:**
 
-- High efficiency in tightly-packed networks
+- 93.8% supernet efficiency
 - Tier-based network segregation
 - Small management and backup networks
 - Optimal CIDR allocation for data center use
@@ -66,7 +66,7 @@ Sample network plans demonstrating common architectures.
 
 **Demonstrates:**
 
-- Small network with excellent packing
+- 118.8% supernet efficiency
 - VoIP network segregation
 - Multiple small networks (/28, /29)
 - Typical branch office architecture

@@ -71,18 +71,18 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 
 ### Technical
 
-- **Enhanced Data Model**
+- **Data Model Changes**
   - Added `networkLocked` boolean to Subnet interface
   - Added `manualNetworkAddress` optional field to Subnet interface
   - Network plan schema updated to support manual network addresses
 
-- **New Core Algorithms**
+- **Auto-fit Algorithms**
   - Auto-fit bin-packing algorithm (best-fit decreasing)
   - VLAN-ordered subnet sorting
   - IP block parsing and validation
   - Utilization calculation for allocated subnets
 
-- **New Components**
+- **Components Added**
   - EditNetworkDialog: Manual network address editing with CIDR validation
   - AvailableBlocksDialog: Multi-block IP range input
   - AutoFitPreviewDialog: Allocation preview with utilization metrics
@@ -127,7 +127,7 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 
 ### Changed
 
-- **Enhanced Error Messages** ([#20](https://github.com/chuckycastle/cidrly/issues/20))
+- **Contextual Error Messages** ([#20](https://github.com/chuckycastle/cidrly/issues/20))
   - All validation errors now include contextual information
   - validateSubnetName: Added examples and current length
   - validateVlanId: Shows actual input value for invalid entries
@@ -149,7 +149,7 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 
 - **Export Service Architecture** ([#49](https://github.com/chuckycastle/cidrly/issues/49))
   - Refactored export system to use Strategy pattern
-  - Modular formatter architecture (YAML, CSV, PDF)
+  - Separate formatter architecture (YAML, CSV, PDF)
   - Centralized export service with consistent error handling
   - TSDoc documentation for all export functions
 
@@ -265,7 +265,7 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
   - Added symlink detection for directory traversal protection
   - Security error messages with "Security violation:" prefix
 
-### Improved
+### Changed
 
 - **Input Sanitization** ([#13](https://github.com/chuckycastle/cidrly/issues/13))
   - All text inputs trim leading/trailing whitespace automatically
@@ -300,7 +300,7 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 
 ### Improved
 
-- **Repository Cleanup** - Updated ignore files and removed accidentally committed artifacts
+- **Repository Cleanup** - Updated ignore files, removed accidentally committed artifacts
   - Removed npm pack tarball (cidrly-0.1.6.tgz) from version control
   - Removed GitHub wiki clones (cidrly.wiki/, cidrly.wiki.backup/) from main repo
   - Updated .gitignore with additional patterns (yarn logs, OS files, temp files)
