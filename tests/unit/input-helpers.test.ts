@@ -17,9 +17,9 @@ describe('Input Helpers', () => {
       expect(parseVlanId('\t50\n')).toBe(50);
     });
 
-    it('should return NaN for invalid input', () => {
-      expect(parseVlanId('abc')).toBeNaN();
-      expect(parseVlanId('')).toBeNaN();
+    it('should throw for invalid input', () => {
+      expect(() => parseVlanId('abc')).toThrow('Invalid VLAN ID: not a number');
+      expect(() => parseVlanId('')).toThrow('Invalid VLAN ID: not a number');
       expect(parseVlanId('12.5')).toBe(12); // parseInt stops at decimal
     });
 
@@ -45,9 +45,9 @@ describe('Input Helpers', () => {
       expect(parseDeviceCount('\t100\n')).toBe(100);
     });
 
-    it('should return NaN for invalid input', () => {
-      expect(parseDeviceCount('xyz')).toBeNaN();
-      expect(parseDeviceCount('')).toBeNaN();
+    it('should throw for invalid input', () => {
+      expect(() => parseDeviceCount('xyz')).toThrow('Invalid device count: not a number');
+      expect(() => parseDeviceCount('')).toThrow('Invalid device count: not a number');
       expect(parseDeviceCount('25.7')).toBe(25); // parseInt stops at decimal
     });
 
