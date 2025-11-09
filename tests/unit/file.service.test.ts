@@ -28,9 +28,10 @@ describe('FileService', () => {
 
   describe('constructor', () => {
     it('should create base directory if it does not exist', () => {
-      const newDir = path.join(os.tmpdir(), 'cidrly-new-dir-' + Date.now());
+      const newDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cidrly-new-dir-'));
 
-      // Directory should not exist yet
+      // Remove the directory to test creation
+      fs.rmdirSync(newDir);
       expect(fs.existsSync(newDir)).toBe(false);
 
       // Create service (should create directory)
@@ -208,7 +209,7 @@ describe('FileService', () => {
     });
 
     it('should return empty array if directory does not exist', async () => {
-      const nonExistentDir = path.join(os.tmpdir(), 'does-not-exist-' + Date.now());
+      const nonExistentDir = fs.mkdtempSync(path.join(os.tmpdir(), 'does-not-exist-'));
       const emptyService = new FileService(nonExistentDir);
 
       // Remove the directory that was created by constructor
@@ -310,6 +311,69 @@ describe('FileService', () => {
     it('should reject path traversal attempts', async () => {
       await expect(service.deletePlan('../outside.json')).rejects.toThrow();
       await expect(service.deletePlan('../../evil.json')).rejects.toThrow();
+    });
+
+    it('should invalidate cache after deletion', async () => {
+      // Create two plans
+      await service.savePlan(createNetworkPlan('Plan 1'), 'plan1.json');
+      await service.savePlan(createNetworkPlan('Plan 2'), 'plan2.json');
+
+      // List plans (populates cache)
+      let plans = await service.listPlans();
+      expect(plans).toHaveLength(2);
+
+      // Delete one plan
+      await service.deletePlan('plan1.json');
+
+      // List again (cache should be invalidated)
+      plans = await service.listPlans();
+      expect(plans).toHaveLength(1);
+      expect(plans[0].filename).toBe('plan2.json');
+    });
+  });
+
+  describe('cache behavior', () => {
+    it('should cache plan list for 5 seconds', async () => {
+      await service.savePlan(createNetworkPlan('Plan 1'), 'plan1.json');
+
+      // First call populates cache
+      const plans1 = await service.listPlans();
+      expect(plans1).toHaveLength(1);
+
+      // Add another file directly to filesystem (bypassing service)
+      fs.writeFileSync(
+        path.join(tempDir, 'plan2.json'),
+        JSON.stringify(createNetworkPlan('Plan 2')),
+      );
+
+      // Second call should use cache (not see new file)
+      const plans2 = await service.listPlans();
+      expect(plans2).toHaveLength(1);
+    });
+
+    it('should invalidate cache after save', async () => {
+      // Create initial plan
+      await service.savePlan(createNetworkPlan('Plan 1'), 'plan1.json');
+
+      // List plans (populates cache)
+      let plans = await service.listPlans();
+      expect(plans).toHaveLength(1);
+
+      // Save new plan (should invalidate cache)
+      await service.savePlan(createNetworkPlan('Plan 2'), 'plan2.json');
+
+      // List again (should see both plans due to cache invalidation)
+      plans = await service.listPlans();
+      expect(plans).toHaveLength(2);
+    });
+
+    it('should return empty array when directory does not exist', async () => {
+      // Create service with non-existent directory
+      const nonExistentDir = path.join(tempDir, 'does-not-exist');
+      const newService = new FileService(nonExistentDir);
+
+      const plans = await newService.listPlans();
+      expect(plans).toEqual([]);
     });
   });
 });

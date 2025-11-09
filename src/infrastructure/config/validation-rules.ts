@@ -269,6 +269,9 @@ export function isValidGrowthPercentage(percentage: number): boolean {
  */
 function ipToInt(ip: string): number {
   const octets = ip.split('.').map(Number);
+  if (octets.some(isNaN)) {
+    throw new Error(`Invalid IP address format: ${ip}`);
+  }
   return (
     ((octets[0] ?? 0) << 24) | ((octets[1] ?? 0) << 16) | ((octets[2] ?? 0) << 8) | (octets[3] ?? 0)
   );

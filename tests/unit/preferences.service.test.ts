@@ -2,7 +2,9 @@
  * Unit tests for PreferencesService
  */
 
+import { jest } from '@jest/globals';
 import fs from 'fs';
+import fsPromises from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { defaultPreferences, type Preferences } from '../../src/schemas/preferences.schema.js';
@@ -396,6 +398,215 @@ describe('PreferencesService', () => {
 
       const prefs = await service.loadPreferences();
       expect(prefs.growthPercentage).toBe(300); // Last save wins
+    });
+
+    it('should create custom savedPlansDir when specified', async () => {
+      const customDir = path.join(tempDir, 'custom-plans');
+      const prefs: Preferences = {
+        growthPercentage: 100,
+        version: 1,
+        savedPlansDir: customDir,
+      };
+
+      await service.savePreferences(prefs);
+
+      // Verify custom directory was created
+      expect(fs.existsSync(customDir)).toBe(true);
+
+      // Verify preferences were saved correctly
+      const loaded = await service.loadPreferences();
+      expect(loaded.savedPlansDir).toBe(customDir);
+    });
+
+    it('should create custom exportsDir when specified', async () => {
+      const customDir = path.join(tempDir, 'custom-exports');
+      const prefs: Preferences = {
+        growthPercentage: 100,
+        version: 1,
+        exportsDir: customDir,
+      };
+
+      await service.savePreferences(prefs);
+
+      // Verify custom directory was created
+      expect(fs.existsSync(customDir)).toBe(true);
+
+      // Verify preferences were saved correctly
+      const loaded = await service.loadPreferences();
+      expect(loaded.exportsDir).toBe(customDir);
+    });
+
+    it('should handle tilde expansion in custom directories', async () => {
+      const prefs: Preferences = {
+        growthPercentage: 100,
+        version: 1,
+        savedPlansDir: '~/cidrly-custom-plans',
+      };
+
+      await service.savePreferences(prefs);
+
+      // Verify the directory was created with expanded path
+      const expandedPath = path.join(os.homedir(), 'cidrly-custom-plans');
+      expect(fs.existsSync(expandedPath)).toBe(true);
+
+      // Clean up
+      fs.rmSync(expandedPath, { recursive: true, force: true });
+    });
+
+    it('should handle both custom directories together', async () => {
+      const customPlansDir = path.join(tempDir, 'both-plans');
+      const customExportsDir = path.join(tempDir, 'both-exports');
+      const prefs: Preferences = {
+        growthPercentage: 100,
+        version: 1,
+        savedPlansDir: customPlansDir,
+        exportsDir: customExportsDir,
+      };
+
+      await service.savePreferences(prefs);
+
+      // Verify both directories were created
+      expect(fs.existsSync(customPlansDir)).toBe(true);
+      expect(fs.existsSync(customExportsDir)).toBe(true);
+    });
+  });
+
+  describe('error handling scenarios', () => {
+    it('should propagate mkdir errors that are not EEXIST in ensureDirectoryExists', async () => {
+      // Spy on fs.mkdir to force a non-EEXIST error
+      const mkdirSpy = jest.spyOn(fsPromises, 'mkdir').mockRejectedValueOnce(
+        Object.assign(new Error('Permission denied'), {
+          code: 'EACCES',
+          errno: -13,
+          syscall: 'mkdir',
+        } as NodeJS.ErrnoException),
+      );
+
+      const prefs: Preferences = {
+        growthPercentage: 100,
+        version: 1,
+      };
+
+      // Should throw because mkdir fails with EACCES (not EEXIST)
+      await expect(service.savePreferences(prefs)).rejects.toThrow();
+
+      mkdirSpy.mockRestore();
+    });
+
+    it('should propagate mkdir errors that are not EEXIST in validateAndCreateDirectory', async () => {
+      const customDir = path.join(tempDir, 'custom-with-error');
+
+      // Spy on fs.mkdir to force a non-EEXIST error on the second call (first is ensureDirectoryExists, second is validateAndCreateDirectory)
+      let callCount = 0;
+      const mkdirSpy = jest
+        .spyOn(fsPromises, 'mkdir')
+        .mockImplementation(async (_dirPath, _options) => {
+          callCount++;
+          if (callCount === 1) {
+            // Let ensureDirectoryExists succeed
+            return undefined;
+          }
+          // Force validateAndCreateDirectory to fail with EPERM
+          const error = new Error('Operation not permitted') as NodeJS.ErrnoException;
+          error.code = 'EPERM';
+          error.errno = -1;
+          error.syscall = 'mkdir';
+          throw error;
+        });
+
+      const prefs: Preferences = {
+        growthPercentage: 100,
+        version: 1,
+        savedPlansDir: customDir,
+      };
+
+      // Should throw because mkdir fails with EPERM (not EEXIST)
+      await expect(service.savePreferences(prefs)).rejects.toThrow();
+
+      mkdirSpy.mockRestore();
+    });
+
+    it('should propagate unlink errors that are not ENOENT in resetPreferences', async () => {
+      // Create a preferences file first
+      await service.savePreferences({ growthPercentage: 100, version: 1 });
+
+      // Spy on fs.unlink to force a non-ENOENT error
+      const unlinkSpy = jest.spyOn(fsPromises, 'unlink').mockRejectedValueOnce(
+        Object.assign(new Error('Permission denied'), {
+          code: 'EACCES',
+          errno: -13,
+          syscall: 'unlink',
+        } as NodeJS.ErrnoException),
+      );
+
+      // Should throw because unlink fails with EACCES (not ENOENT)
+      // The error gets wrapped in FileOperationError
+      await expect(service.resetPreferences()).rejects.toThrow();
+
+      unlinkSpy.mockRestore();
+    });
+
+    it('should ignore ENOENT errors in resetPreferences when file does not exist', async () => {
+      // File doesn't exist, so unlink will fail with ENOENT
+      // This should NOT throw - it should be silently ignored
+      await expect(service.resetPreferences()).resolves.not.toThrow();
+    });
+
+    it('should ignore EEXIST errors in ensureDirectoryExists when directory already exists', async () => {
+      // Create directory first
+      const prefsDir = path.join(tempDir, 'cidrly');
+      fs.mkdirSync(prefsDir, { recursive: true });
+
+      // Spy on mkdir to simulate EEXIST error
+      const mkdirSpy = jest.spyOn(fsPromises, 'mkdir').mockRejectedValueOnce(
+        Object.assign(new Error('File exists'), {
+          code: 'EEXIST',
+          errno: -17,
+          syscall: 'mkdir',
+        } as NodeJS.ErrnoException),
+      );
+
+      // Should not throw - EEXIST is expected and ignored
+      await expect(
+        service.savePreferences({ growthPercentage: 100, version: 1 }),
+      ).resolves.not.toThrow();
+
+      mkdirSpy.mockRestore();
+    });
+
+    it('should ignore EEXIST errors in validateAndCreateDirectory when directory already exists', async () => {
+      const customDir = path.join(tempDir, 'existing-custom');
+      // Create both the custom dir and the preferences dir
+      fs.mkdirSync(customDir, { recursive: true });
+      const prefsDir = path.join(tempDir, 'cidrly');
+      fs.mkdirSync(prefsDir, { recursive: true });
+
+      // Spy on mkdir - only mock the call for customDir
+      const mkdirSpy = jest
+        .spyOn(fsPromises, 'mkdir')
+        .mockImplementation(async (dirPath, _options) => {
+          // If it's the custom directory, simulate EEXIST
+          if (typeof dirPath === 'string' && dirPath.includes('existing-custom')) {
+            const error = new Error('File exists') as NodeJS.ErrnoException;
+            error.code = 'EEXIST';
+            error.errno = -17;
+            error.syscall = 'mkdir';
+            throw error;
+          }
+          // Otherwise, call the real mkdir (for preferences dir)
+          return undefined;
+        });
+
+      const prefs: Preferences = {
+        growthPercentage: 100,
+        version: 1,
+        savedPlansDir: customDir,
+      };
+
+      // Should not throw - EEXIST is expected and ignored
+      await expect(service.savePreferences(prefs)).resolves.not.toThrow();
+
+      mkdirSpy.mockRestore();
     });
   });
 });

@@ -301,6 +301,11 @@ export function validateManualNetworkAddress(
 
   // Check network boundary alignment
   const ipParts = ipAddress.split('.').map(Number);
+  if (ipParts.some(isNaN)) {
+    result.valid = false;
+    result.errors.push('Invalid IP address format');
+    return result;
+  }
   const ipInt = (ipParts[0]! << 24) | (ipParts[1]! << 16) | (ipParts[2]! << 8) | ipParts[3]!;
   const subnetMask = ~((1 << (32 - inputPrefix)) - 1);
   const networkInt = ipInt & subnetMask;
@@ -324,6 +329,10 @@ export function validateManualNetworkAddress(
   const baseIpValidation = validateIpAddress(baseNetwork);
   if (baseIpValidation === true) {
     const baseParts = baseNetwork.split('.').map(Number);
+    if (baseParts.some(isNaN)) {
+      // Skip validation if base network is invalid
+      return result;
+    }
     const baseFirstOctet = baseParts[0];
     const inputFirstOctet = ipParts[0];
 
@@ -360,9 +369,15 @@ export function validateManualNetworkAddress(
     }
 
     const existingPrefix = parseInt(existingPrefixStr, 10);
+    if (isNaN(existingPrefix)) {
+      continue; // Skip invalid prefix
+    }
 
     // Calculate ranges for both networks
     const existingIpParts = existingIp.split('.').map(Number);
+    if (existingIpParts.some(isNaN)) {
+      continue; // Skip invalid IP
+    }
     const existingIpInt =
       (existingIpParts[0]! << 24) |
       (existingIpParts[1]! << 16) |

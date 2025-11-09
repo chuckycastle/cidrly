@@ -43,7 +43,7 @@ export const AvailableBlocksDialog: React.FC<AvailableBlocksDialogProps> = ({
     const result = parseAvailableBlocks(trimmed);
 
     if (!result.valid) {
-      setError(result.errors[0] || 'Invalid CIDR block');
+      setError(result.errors[0] ?? 'Invalid CIDR block');
       return;
     }
 
@@ -63,7 +63,7 @@ export const AvailableBlocksDialog: React.FC<AvailableBlocksDialogProps> = ({
       const result = parseAvailableBlocks(allBlocksStr);
 
       if (!result.valid) {
-        setError(result.errors[0] || 'Invalid blocks');
+        setError(result.errors[0] ?? 'Invalid blocks');
         setMode('input');
         return;
       }

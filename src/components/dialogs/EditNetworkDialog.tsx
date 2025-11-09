@@ -25,11 +25,11 @@ export const EditNetworkDialog: React.FC<EditNetworkDialogProps> = ({
   onSubmit,
   onCancel,
 }) => {
-  const currentNetwork = subnet.subnetInfo?.networkAddress || '';
-  const currentCidr = subnet.subnetInfo?.cidrPrefix || 24;
+  const currentNetwork = subnet.subnetInfo?.networkAddress ?? '';
+  const currentCidr = subnet.subnetInfo?.cidrPrefix ?? 24;
 
   // Extract just the IP address without CIDR for initial value
-  const currentIp = currentNetwork.split('/')[0] || '';
+  const currentIp = currentNetwork.split('/')[0] ?? '';
 
   const [ipAddress, setIpAddress] = useState(currentIp);
   const [cidrPrefix, setCidrPrefix] = useState(currentCidr.toString());
@@ -40,10 +40,10 @@ export const EditNetworkDialog: React.FC<EditNetworkDialogProps> = ({
 
   // Reset state when subnet changes
   useEffect(() => {
-    const network = subnet.subnetInfo?.networkAddress || '';
-    const ip = network.split('/')[0] || '';
+    const network = subnet.subnetInfo?.networkAddress ?? '';
+    const ip = network.split('/')[0] ?? '';
     setIpAddress(ip);
-    setCidrPrefix((subnet.subnetInfo?.cidrPrefix || 24).toString());
+    setCidrPrefix((subnet.subnetInfo?.cidrPrefix ?? 24).toString());
     setLock(subnet.networkLocked ?? false);
     setErrors([]);
     setWarnings([]);
@@ -114,7 +114,7 @@ export const EditNetworkDialog: React.FC<EditNetworkDialogProps> = ({
   const handleValidateAndSubmit = (): void => {
     // Construct full network address
     const networkAddress = `${ipAddress}/${cidrPrefix}`;
-    const expectedCidr = subnet.subnetInfo?.cidrPrefix || 24;
+    const expectedCidr = subnet.subnetInfo?.cidrPrefix ?? 24;
 
     // Validate using the validator function
     const validation = validateManualNetworkAddress(

@@ -9,6 +9,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 For planned features and enhancements, see [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) and [Milestones](https://github.com/chuckycastle/cidrly/milestones).
 
+## [0.4.2] - 2025-11-08
+
+### Fixed
+
+- **Standardized Error Type Narrowing** ([#77](https://github.com/chuckycastle/cidrly/issues/77))
+  - Created centralized `error-helpers.ts` with `getErrorMessage()` and `isErrnoException()` utilities
+  - Replaced inconsistent error handling patterns across 6 files
+  - Type-safe error message extraction with proper fallbacks
+  - 100% test coverage on error utilities
+
+- **Memory Leak in Auto-Save Hook** ([#75](https://github.com/chuckycastle/cidrly/issues/75))
+  - Changed cleanup from `flush()` to `cancel()` to prevent stale operations
+  - Prevents debounced functions from executing after dependency changes
+  - Comprehensive debounce test suite with 14 tests
+  - Fixed race conditions in preference changes
+
+- **Selected Index Out of Bounds** ([#81](https://github.com/chuckycastle/cidrly/issues/81))
+  - Auto-reset selectedIndex when subnet array changes
+  - Added useEffect hook to clamp index to valid range
+  - Prevents array access errors after deletions
+
+- **Duplicate Keyboard Shortcuts** ([#78](https://github.com/chuckycastle/cidrly/issues/78))
+  - Changed from console warnings to throwing errors (fail-fast)
+  - Detects duplicate shortcuts at registration time
+  - Provides detailed error messages showing conflicting descriptions
+
+- **Test Path Conflicts** ([#79](https://github.com/chuckycastle/cidrly/issues/79))
+  - Replaced `Date.now()` with `fs.mkdtempSync()` for unique directories
+  - Guarantees unique paths across parallel test execution
+  - Fixed 3 instances in file.service and export.service tests
+
+### Performance
+
+- **Optimized Subnet Sorting** ([#82](https://github.com/chuckycastle/cidrly/issues/82))
+  - Wrapped `sortSubnets()` with useMemo for result caching
+  - Only re-sorts when dependencies change (subnets, column, direction)
+  - Saves up to 500ms per render with large datasets
+
+### Technical
+
+- **IP to Integer Conversion** ([#83](https://github.com/chuckycastle/cidrly/issues/83))
+  - Investigated bitwise operations vs multiplication
+  - Confirmed multiplication approach is correct (avoids signed integer issues)
+  - JavaScript's `<<` operator produces signed 32-bit integers causing sort errors
+  - Documented findings for future reference
+
+- **Test Coverage Improvements**
+  - Added 78 new tests (+14.1% total tests)
+  - planStore: 100% coverage (up from 35.71%)
+  - preferencesStore: 100% coverage (up from 0%)
+  - Overall store coverage: 82.24% (up from 46.72%)
+  - New test files:
+    - `tests/hooks/useAutoSave.test.ts` (11 tests)
+    - `tests/hooks/useKeyboardShortcuts.test.ts` (12 tests)
+    - `tests/store/planStore.test.ts` (30 tests)
+    - `tests/store/preferencesStore.test.ts` (28 tests)
+
+- **Cascading Issue Validation**
+  - Added workflow tests for complex operation sequences
+  - Plan store: add → calculate → update workflows
+  - Preferences store: update → reset → update workflows
+  - Prevents state corruption from repeated operations
+
+### Distribution
+
+- **Test Suite**
+  - 630 total tests (up from 552)
+  - All tests passing
+  - Execution time: < 1.5 seconds
+
 ## [0.4.1] - 2025-11-08
 
 ### Fixed
@@ -752,7 +822,8 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 - **PATCH** version for backwards-compatible bug fixes
 - **Pre-release** suffixes: `-alpha`, `-beta`, `-rc` for pre-release versions
 
-[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/chuckycastle/cidrly/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/chuckycastle/cidrly/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/chuckycastle/cidrly/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/chuckycastle/cidrly/compare/v0.3.1...v0.3.2

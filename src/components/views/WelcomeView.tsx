@@ -17,6 +17,7 @@ import { FILE_RULES } from '../../infrastructure/config/validation-rules.js';
 import { parseNetworkPlan } from '../../schemas/network-plan.schema.js';
 import { usePlanStore } from '../../store/planStore.js';
 import { colors } from '../../themes/colors.js';
+import { getErrorMessage, isErrnoException } from '../../utils/error-helpers.js';
 import { InputDialog } from '../dialogs/InputDialog.js';
 import { SelectDialog } from '../dialogs/SelectDialog.js';
 
@@ -92,7 +93,7 @@ export const WelcomeView: React.FC = () => {
       try {
         stats = fs.statSync(filepath);
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if (isErrnoException(error) && error.code === 'ENOENT') {
           setState({ type: 'error', message: 'File not found' });
           setTimeout(() => setState({ type: 'initial' }), 2000);
           return;
@@ -136,7 +137,7 @@ export const WelcomeView: React.FC = () => {
       } else {
         setState({
           type: 'error',
-          message: `Failed to load plan: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          message: `Failed to load plan: ${getErrorMessage(error)}`,
         });
       }
       setTimeout(() => setState({ type: 'initial' }), 2000);

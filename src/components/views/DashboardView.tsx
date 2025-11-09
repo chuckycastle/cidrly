@@ -6,7 +6,7 @@
 import fs from 'fs';
 import { Box, Text, useApp } from 'ink';
 import Spinner from 'ink-spinner';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { AutoFitResult } from '../../core/calculators/auto-fit.js';
 import { autoFitSubnets } from '../../core/calculators/auto-fit.js';
 import { createNetworkPlan, createSubnet } from '../../core/models/network-plan.js';
@@ -36,6 +36,7 @@ import type { SortColumn } from '../../store/uiStore.js';
 import { useUIStore } from '../../store/uiStore.js';
 import { colors } from '../../themes/colors.js';
 import type { AvailableBlock } from '../../utils/block-parser.js';
+import { getErrorMessage, isErrnoException } from '../../utils/error-helpers.js';
 import { parseDeviceCount, parseVlanId } from '../../utils/input-helpers.js';
 import { sortSubnets } from '../../utils/subnet-sorters.js';
 import { AutoFitPreviewDialog } from '../dialogs/AutoFitPreviewDialog.js';
@@ -161,8 +162,11 @@ export const DashboardView: React.FC = () => {
       (col === 'name' || visibleSet.has(col as SortColumn)),
   );
 
-  // Apply sorting to subnets
-  const sortedSubnets = sortSubnets(subnets, sortColumn, sortDirection);
+  // Apply sorting to subnets (memoized to prevent unnecessary re-sorting)
+  const sortedSubnets = useMemo(
+    () => sortSubnets(subnets, sortColumn, sortDirection),
+    [subnets, sortColumn, sortDirection],
+  );
 
   // Auto-save plan when changes are detected (if enabled in preferences)
   useAutoSave({
@@ -183,6 +187,15 @@ export const DashboardView: React.FC = () => {
       setSelectedHeaderIndex(Math.max(0, columns.length - 1));
     }
   }, [columns.length, selectedHeaderIndex]);
+
+  // Reset selected index when sorted subnets array changes
+  useEffect(() => {
+    if (selectedIndex >= sortedSubnets.length && sortedSubnets.length > 0) {
+      setSelectedIndex(sortedSubnets.length - 1);
+    } else if (sortedSubnets.length === 0) {
+      setSelectedIndex(0);
+    }
+  }, [sortedSubnets.length, selectedIndex, setSelectedIndex]);
 
   // Helper to get the selected subnet from sorted array and find its original index
   const getSelectedSubnet = (): {
@@ -361,12 +374,7 @@ export const DashboardView: React.FC = () => {
         if (confirmed) {
           const removed = removeSubnet(originalIndex);
           if (removed) {
-            // Adjust selected index in sorted view
-            if (sortedSubnets.length === 0) {
-              setSelectedIndex(0);
-            } else if (selectedIndex >= sortedSubnets.length) {
-              setSelectedIndex(sortedSubnets.length - 1);
-            }
+            // selectedIndex will be automatically adjusted by the useEffect hook
             notify.success(`Subnet "${removed.name}" deleted.`);
           }
         }
@@ -464,7 +472,7 @@ export const DashboardView: React.FC = () => {
       label,
       defaultValue: defaultFilename,
       onSubmit: (filename) => {
-        void (async (): Promise<void> => {
+        (async (): Promise<void> => {
           setDialog({ type: 'loading', message: 'Saving plan...' });
           try {
             // If we have a directory path, join it with the filename
@@ -481,7 +489,7 @@ export const DashboardView: React.FC = () => {
                 }
               } catch (error) {
                 // Path doesn't exist or is not accessible, continue with save
-                if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+                if (isErrnoException(error) && error.code !== 'ENOENT') {
                   throw error;
                 }
               }
@@ -501,14 +509,16 @@ export const DashboardView: React.FC = () => {
             if (isFileOperationError(error)) {
               notify.error(error.getUserMessage());
             } else {
-              notify.error(
-                `Failed to save: ${error instanceof Error ? error.message : 'Unknown error'}`,
-              );
+              notify.error(`Failed to save: ${getErrorMessage(error)}`);
             }
             // Return to save dialog to allow retry
             handleSavePlan(directoryPath);
           }
-        })();
+        })().catch((error: unknown) => {
+          // Catch any unhandled rejections
+          notify.error(`Unexpected error: ${getErrorMessage(error)}`);
+          setDialog({ type: 'none' });
+        });
       },
     });
   };
@@ -545,9 +555,7 @@ export const DashboardView: React.FC = () => {
         handleLoadCustomPath();
       }
     } catch (error) {
-      notify.error(
-        `Failed to list plans: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
+      notify.error(`Failed to list plans: ${getErrorMessage(error)}`);
     }
   };
 
@@ -571,7 +579,7 @@ export const DashboardView: React.FC = () => {
       try {
         stats = fs.statSync(filepath);
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if (isErrnoException(error) && error.code === 'ENOENT') {
           notify.error('File not found. Please try a different path.');
           // Return to custom path input instead of closing
           handleLoadCustomPath();
@@ -642,9 +650,7 @@ export const DashboardView: React.FC = () => {
       if (isFileOperationError(error)) {
         notify.error(error.getUserMessage());
       } else {
-        notify.error(
-          `Failed to load plan: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        );
+        notify.error(`Failed to load plan: ${getErrorMessage(error)}`);
       }
       // Return to custom path input to allow retry
       handleLoadCustomPath();
@@ -680,7 +686,7 @@ export const DashboardView: React.FC = () => {
       label,
       defaultValue: defaultFilename,
       onSubmit: (filename) => {
-        void (async (): Promise<void> => {
+        (async (): Promise<void> => {
           setDialog({ type: 'loading', message: 'Saving plan...' });
           try {
             // If we have a directory path, join it with the filename
@@ -697,7 +703,7 @@ export const DashboardView: React.FC = () => {
                 }
               } catch (error) {
                 // Path doesn't exist or is not accessible, continue with save
-                if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+                if (isErrnoException(error) && error.code !== 'ENOENT') {
                   throw error;
                 }
               }
@@ -718,14 +724,16 @@ export const DashboardView: React.FC = () => {
             if (isFileOperationError(error)) {
               notify.error(error.getUserMessage());
             } else {
-              notify.error(
-                `Failed to save: ${error instanceof Error ? error.message : 'Unknown error'}`,
-              );
+              notify.error(`Failed to save: ${getErrorMessage(error)}`);
             }
             // Return to save dialog to allow retry
             handleSaveAndCreateNew(directoryPath);
           }
-        })();
+        })().catch((error: unknown) => {
+          // Catch any unhandled rejections
+          notify.error(`Unexpected error: ${getErrorMessage(error)}`);
+          setDialog({ type: 'none' });
+        });
       },
     });
   };
@@ -796,7 +804,7 @@ export const DashboardView: React.FC = () => {
       return;
     }
 
-    void (async (): Promise<void> => {
+    (async (): Promise<void> => {
       setDialog({ type: 'loading', message: 'Exporting plan...' });
       try {
         // If we have a directory path, join it with the filename
@@ -818,7 +826,7 @@ export const DashboardView: React.FC = () => {
             }
           } catch (error) {
             // Path doesn't exist or is not accessible, continue with export
-            if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+            if (isErrnoException(error) && error.code !== 'ENOENT') {
               throw error;
             }
           }
@@ -832,9 +840,7 @@ export const DashboardView: React.FC = () => {
         if (isFileOperationError(error)) {
           notify.error(error.getUserMessage());
         } else {
-          notify.error(
-            `Failed to export: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          );
+          notify.error(`Failed to export: ${getErrorMessage(error)}`);
         }
         // Return to filename input dialog on error for retry
         setDialog({
@@ -843,7 +849,11 @@ export const DashboardView: React.FC = () => {
           directoryPath,
         });
       }
-    })();
+    })().catch((error: unknown) => {
+      // Catch any unhandled rejections
+      notify.error(`Unexpected error: ${getErrorMessage(error)}`);
+      setDialog({ type: 'none' });
+    });
   };
 
   // Keyboard shortcuts configuration
@@ -1147,38 +1157,46 @@ export const DashboardView: React.FC = () => {
           </Box>
         </Modal>
       )}
-      {dialog.type === 'info' && sortedSubnets[selectedIndex] && (
-        <Modal>
-          <SubnetInfoDialog
-            subnet={sortedSubnets[selectedIndex]}
-            onClose={() => setDialog({ type: 'none' })}
-          />
-        </Modal>
-      )}
-      {dialog.type === 'edit-network' && sortedSubnets[selectedIndex] && plan && (
-        <Modal>
-          <EditNetworkDialog
-            subnet={sortedSubnets[selectedIndex]}
-            baseNetwork={plan.baseIp}
-            existingSubnets={subnets}
-            onSubmit={(networkAddress, lock) => {
-              const subnet = sortedSubnets[selectedIndex];
-              if (!subnet?.subnetInfo) return;
+      {dialog.type === 'info' &&
+        ((): React.ReactElement | null => {
+          const selectedSubnetData = getSelectedSubnet();
+          if (!selectedSubnetData) return null;
+          return (
+            <Modal>
+              <SubnetInfoDialog
+                subnet={selectedSubnetData.subnet}
+                onClose={() => setDialog({ type: 'none' })}
+              />
+            </Modal>
+          );
+        })()}
+      {dialog.type === 'edit-network' &&
+        ((): React.ReactElement | null => {
+          const selectedSubnetData = getSelectedSubnet();
+          if (!selectedSubnetData) return null;
+          if (!plan) return null;
+          return (
+            <Modal>
+              <EditNetworkDialog
+                subnet={selectedSubnetData.subnet}
+                baseNetwork={plan.baseIp}
+                existingSubnets={subnets}
+                onSubmit={(networkAddress, lock) => {
+                  const subnetData = getSelectedSubnet();
+                  if (!subnetData?.subnet.subnetInfo) return;
 
-              // Update subnet in store with new network address and lock status
-              const subnetIndex = subnets.findIndex((s) => s.id === subnet.id);
-              if (subnetIndex !== -1) {
-                setManualNetworkAddress(subnetIndex, networkAddress, lock);
-                notify.success(
-                  `Network address updated to ${networkAddress}${lock ? ' (locked)' : ''}`,
-                );
-              }
-              setDialog({ type: 'none' });
-            }}
-            onCancel={() => setDialog({ type: 'none' })}
-          />
-        </Modal>
-      )}
+                  // Update subnet in store with new network address and lock status
+                  setManualNetworkAddress(subnetData.originalIndex, networkAddress, lock);
+                  notify.success(
+                    `Network address updated to ${networkAddress}${lock ? ' (locked)' : ''}`,
+                  );
+                  setDialog({ type: 'none' });
+                }}
+                onCancel={() => setDialog({ type: 'none' })}
+              />
+            </Modal>
+          );
+        })()}
       {dialog.type === 'input' && (
         <Modal>
           <InputDialog
@@ -1263,9 +1281,7 @@ export const DashboardView: React.FC = () => {
                 notify.success(`Plan "${dialog.name}" created successfully!`);
                 setDialog({ type: 'none' });
               } catch (error) {
-                notify.error(
-                  `Failed to create plan: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                );
+                notify.error(`Failed to create plan: ${getErrorMessage(error)}`);
                 // Keep dialog open for retry
               }
             }}
@@ -1310,7 +1326,7 @@ export const DashboardView: React.FC = () => {
             defaultValue={preferences.growthPercentage.toString()}
             onSubmit={(value) => {
               const growthPercentage = parseInt(value, 10);
-              void (async (): Promise<void> => {
+              (async (): Promise<void> => {
                 try {
                   const updatedPrefs = { ...preferences, growthPercentage };
                   await preferencesService.savePreferences(updatedPrefs);
@@ -1324,12 +1340,13 @@ export const DashboardView: React.FC = () => {
                     `Growth percentage set to ${growthPercentage}%${plan && subnets.length > 0 ? ' - Plan recalculated' : ''}`,
                   );
                 } catch (error) {
-                  notify.error(
-                    `Failed to save preference: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                  );
+                  notify.error(`Failed to save preference: ${getErrorMessage(error)}`);
                   setDialog({ type: 'preferences-menu' });
                 }
-              })();
+              })().catch((error: unknown) => {
+                notify.error(`Unexpected error: ${getErrorMessage(error)}`);
+                setDialog({ type: 'preferences-menu' });
+              });
             }}
             onCancel={() => setDialog({ type: 'preferences-menu' })}
             validate={(value) => {
@@ -1350,19 +1367,20 @@ export const DashboardView: React.FC = () => {
             defaultValue={preferences.baseIp}
             allowedChars={/[0-9.]/}
             onSubmit={(baseIp) => {
-              void (async (): Promise<void> => {
+              (async (): Promise<void> => {
                 try {
                   const updatedPrefs = { ...preferences, baseIp };
                   await preferencesService.savePreferences(updatedPrefs);
                   setPreferences(updatedPrefs);
                   handlePreferenceSaved(`Default base IP set to ${baseIp}`);
                 } catch (error) {
-                  notify.error(
-                    `Failed to save preference: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                  );
+                  notify.error(`Failed to save preference: ${getErrorMessage(error)}`);
                   setDialog({ type: 'preferences-menu' });
                 }
-              })();
+              })().catch((error: unknown) => {
+                notify.error(`Unexpected error: ${getErrorMessage(error)}`);
+                setDialog({ type: 'preferences-menu' });
+              });
             }}
             onCancel={() => setDialog({ type: 'preferences-menu' })}
             validate={validateIpAddress}
@@ -1395,7 +1413,7 @@ export const DashboardView: React.FC = () => {
             label="Enter custom directory path (or leave blank for default):"
             defaultValue={preferences.savedPlansDir ?? ''}
             onSubmit={(dir) => {
-              void (async (): Promise<void> => {
+              (async (): Promise<void> => {
                 try {
                   const updatedPrefs = {
                     ...preferences,
@@ -1407,12 +1425,13 @@ export const DashboardView: React.FC = () => {
                     `Saved plans directory ${dir.trim() ? `set to ${dir}` : 'reset to default'}`,
                   );
                 } catch (error) {
-                  notify.error(
-                    `Failed to save preference: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                  );
+                  notify.error(`Failed to save preference: ${getErrorMessage(error)}`);
                   setDialog({ type: 'preferences-directories' });
                 }
-              })();
+              })().catch((error: unknown) => {
+                notify.error(`Unexpected error: ${getErrorMessage(error)}`);
+                setDialog({ type: 'preferences-directories' });
+              });
             }}
             onCancel={() => setDialog({ type: 'preferences-directories' })}
           />
@@ -1425,7 +1444,7 @@ export const DashboardView: React.FC = () => {
             label="Enter custom directory path (or leave blank for default):"
             defaultValue={preferences.exportsDir ?? ''}
             onSubmit={(dir) => {
-              void (async (): Promise<void> => {
+              (async (): Promise<void> => {
                 try {
                   const updatedPrefs = {
                     ...preferences,
@@ -1437,12 +1456,13 @@ export const DashboardView: React.FC = () => {
                     `Exports directory ${dir.trim() ? `set to ${dir}` : 'reset to default'}`,
                   );
                 } catch (error) {
-                  notify.error(
-                    `Failed to save preference: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                  );
+                  notify.error(`Failed to save preference: ${getErrorMessage(error)}`);
                   setDialog({ type: 'preferences-directories' });
                 }
-              })();
+              })().catch((error: unknown) => {
+                notify.error(`Unexpected error: ${getErrorMessage(error)}`);
+                setDialog({ type: 'preferences-directories' });
+              });
             }}
             onCancel={() => setDialog({ type: 'preferences-directories' })}
           />
@@ -1454,7 +1474,7 @@ export const DashboardView: React.FC = () => {
             autoSave={preferences.autoSave}
             saveDelay={preferences.saveDelay}
             onSubmit={(autoSave, saveDelay) => {
-              void (async (): Promise<void> => {
+              (async (): Promise<void> => {
                 try {
                   const updatedPrefs = { ...preferences, autoSave, saveDelay };
                   await preferencesService.savePreferences(updatedPrefs);
@@ -1463,12 +1483,13 @@ export const DashboardView: React.FC = () => {
                     `Save options updated: Auto-save ${autoSave ? 'enabled' : 'disabled'}, delay ${saveDelay}ms`,
                   );
                 } catch (error) {
-                  notify.error(
-                    `Failed to save preferences: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                  );
+                  notify.error(`Failed to save preferences: ${getErrorMessage(error)}`);
                   setDialog({ type: 'preferences-menu' });
                 }
-              })();
+              })().catch((error: unknown) => {
+                notify.error(`Unexpected error: ${getErrorMessage(error)}`);
+                setDialog({ type: 'preferences-menu' });
+              });
             }}
             onCancel={() => setDialog({ type: 'preferences-menu' })}
           />
@@ -1480,7 +1501,7 @@ export const DashboardView: React.FC = () => {
             visibleColumns={preferences.columnPreferences.visibleColumns}
             columnOrder={preferences.columnPreferences.columnOrder}
             onSave={(visibleColumns, columnOrder) => {
-              void (async (): Promise<void> => {
+              (async (): Promise<void> => {
                 try {
                   type ColumnKey =
                     | 'name'
@@ -1504,12 +1525,13 @@ export const DashboardView: React.FC = () => {
                     `Column configuration updated (${visibleColumns.length} columns visible)`,
                   );
                 } catch (error) {
-                  notify.error(
-                    `Failed to save preference: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                  );
+                  notify.error(`Failed to save preference: ${getErrorMessage(error)}`);
                   setDialog({ type: 'preferences-menu' });
                 }
-              })();
+              })().catch((error: unknown) => {
+                notify.error(`Unexpected error: ${getErrorMessage(error)}`);
+                setDialog({ type: 'preferences-menu' });
+              });
             }}
             onCancel={() => setDialog({ type: 'preferences-menu' })}
           />

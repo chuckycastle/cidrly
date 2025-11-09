@@ -3,7 +3,7 @@
  * Handles loading and saving user preferences
  */
 
-import fs from 'fs';
+import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { ErrorFactory } from '../errors/index.js';
@@ -13,6 +13,7 @@ import {
   validatePreferences,
   type Preferences,
 } from '../schemas/preferences.schema.js';
+import { isErrnoException } from '../utils/error-helpers.js';
 
 /**
  * Service class for managing user preferences
@@ -34,11 +35,11 @@ export class PreferencesService {
   /**
    * Ensure the preferences directory exists
    */
-  private ensureDirectoryExists(): void {
+  private async ensureDirectoryExists(): Promise<void> {
     try {
-      fs.mkdirSync(this.preferencesDir, { recursive: true });
+      await fs.mkdir(this.preferencesDir, { recursive: true });
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+      if (isErrnoException(error) && error.code !== 'EEXIST') {
         throw error;
       }
     }
@@ -48,12 +49,12 @@ export class PreferencesService {
    * Validate and create a directory if it doesn't exist
    * Expands ~ to home directory
    */
-  private validateAndCreateDirectory(dirPath: string): void {
+  private async validateAndCreateDirectory(dirPath: string): Promise<void> {
     const expandedPath = dirPath.replace(/^~/, os.homedir());
     try {
-      fs.mkdirSync(expandedPath, { recursive: true });
+      await fs.mkdir(expandedPath, { recursive: true });
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+      if (isErrnoException(error) && error.code !== 'EEXIST') {
         throw error;
       }
     }
@@ -66,7 +67,7 @@ export class PreferencesService {
   async loadPreferences(): Promise<Preferences> {
     try {
       // Read and parse the file
-      const fileContent = fs.readFileSync(this.preferencesFile, 'utf-8');
+      const fileContent = await fs.readFile(this.preferencesFile, 'utf-8');
       const data = JSON.parse(fileContent) as unknown;
 
       // Validate and return (with fallback to defaults on error)
@@ -89,17 +90,17 @@ export class PreferencesService {
 
       // Validate and create custom directories if specified
       if (validatedPreferences.savedPlansDir) {
-        this.validateAndCreateDirectory(validatedPreferences.savedPlansDir);
+        await this.validateAndCreateDirectory(validatedPreferences.savedPlansDir);
       }
       if (validatedPreferences.exportsDir) {
-        this.validateAndCreateDirectory(validatedPreferences.exportsDir);
+        await this.validateAndCreateDirectory(validatedPreferences.exportsDir);
       }
 
       // Ensure preferences directory exists
-      this.ensureDirectoryExists();
+      await this.ensureDirectoryExists();
 
       // Write to file
-      fs.writeFileSync(
+      await fs.writeFile(
         this.preferencesFile,
         JSON.stringify(validatedPreferences, null, 2),
         'utf-8',
@@ -117,7 +118,7 @@ export class PreferencesService {
     try {
       // Attempt to delete the file directly
       // If it doesn't exist, catch ENOENT and ignore
-      fs.unlinkSync(this.preferencesFile);
+      await fs.unlink(this.preferencesFile);
     } catch (error) {
       // Ignore "file not found" errors - file is already deleted
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
