@@ -55,7 +55,7 @@ const IpAddressSchema = z
   .refine(
     (ip) => {
       const parts = ip.split('.').map(Number);
-      return parts.every((part) => part >= 0 && part <= 255);
+      return !parts.some(isNaN) && parts.every((part) => part >= 0 && part <= 255);
     },
     { message: 'IP address octets must be 0-255' },
   );

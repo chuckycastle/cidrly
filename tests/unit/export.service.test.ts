@@ -28,9 +28,10 @@ describe('ExportService', () => {
 
   describe('constructor', () => {
     it('should create exports directory if it does not exist', async () => {
-      const newDir = path.join(os.tmpdir(), 'cidrly-export-new-' + Date.now());
+      const newDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cidrly-export-new-'));
 
-      // Directory should not exist yet
+      // Remove the directory to test creation
+      fs.rmdirSync(newDir);
       expect(fs.existsSync(newDir)).toBe(false);
 
       // Create service (should create directory)

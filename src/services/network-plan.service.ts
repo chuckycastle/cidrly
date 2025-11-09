@@ -303,7 +303,7 @@ export class NetworkPlanService {
     // Parse network address to update subnetInfo
     const parts = networkAddress.split('/');
     const ipAddress = parts[0];
-    const cidrPrefix = parseInt(parts[1] || '24', 10);
+    const cidrPrefix = parseInt(parts[1] ?? '24', 10);
 
     if (!ipAddress || isNaN(cidrPrefix)) {
       throw new ValidationError(
@@ -324,7 +324,7 @@ export class NetworkPlanService {
       if (i !== index) return s;
 
       // Calculate or use existing subnet info fields
-      const existingInfo = s.subnetInfo || {
+      const existingInfo = s.subnetInfo ?? {
         expectedDevices: s.expectedDevices,
         plannedDevices: s.expectedDevices,
         requiredHosts: s.expectedDevices + 2,

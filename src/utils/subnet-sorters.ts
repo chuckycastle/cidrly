@@ -15,7 +15,12 @@ function ipToNumber(ip: string): number {
   // Strip CIDR prefix if present (e.g., "10.1.241.0/24" -> "10.1.241.0")
   const ipOnly = ip.split('/')[0] ?? ip;
   const parts = ipOnly.split('.').map(Number);
+  // Validate no NaN values
+  if (parts.some(isNaN)) {
+    return 0; // Return 0 for invalid IPs to sort them to the beginning
+  }
   // Use multiplication instead of bitwise operators to avoid signed integer issues
+  // JavaScript's << operator produces signed 32-bit integers, causing IPs >= 128.0.0.0 to become negative
   return (
     (parts[0] ?? 0) * 16777216 + (parts[1] ?? 0) * 65536 + (parts[2] ?? 0) * 256 + (parts[3] ?? 0)
   );

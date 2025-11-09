@@ -33,7 +33,7 @@ export interface KeyboardShortcutConfig {
  * - Registration of multiple shortcuts with descriptions
  * - Enable/disable functionality for modal contexts
  * - Categorization for help displays
- * - Conflict detection and warnings
+ * - Duplicate shortcut detection (throws error on conflict)
  *
  * @example
  * ```tsx
@@ -74,20 +74,21 @@ export const useKeyboardShortcuts = (
     shortcutsRef.current = shortcuts;
   }, [shortcuts]);
 
-  // Detect and warn about duplicate key bindings
+  // Detect and prevent duplicate key bindings
   useEffect(() => {
-    const keyMap = new Map<string, number>();
-    shortcuts.forEach((shortcut) => {
-      const count = keyMap.get(shortcut.key) ?? 0;
-      keyMap.set(shortcut.key, count + 1);
-    });
+    const keyMap = new Map<string, KeyboardShortcut>();
+    const enabledShortcuts = shortcuts.filter((s) => s.enabled !== false);
 
-    keyMap.forEach((count, key) => {
-      if (count > 1) {
-        console.warn(
-          `[useKeyboardShortcuts] Duplicate key binding detected: "${key}" is bound ${count} times`,
+    enabledShortcuts.forEach((shortcut) => {
+      const existing = keyMap.get(shortcut.key);
+      if (existing) {
+        throw new Error(
+          `Duplicate keyboard shortcut detected: "${shortcut.key}". ` +
+            `This key is bound to both "${existing.description}" and "${shortcut.description}". ` +
+            `Each keyboard shortcut must be unique within a component.`,
         );
       }
+      keyMap.set(shortcut.key, shortcut);
     });
   }, [shortcuts]);
 

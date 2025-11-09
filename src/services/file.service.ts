@@ -3,13 +3,15 @@
  * Handles file operations for network plans
  */
 
-import fs from 'fs';
+import fsSync from 'fs';
+import fs from 'fs/promises';
 import path from 'path';
 import type { NetworkPlan } from '../core/models/network-plan.js';
 import { ErrorFactory, isFileOperationError } from '../errors/index.js';
 import { ErrorCode, ValidationError } from '../errors/network-plan-errors.js';
 import { resolveUserPath, validateFilename } from '../infrastructure/security/security-utils.js';
 import { parseNetworkPlan } from '../schemas/network-plan.schema.js';
+import { isErrnoException } from '../utils/error-helpers.js';
 
 export interface SavedPlanFile {
   filename: string;
@@ -26,9 +28,9 @@ export class FileService {
   private readonly CACHE_TTL_MS = 5000; // Cache for 5 seconds
 
   constructor(private readonly baseDirectory: string) {
-    // Ensure base directory exists
+    // Ensure base directory exists (sync in constructor)
     try {
-      fs.mkdirSync(this.baseDirectory, { recursive: true });
+      fsSync.mkdirSync(this.baseDirectory, { recursive: true });
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
         throw error;
@@ -94,15 +96,15 @@ export class FileService {
       // Ensure parent directory exists
       const dirPath = path.dirname(filepath);
       try {
-        fs.mkdirSync(dirPath, { recursive: true });
+        await fs.mkdir(dirPath, { recursive: true });
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+        if (isErrnoException(error) && error.code !== 'EEXIST') {
           throw error;
         }
       }
 
       // Write the file
-      fs.writeFileSync(filepath, JSON.stringify(plan, null, 2), 'utf-8');
+      await fs.writeFile(filepath, JSON.stringify(plan, null, 2), 'utf-8');
 
       // Invalidate cache after modifying filesystem
       this.invalidateCache();
@@ -134,9 +136,9 @@ export class FileService {
       // Read the file
       let fileContent: string;
       try {
-        fileContent = fs.readFileSync(filepath, 'utf-8');
+        fileContent = await fs.readFile(filepath, 'utf-8');
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if (isErrnoException(error) && error.code === 'ENOENT') {
           throw ErrorFactory.fileNotFound(filepath);
         }
         throw error;
@@ -171,25 +173,27 @@ export class FileService {
       // Read directory
       let files: string[];
       try {
-        files = fs.readdirSync(this.baseDirectory);
+        files = await fs.readdir(this.baseDirectory);
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if (isErrnoException(error) && error.code === 'ENOENT') {
           return [];
         }
         throw error;
       }
       const planFiles = files.filter((f) => f.endsWith('.cidr') || f.endsWith('.json'));
 
-      const savedPlans: SavedPlanFile[] = planFiles.map((filename) => {
-        const filepath = path.join(this.baseDirectory, filename);
-        const stats = fs.statSync(filepath);
+      const savedPlans: SavedPlanFile[] = await Promise.all(
+        planFiles.map(async (filename) => {
+          const filepath = path.join(this.baseDirectory, filename);
+          const stats = await fs.stat(filepath);
 
-        return {
-          filename,
-          path: filepath,
-          modifiedAt: stats.mtime,
-        };
-      });
+          return {
+            filename,
+            path: filepath,
+            modifiedAt: stats.mtime,
+          };
+        }),
+      );
 
       // Sort by modified date, most recent first
       savedPlans.sort((a, b) => b.modifiedAt.getTime() - a.modifiedAt.getTime());
@@ -226,9 +230,9 @@ export class FileService {
 
       // Delete the file
       try {
-        fs.unlinkSync(filepath);
+        await fs.unlink(filepath);
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if (isErrnoException(error) && error.code === 'ENOENT') {
           throw ErrorFactory.fileNotFound(filepath);
         }
         throw error;

@@ -34,7 +34,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
     stdout.on('resize', handleResize);
 
-    return () => {
+    return (): void => {
       stdout.off('resize', handleResize);
     };
   }, [stdout]);

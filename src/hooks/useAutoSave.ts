@@ -70,8 +70,10 @@ export function useAutoSave({
     debouncedSaveRef.current = debouncedWithFlush(savePlan, preferences.saveDelay);
 
     return () => {
-      // Cleanup: flush any pending saves when component unmounts
-      debouncedSaveRef.current?.flush();
+      // Cleanup: cancel pending operations to prevent memory leaks and race conditions
+      // When dependencies change, we cancel the old debounced function before creating a new one
+      // When component unmounts, we also cancel to prevent saves after unmount
+      debouncedSaveRef.current?.cancel();
     };
   }, [
     preferences.autoSave,

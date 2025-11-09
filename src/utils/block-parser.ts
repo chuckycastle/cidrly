@@ -24,6 +24,9 @@ export interface BlockParseResult {
  */
 function ipToInt(ip: string): number {
   const parts = ip.split('.').map(Number);
+  if (parts.some(isNaN)) {
+    throw new Error(`Invalid IP address format: ${ip}`);
+  }
   return (parts[0]! << 24) | (parts[1]! << 16) | (parts[2]! << 8) | parts[3]!;
 }
 

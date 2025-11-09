@@ -5,6 +5,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { isErrnoException } from '../../utils/error-helpers.js';
 import { FILENAME_RULES } from '../config/validation-rules.js';
 
 /**
@@ -55,7 +56,7 @@ function isSymbolicLink(filePath: string): boolean {
       }
     } catch (error) {
       // If file doesn't exist, check parent paths
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      if (isErrnoException(error) && error.code !== 'ENOENT') {
         throw error;
       }
     }
@@ -76,7 +77,7 @@ function isSymbolicLink(filePath: string): boolean {
         }
       } catch (error) {
         // Path component doesn't exist, continue checking
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        if (isErrnoException(error) && error.code !== 'ENOENT') {
           throw error;
         }
       }
