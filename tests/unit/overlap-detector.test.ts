@@ -286,4 +286,55 @@ describe('Overlap Detector', () => {
       expect(result.hasOverlap).toBe(false);
     });
   });
+
+  describe('IP Address Validation', () => {
+    it('should throw error for IP addresses with wrong number of octets', () => {
+      const subnets = [
+        { networkAddress: '10.0.0/24', name: 'Invalid' },
+        { networkAddress: '10.0.1.0/24', name: 'Valid' },
+      ];
+      expect(() => detectOverlaps(subnets)).toThrow('Invalid IP address format: 10.0.0');
+    });
+
+    it('should throw error for IP addresses with too many octets', () => {
+      const subnets = [
+        { networkAddress: '10.0.0.0.0/24', name: 'Invalid' },
+        { networkAddress: '10.0.1.0/24', name: 'Valid' },
+      ];
+      expect(() => detectOverlaps(subnets)).toThrow('Invalid IP address format: 10.0.0.0.0');
+    });
+
+    it('should throw error for IP addresses with octets > 255', () => {
+      const subnets = [
+        { networkAddress: '10.0.0.999/24', name: 'Invalid' },
+        { networkAddress: '10.0.1.0/24', name: 'Valid' },
+      ];
+      expect(() => detectOverlaps(subnets)).toThrow('Invalid IP address format: 10.0.0.999');
+    });
+
+    it('should throw error for IP addresses with negative octets', () => {
+      const subnets = [
+        { networkAddress: '10.0.-1.0/24', name: 'Invalid' },
+        { networkAddress: '10.0.1.0/24', name: 'Valid' },
+      ];
+      expect(() => detectOverlaps(subnets)).toThrow('Invalid IP address format: 10.0.-1.0');
+    });
+
+    it('should throw error for non-numeric octets', () => {
+      const subnets = [
+        { networkAddress: '10.0.abc.0/24', name: 'Invalid' },
+        { networkAddress: '10.0.1.0/24', name: 'Valid' },
+      ];
+      expect(() => detectOverlaps(subnets)).toThrow('Invalid IP address format: 10.0.abc.0');
+    });
+
+    it('should accept valid IP addresses in range 0-255', () => {
+      const subnets = [
+        { networkAddress: '0.0.0.0/24', name: 'Valid' },
+        { networkAddress: '255.255.255.255/32', name: 'Valid' },
+        { networkAddress: '192.168.1.1/24', name: 'Valid' },
+      ];
+      expect(() => detectOverlaps(subnets)).not.toThrow();
+    });
+  });
 });

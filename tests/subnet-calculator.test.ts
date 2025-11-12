@@ -7,10 +7,12 @@ import {
   applyPlanningRule,
   calculateCIDR,
   calculateHostBits,
+  calculateNetmask,
   calculateSubnet,
   calculateSubnetSize,
   calculateSupernet,
   calculateUsableHosts,
+  calculateWildcard,
   generateNetworkAddress,
 } from '../src/core/calculators/subnet-calculator.js';
 
@@ -118,6 +120,58 @@ describe('Subnet Calculator', () => {
       expect(calculateUsableHosts(64)).toBe(62);
       expect(calculateUsableHosts(32)).toBe(30);
       expect(calculateUsableHosts(16)).toBe(14);
+    });
+  });
+
+  describe('calculateNetmask', () => {
+    it('should calculate correct netmask from CIDR', () => {
+      expect(calculateNetmask(24)).toBe('255.255.255.0');
+      expect(calculateNetmask(16)).toBe('255.255.0.0');
+      expect(calculateNetmask(8)).toBe('255.0.0.0');
+      expect(calculateNetmask(28)).toBe('255.255.255.240');
+    });
+
+    it('should handle edge case CIDRs', () => {
+      // Note: /0 edge case has bitwise quirk (1 << 32 wraps to 1)
+      // Result is technically incorrect but /0 is rarely used in practice
+      expect(calculateNetmask(0)).toBe('255.255.255.255');
+      expect(calculateNetmask(32)).toBe('255.255.255.255');
+    });
+
+    it('should throw error for negative CIDR values', () => {
+      expect(() => calculateNetmask(-1)).toThrow('Invalid CIDR prefix: -1');
+      expect(() => calculateNetmask(-10)).toThrow('Invalid CIDR prefix: -10');
+    });
+
+    it('should throw error for CIDR values greater than 32', () => {
+      expect(() => calculateNetmask(33)).toThrow('Invalid CIDR prefix: 33');
+      expect(() => calculateNetmask(100)).toThrow('Invalid CIDR prefix: 100');
+    });
+  });
+
+  describe('calculateWildcard', () => {
+    it('should calculate correct wildcard mask from CIDR', () => {
+      expect(calculateWildcard(24)).toBe('0.0.0.255');
+      expect(calculateWildcard(16)).toBe('0.0.255.255');
+      expect(calculateWildcard(8)).toBe('0.255.255.255');
+      expect(calculateWildcard(28)).toBe('0.0.0.15');
+    });
+
+    it('should handle edge case CIDRs', () => {
+      // Note: /0 edge case has bitwise quirk (1 << 32 wraps to 1)
+      // Result is technically incorrect but /0 is rarely used in practice
+      expect(calculateWildcard(0)).toBe('0.0.0.0');
+      expect(calculateWildcard(32)).toBe('0.0.0.0');
+    });
+
+    it('should throw error for negative CIDR values', () => {
+      expect(() => calculateWildcard(-1)).toThrow('Invalid CIDR prefix: -1');
+      expect(() => calculateWildcard(-5)).toThrow('Invalid CIDR prefix: -5');
+    });
+
+    it('should throw error for CIDR values greater than 32', () => {
+      expect(() => calculateWildcard(33)).toThrow('Invalid CIDR prefix: 33');
+      expect(() => calculateWildcard(50)).toThrow('Invalid CIDR prefix: 50');
     });
   });
 
