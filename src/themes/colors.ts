@@ -1,8 +1,8 @@
 /**
  * Modern Color Theme
- * Sophisticated, professional palette inspired by Claude Code CLI
- * Muted tones, strategic accents, visual hierarchy
- * Now supports automatic light/dark theme adaptation
+ * Sophisticated, professional palette with muted tones
+ * Strategic accents and visual hierarchy
+ * Supports automatic light/dark theme adaptation
  */
 
 import chalk from 'chalk';
