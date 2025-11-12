@@ -9,6 +9,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 For planned features and enhancements, see [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) and [Milestones](https://github.com/chuckycastle/cidrly/milestones).
 
+## [0.4.3] - 2025-11-11
+
+### Fixed
+
+- **Memory Leaks** ([#85](https://github.com/chuckycastle/cidrly/issues/85), [#88](https://github.com/chuckycastle/cidrly/issues/88))
+  - Fixed memory leak in useAutoSave hook (in-flight async operations not cancelled on unmount)
+  - Fixed notification timer leak in uiStore (timers not cleared on notification removal)
+  - Added proper cleanup in useEffect hooks
+
+- **State Management** ([#86](https://github.com/chuckycastle/cidrly/issues/86), [#91](https://github.com/chuckycastle/cidrly/issues/91))
+  - Fixed state updates after unmount in WelcomeView
+  - Fixed race condition in FileService cache invalidation
+  - Component cleanup prevents "Cannot update unmounted component" warnings
+
+- **Input Validation** ([#87](https://github.com/chuckycastle/cidrly/issues/87), [#89](https://github.com/chuckycastle/cidrly/issues/89), [#90](https://github.com/chuckycastle/cidrly/issues/90), [#94](https://github.com/chuckycastle/cidrly/issues/94), [#95](https://github.com/chuckycastle/cidrly/issues/95), [#97](https://github.com/chuckycastle/cidrly/issues/97))
+  - Fixed non-null assertions in subnet-calculator (eliminated unsafe `!` operators)
+  - Fixed integer overflow in IP calculations (proper 32-bit unsigned handling)
+  - Fixed unsafe array access in overlap-detector (bounds checking)
+  - Added boundary validation in calculateSubnetSize (CIDR range 0-32)
+  - Added defensive validation in ipToInt function (IP octet range validation)
+  - Added function-level CIDR validation (consistent validation across all entry points)
+
+- **Error Handling** ([#92](https://github.com/chuckycastle/cidrly/issues/92), [#98](https://github.com/chuckycastle/cidrly/issues/98))
+  - Standardized error type narrowing patterns across codebase
+  - Audited and improved async error handling coverage
+  - Consistent error message extraction with proper fallbacks
+
+- **Code Quality** ([#93](https://github.com/chuckycastle/cidrly/issues/93), [#96](https://github.com/chuckycastle/cidrly/issues/96), [#99](https://github.com/chuckycastle/cidrly/issues/99), [#100](https://github.com/chuckycastle/cidrly/issues/100))
+  - Replaced deprecated `substr()` with `substring()` (removed deprecation warnings)
+  - Removed redundant optional chaining in network-plan (cleaner type safety)
+  - Documented Math.pow precision limits for CIDR calculations
+  - Reviewed and hardened array access patterns
+
+- **UI/UX** (This release)
+  - Fixed dialog message formatting (escaped newlines `\n\n` now display as blank lines)
+  - Affected dialogs: Create New Plan, Delete Subnet, Preferences confirmation
+  - Messages now render with proper line breaks instead of literal characters
+
+### Testing
+
+- **Test Coverage** ([#101](https://github.com/chuckycastle/cidrly/issues/101), [#102](https://github.com/chuckycastle/cidrly/issues/102), [#103](https://github.com/chuckycastle/cidrly/issues/103))
+  - Added concurrent file operation tests (race condition scenarios)
+  - Added component unmount scenario tests (cleanup validation)
+  - Added CIDR boundary edge case tests (0, 32, out-of-range values)
+  - Test suite: 652 total tests, all passing
+
 ## [0.4.2] - 2025-11-08
 
 ### Fixed
@@ -822,7 +868,8 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 - **PATCH** version for backwards-compatible bug fixes
 - **Pre-release** suffixes: `-alpha`, `-beta`, `-rc` for pre-release versions
 
-[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.4.3...HEAD
+[0.4.3]: https://github.com/chuckycastle/cidrly/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/chuckycastle/cidrly/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/chuckycastle/cidrly/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/chuckycastle/cidrly/compare/v0.3.2...v0.4.0

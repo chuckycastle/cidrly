@@ -369,7 +369,9 @@ export const DashboardView: React.FC = () => {
     setDialog({
       type: 'confirm',
       title: 'Delete Subnet',
-      message: `Delete "${subnet.name}" (VLAN ${subnet.vlanId})?\n\nThis cannot be undone.`,
+      message: `Delete "${subnet.name}" (VLAN ${subnet.vlanId})?
+
+This cannot be undone.`,
       onConfirm: (confirmed) => {
         if (confirmed) {
           const removed = removeSubnet(originalIndex);
@@ -1244,7 +1246,9 @@ export const DashboardView: React.FC = () => {
         <Modal>
           <ConfirmDialog
             title="Create New Plan"
-            message="Save current plan before creating new?\n\nUnsaved changes will be lost."
+            message={`Save current plan before creating new?
+
+Unsaved changes will be lost.`}
             onConfirm={(shouldSave) => {
               if (shouldSave) {
                 handleSaveAndCreateNew();
@@ -1541,7 +1545,9 @@ export const DashboardView: React.FC = () => {
         <Modal>
           <ConfirmDialog
             title="Preferences"
-            message={`Preference saved successfully!\n\nEdit another preference?`}
+            message={`Preference saved successfully!
+
+Edit another preference?`}
             onConfirm={(result) => {
               if (result) {
                 setDialog({ type: 'preferences-menu' });
