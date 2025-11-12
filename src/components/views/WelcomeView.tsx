@@ -6,7 +6,7 @@
 import fs from 'fs';
 import { Box, Text } from 'ink';
 import path from 'path';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import packageJson from '../../../package.json' with { type: 'json' };
 import { createNetworkPlan } from '../../core/models/network-plan.js';
 import { validateIpAddress } from '../../core/validators/validators.js';
@@ -34,6 +34,16 @@ export const WelcomeView: React.FC = () => {
   const setCurrentFilename = usePlanStore.use.setCurrentFilename();
   const { goToDashboard } = useNavigation();
   const notify = useNotify();
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
 
   // Get saved plans from specified directory or default
   const getSavedPlans = (directoryPath?: string): Array<{ label: string; value: string }> => {
@@ -95,7 +105,7 @@ export const WelcomeView: React.FC = () => {
       } catch (error) {
         if (isErrnoException(error) && error.code === 'ENOENT') {
           setState({ type: 'error', message: 'File not found' });
-          setTimeout(() => setState({ type: 'initial' }), 2000);
+          timerRef.current = setTimeout(() => setState({ type: 'initial' }), 2000);
           return;
         }
         throw error;
@@ -106,7 +116,7 @@ export const WelcomeView: React.FC = () => {
 
         if (files.length === 0) {
           setState({ type: 'error', message: 'No .cidr or .json files found in directory' });
-          setTimeout(() => setState({ type: 'load-select' }), 2000);
+          timerRef.current = setTimeout(() => setState({ type: 'load-select' }), 2000);
           return;
         }
 
@@ -140,7 +150,7 @@ export const WelcomeView: React.FC = () => {
           message: `Failed to load plan: ${getErrorMessage(error)}`,
         });
       }
-      setTimeout(() => setState({ type: 'initial' }), 2000);
+      timerRef.current = setTimeout(() => setState({ type: 'initial' }), 2000);
     }
   };
 

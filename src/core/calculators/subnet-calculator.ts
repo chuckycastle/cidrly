@@ -60,6 +60,9 @@ export function calculateHostBits(hostCount: number): number {
 
   // Find the smallest power of 2 that can fit totalAddresses
   // Example: 50 hosts + 2 = 52, need 2^6 = 64 addresses (6 host bits)
+  //
+  // Note: Math.pow() is safe for powers of 2 up to 2^53 (JavaScript's max safe integer).
+  // In practice, IPv4 subnet calculations never exceed 2^32, well within safe limits.
   let hostBits = 0;
   while (Math.pow(2, hostBits) < totalAddresses) {
     hostBits++;
@@ -77,9 +80,19 @@ export function calculateCIDR(hostBits: number): number {
 
 /**
  * Calculate subnet size (total addresses) from CIDR
+ *
+ * @param cidr - CIDR prefix (0-32)
+ * @returns Total number of addresses in subnet
+ * @throws Error if CIDR is out of valid range
  */
 export function calculateSubnetSize(cidr: number): number {
+  if (cidr < 0 || cidr > 32) {
+    throw new Error(`Invalid CIDR prefix: ${cidr}. Must be between 0 and 32.`);
+  }
+
   const hostBits = 32 - cidr;
+  // Math.pow(2, hostBits) is safe here: max is 2^32 for /0, well within JavaScript's
+  // Number.MAX_SAFE_INTEGER (2^53 - 1). All IPv4 calculations stay within safe precision.
   return Math.pow(2, hostBits);
 }
 
@@ -93,16 +106,32 @@ export function calculateUsableHosts(subnetSize: number): number {
 
 /**
  * Calculate netmask in dotted decimal format from CIDR
+ *
+ * @param cidr - CIDR prefix (0-32)
+ * @returns Netmask in dotted decimal format (e.g., "255.255.255.0")
+ * @throws Error if CIDR is out of valid range
  */
 export function calculateNetmask(cidr: number): string {
+  if (cidr < 0 || cidr > 32) {
+    throw new Error(`Invalid CIDR prefix: ${cidr}. Must be between 0 and 32.`);
+  }
+
   const mask = ~((1 << (32 - cidr)) - 1);
   return [(mask >>> 24) & 255, (mask >>> 16) & 255, (mask >>> 8) & 255, mask & 255].join('.');
 }
 
 /**
  * Calculate wildcard mask from CIDR
+ *
+ * @param cidr - CIDR prefix (0-32)
+ * @returns Wildcard mask in dotted decimal format (e.g., "0.0.0.255")
+ * @throws Error if CIDR is out of valid range
  */
 export function calculateWildcard(cidr: number): string {
+  if (cidr < 0 || cidr > 32) {
+    throw new Error(`Invalid CIDR prefix: ${cidr}. Must be between 0 and 32.`);
+  }
+
   const mask = (1 << (32 - cidr)) - 1;
   return [(mask >>> 24) & 255, (mask >>> 16) & 255, (mask >>> 8) & 255, mask & 255].join('.');
 }
@@ -124,7 +153,8 @@ function parseNetworkAddress(networkAddress: string): { ipInt: number; cidr: num
   if (oct1 === undefined || oct2 === undefined || oct3 === undefined || oct4 === undefined) {
     throw new Error(`Invalid IP address format: ${ipStr}`);
   }
-  const ipInt = (oct1 << 24) | (oct2 << 16) | (oct3 << 8) | oct4;
+  // Use unsigned right shift (>>>) to convert to unsigned 32-bit integer
+  const ipInt = ((oct1 << 24) | (oct2 << 16) | (oct3 << 8) | oct4) >>> 0;
   const cidr = parseInt(cidrStr, 10);
   return { ipInt, cidr };
 }
@@ -150,6 +180,7 @@ export function calculateHostMin(networkAddress: string): string {
 export function calculateHostMax(networkAddress: string): string {
   const { ipInt, cidr } = parseNetworkAddress(networkAddress);
   const hostBits = 32 - cidr;
+  // Math.pow(2, hostBits) safe: max 2^32, within Number.MAX_SAFE_INTEGER (2^53 - 1)
   const subnetSize = Math.pow(2, hostBits);
   const broadcastInt = ipInt + subnetSize - 1;
   return ipIntToString(broadcastInt - 1);
@@ -161,6 +192,7 @@ export function calculateHostMax(networkAddress: string): string {
 export function calculateBroadcast(networkAddress: string): string {
   const { ipInt, cidr } = parseNetworkAddress(networkAddress);
   const hostBits = 32 - cidr;
+  // Math.pow(2, hostBits) safe: max 2^32, within Number.MAX_SAFE_INTEGER (2^53 - 1)
   const subnetSize = Math.pow(2, hostBits);
   return ipIntToString(ipInt + subnetSize - 1);
 }
@@ -280,6 +312,7 @@ export function calculateSupernet(subnetInfos: SubnetInfo[]): {
   const totalAddresses = subnetInfos.reduce((sum, subnet) => sum + subnet.subnetSize, 0);
 
   // Find the smallest power of 2 that can fit all addresses
+  // Math.pow(2, hostBits) safe: max 2^32, within Number.MAX_SAFE_INTEGER (2^53 - 1)
   let hostBits = 0;
   while (Math.pow(2, hostBits) < totalAddresses) {
     hostBits++;
@@ -297,10 +330,12 @@ export function calculateSupernet(subnetInfos: SubnetInfo[]): {
   if (subnetInfos.length > 0 && firstSubnet?.networkAddress) {
     // Parse all network addresses to find actual min/max (don't assume array order)
     const addressData = subnetInfos
-      .filter((subnet) => subnet.networkAddress) // Ensure all have addresses
+      .filter((subnet): subnet is SubnetInfo & { networkAddress: string } =>
+        Boolean(subnet.networkAddress),
+      ) // Type guard ensures networkAddress is string
       .map((subnet) => ({
         subnet,
-        ipInt: parseNetworkAddress(subnet.networkAddress!).ipInt,
+        ipInt: parseNetworkAddress(subnet.networkAddress).ipInt, // No assertion needed
       }));
 
     // Find minimum IP address (first allocated subnet)
@@ -344,11 +379,11 @@ export function generateNetworkAddress(baseIp: string, cidr: number): string {
   // Calculate subnet mask
   const mask = ~((1 << (32 - cidr)) - 1);
 
-  // Convert octets to 32-bit integer
-  let ipInt = (oct1 << 24) | (oct2 << 16) | (oct3 << 8) | oct4;
+  // Convert octets to 32-bit unsigned integer
+  let ipInt = ((oct1 << 24) | (oct2 << 16) | (oct3 << 8) | oct4) >>> 0;
 
   // Apply mask
-  ipInt = ipInt & mask;
+  ipInt = (ipInt & mask) >>> 0;
 
   // Convert back to octets
   const resultOctets = [
@@ -417,7 +452,7 @@ export function allocateSubnetAddresses(baseIp: string, subnetInfos: SubnetInfo[
   if (oct1 === undefined || oct2 === undefined || oct3 === undefined || oct4 === undefined) {
     throw new Error(`Invalid IP address: ${baseIp}`);
   }
-  let currentIp = (oct1 << 24) | (oct2 << 16) | (oct3 << 8) | oct4;
+  let currentIp = ((oct1 << 24) | (oct2 << 16) | (oct3 << 8) | oct4) >>> 0;
 
   return subnetInfos.map((subnet) => {
     // CRITICAL: Align to subnet boundary before allocation

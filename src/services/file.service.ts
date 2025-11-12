@@ -162,6 +162,13 @@ export class FileService {
   /**
    * List all saved plans in the directory
    * Results are cached for 5 seconds to improve performance
+   *
+   * Note: This method has a potential TOCTOU (Time-of-Check-Time-of-Use) race condition
+   * between cache validation and return. This is acceptable because:
+   * - Cache invalidation happens after 5 seconds, so stale data is short-lived
+   * - Read-only operation with no security implications
+   * - Performance benefit outweighs minimal staleness risk
+   * - Worst case: User sees slightly outdated file list for < 5 seconds
    */
   async listPlans(): Promise<SavedPlanFile[]> {
     // Return cached result if still valid

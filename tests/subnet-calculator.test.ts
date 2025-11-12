@@ -95,6 +95,21 @@ describe('Subnet Calculator', () => {
       expect(calculateSubnetSize(27)).toBe(32);
       expect(calculateSubnetSize(28)).toBe(16);
     });
+
+    it('should handle CIDR boundary values /0 and /32', () => {
+      expect(calculateSubnetSize(0)).toBe(4294967296); // 2^32 addresses (entire IPv4 space)
+      expect(calculateSubnetSize(32)).toBe(1); // 2^0 = 1 address (single host)
+    });
+
+    it('should throw error for negative CIDR values', () => {
+      expect(() => calculateSubnetSize(-1)).toThrow('Invalid CIDR prefix: -1');
+      expect(() => calculateSubnetSize(-5)).toThrow('Invalid CIDR prefix: -5');
+    });
+
+    it('should throw error for CIDR values greater than 32', () => {
+      expect(() => calculateSubnetSize(33)).toThrow('Invalid CIDR prefix: 33');
+      expect(() => calculateSubnetSize(100)).toThrow('Invalid CIDR prefix: 100');
+    });
   });
 
   describe('calculateUsableHosts', () => {

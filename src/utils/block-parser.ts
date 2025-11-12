@@ -159,8 +159,8 @@ export function parseAvailableBlocks(input: string): BlockParseResult {
   const blocks: AvailableBlock[] = [];
 
   // Parse each line
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!.trim();
+  for (const [i, lineContent] of lines.entries()) {
+    const line = lineContent.trim();
 
     // Skip empty lines
     if (!line) {

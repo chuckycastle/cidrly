@@ -31,6 +31,27 @@ export function getErrorMessage(error: unknown): string {
 }
 
 /**
+ * Type guard to check if value is an Error instance
+ *
+ * @param value - Unknown value to check
+ * @returns True if value is an Error instance
+ *
+ * @example
+ * ```typescript
+ * try {
+ *   // risky operation
+ * } catch (error) {
+ *   if (isError(error)) {
+ *     console.log(error.message); // TypeScript knows error is Error
+ *   }
+ * }
+ * ```
+ */
+export function isError(value: unknown): value is Error {
+  return value instanceof Error;
+}
+
+/**
  * Type guard to check if error is a NodeJS.ErrnoException
  *
  * @param error - Unknown error value

@@ -17,16 +17,17 @@ export interface OverlapConflict {
 }
 
 /**
- * Convert IP address string to 32-bit integer
+ * Convert IP address string to 32-bit unsigned integer
  */
 function ipToInt(ip: string): number {
   const octets = ip.split('.').map(Number);
-  if (octets.some(isNaN)) {
+  // Validate: must have exactly 4 octets, all numeric, and in range 0-255
+  if (octets.length !== 4 || octets.some((o) => isNaN(o) || o < 0 || o > 255)) {
     throw new Error(`Invalid IP address format: ${ip}`);
   }
-  return (
-    ((octets[0] ?? 0) << 24) | ((octets[1] ?? 0) << 16) | ((octets[2] ?? 0) << 8) | (octets[3] ?? 0)
-  );
+  const [oct1, oct2, oct3, oct4] = octets;
+  // TypeScript now knows these are numbers (not undefined) due to validation above
+  return ((oct1! << 24) | (oct2! << 16) | (oct3! << 8) | oct4!) >>> 0;
 }
 
 /**

@@ -3,9 +3,13 @@
  * Zustand store for managing UI state (views, selection, notifications) with auto-generated selectors and Immer middleware
  */
 
+import { enableMapSet } from 'immer';
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { createSelectors } from './createSelectors.js';
+
+// Enable Map/Set support in Immer for notificationTimers Map
+enableMapSet();
 
 export type ViewType = 'welcome' | 'dashboard' | 'detail' | 'help';
 
@@ -40,6 +44,7 @@ interface UIState {
   maxVisibleNotifications: number;
   sortColumn: SortColumn | null;
   sortDirection: SortDirection;
+  notificationTimers: Map<string, NodeJS.Timeout>; // Timer tracking for cleanup
 
   // Actions
   setView: (view: ViewType) => void;
@@ -72,6 +77,7 @@ const useUIStoreBase = create<UIState>()(
       maxVisibleNotifications: 5,
       sortColumn: null,
       sortDirection: 'asc',
+      notificationTimers: new Map(),
 
       // Actions
       setView: (view: ViewType): void => {
@@ -129,7 +135,7 @@ const useUIStoreBase = create<UIState>()(
         }
 
         const notification: Notification = {
-          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
           message,
           type,
           timestamp: Date.now(),
@@ -150,14 +156,25 @@ const useUIStoreBase = create<UIState>()(
 
         // Auto-dismiss if duration > 0
         if (duration > 0) {
-          setTimeout(() => {
+          const timerId = setTimeout(() => {
             get().dismissNotification(notification.id);
           }, duration);
+
+          set((state) => {
+            state.notificationTimers.set(notification.id, timerId);
+          });
         }
       },
 
       dismissNotification: (id: string): void => {
         set((state) => {
+          // Clear timer if exists
+          const timerId = state.notificationTimers.get(id);
+          if (timerId) {
+            clearTimeout(timerId);
+            state.notificationTimers.delete(id);
+          }
+
           // With Immer, we can mutate directly
           state.notifications = state.notifications.filter((n) => n.id !== id);
         });
@@ -165,6 +182,12 @@ const useUIStoreBase = create<UIState>()(
 
       clearNotifications: (): void => {
         set((state) => {
+          // Clear all timers
+          state.notificationTimers.forEach((timerId) => {
+            clearTimeout(timerId);
+          });
+          state.notificationTimers.clear();
+
           state.notifications = [];
         });
       },

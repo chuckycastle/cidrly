@@ -56,14 +56,31 @@ export function useAutoSave({
       return;
     }
 
+    const abortController = new AbortController();
+
     const savePlan = async (planToSave: NetworkPlan): Promise<void> => {
+      if (abortController.signal.aborted) {
+        return;
+      }
+
       try {
         // Use currentFilename to prevent duplicate file bug
         await fileService.savePlan(planToSave, currentFilename);
+
+        if (abortController.signal.aborted) {
+          return;
+        }
+
         lastSavedPlanRef.current = JSON.stringify(planToSave);
         onSuccess?.();
       } catch (error) {
-        onError?.(error as Error);
+        if (abortController.signal.aborted) {
+          return;
+        }
+
+        if (error instanceof Error) {
+          onError?.(error);
+        }
       }
     };
 
@@ -73,6 +90,7 @@ export function useAutoSave({
       // Cleanup: cancel pending operations to prevent memory leaks and race conditions
       // When dependencies change, we cancel the old debounced function before creating a new one
       // When component unmounts, we also cancel to prevent saves after unmount
+      abortController.abort();
       debouncedSaveRef.current?.cancel();
     };
   }, [
