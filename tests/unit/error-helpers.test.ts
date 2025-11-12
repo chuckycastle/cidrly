@@ -2,7 +2,7 @@
  * Error Helper Utilities Tests
  */
 
-import { getErrorMessage, isError, isErrnoException } from '../../src/utils/error-helpers.js';
+import { getErrorMessage, isErrnoException, isError } from '../../src/utils/error-helpers.js';
 
 describe('getErrorMessage', () => {
   it('should extract message from Error instance', () => {
