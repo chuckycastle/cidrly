@@ -29,7 +29,7 @@ export const preferencesSchema = z.object({
   baseIp: z
     .string()
     .regex(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/, 'Must be a valid IP address')
-    .default('192.0.2.0'),
+    .default('10.0.0.0'),
 
   /**
    * Custom directory for saved plans (optional override)
@@ -89,7 +89,7 @@ export type Preferences = z.infer<typeof preferencesSchema>;
  */
 export const defaultPreferences: Preferences = {
   growthPercentage: 100,
-  baseIp: '192.0.2.0',
+  baseIp: '10.0.0.0',
   savedPlansDir: undefined,
   exportsDir: undefined,
   version: 1,
