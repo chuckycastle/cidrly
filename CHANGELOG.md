@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 For planned features and enhancements, see [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) and [Milestones](https://github.com/chuckycastle/cidrly/milestones).
 
+## [0.4.4] - 2025-11-13
+
+### Fixed
+
+- **Path Input Handling** ([#104](https://github.com/chuckycastle/cidrly/issues/104))
+  - Fixed directory paths with spaces failing validation
+  - Added `unescapeShellPath()` utility to handle macOS/terminal escaped paths
+  - Paths like `/path/folder\ with\ space` now automatically unescape
+  - Affects Load Plan, Save Plan, and Preferences directory inputs
+  - Added `preprocessInput` prop to InputDialog for path preprocessing
+  - Added 10 unit tests for shell path unescaping edge cases
+
+- **Base IP Inconsistency** ([#106](https://github.com/chuckycastle/cidrly/issues/106))
+  - Fixed default base IP inconsistency between schema and UI
+  - Schema previously used `192.0.2.0` (TEST-NET-1, RFC 5737)
+  - UI used `10.0.0.0` (RFC 1918 private range)
+  - Standardized to `10.0.0.0` for consistent user experience
+
+### Improved
+
+- **Save/Export Directory UX** ([#105](https://github.com/chuckycastle/cidrly/issues/105))
+  - Improved drag & drop workflow for saving to different directories
+  - When directory path provided, prompts for filename only
+  - Automatic extension handling (.cidr, .yaml, .csv, .pdf)
+  - Eliminates need to manually add trailing slash and extension
+  - Applies to Save Plan and all Export formats
+
 ## [0.4.3] - 2025-11-11
 
 ### Fixed
@@ -869,6 +896,7 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 - **Pre-release** suffixes: `-alpha`, `-beta`, `-rc` for pre-release versions
 
 [Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.4.3...HEAD
+[0.4.4]: https://github.com/chuckycastle/cidrly/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/chuckycastle/cidrly/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/chuckycastle/cidrly/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/chuckycastle/cidrly/compare/v0.4.0...v0.4.1
