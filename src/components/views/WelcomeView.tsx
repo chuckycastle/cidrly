@@ -18,6 +18,7 @@ import { parseNetworkPlan } from '../../schemas/network-plan.schema.js';
 import { usePlanStore } from '../../store/planStore.js';
 import { colors } from '../../themes/colors.js';
 import { getErrorMessage, isErrnoException } from '../../utils/error-helpers.js';
+import { unescapeShellPath } from '../../utils/path-helpers.js';
 import { InputDialog } from '../dialogs/InputDialog.js';
 import { SelectDialog } from '../dialogs/SelectDialog.js';
 
@@ -211,6 +212,7 @@ export const WelcomeView: React.FC = () => {
         <InputDialog
           title="Load Plan"
           label="File path (from ~/cidrly/saved-plans or absolute path):"
+          preprocessInput={unescapeShellPath}
           onSubmit={handleLoadPlan}
           onCancel={() => setState({ type: 'load-select' })}
         />

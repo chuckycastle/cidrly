@@ -38,6 +38,7 @@ import { colors } from '../../themes/colors.js';
 import type { AvailableBlock } from '../../utils/block-parser.js';
 import { getErrorMessage, isErrnoException } from '../../utils/error-helpers.js';
 import { parseDeviceCount, parseVlanId } from '../../utils/input-helpers.js';
+import { unescapeShellPath } from '../../utils/path-helpers.js';
 import { sortSubnets } from '../../utils/subnet-sorters.js';
 import { AutoFitPreviewDialog } from '../dialogs/AutoFitPreviewDialog.js';
 import { AvailableBlocksDialog } from '../dialogs/AvailableBlocksDialog.js';
@@ -61,10 +62,12 @@ type DialogType =
       type: 'input';
       title: string;
       label: string;
+      helperText?: string;
       defaultValue?: string;
       onSubmit: (value: string) => void;
       validate?: (value: string) => boolean | string;
       allowedChars?: RegExp;
+      preprocessInput?: (value: string) => string;
     }
   | {
       type: 'select';
@@ -463,22 +466,39 @@ This cannot be undone.`,
     if (!plan?.supernet) return;
     // Use current filename if available, otherwise "untitled"
     const baseName = currentFilename ? currentFilename.replace(/\.(cidr|json)$/, '') : 'untitled';
-    const defaultFilename = `${baseName}.cidr`;
+    const defaultFilename = directoryPath ? baseName : `${baseName}.cidr`;
     const label = directoryPath
-      ? `Filename (will save to ${directoryPath}):`
-      : 'File path (from ~/cidrly/saved-plans or absolute path):';
+      ? `Filename (empty = ${baseName}):`
+      : `Filename or path (empty = ${defaultFilename}):`;
+    const helperText = directoryPath ? `Will save to: ${directoryPath}` : undefined;
 
     setDialog({
       type: 'input',
       title: 'Save Plan',
       label,
-      defaultValue: defaultFilename,
+      helperText,
+      defaultValue: '', // Start with empty input
+      preprocessInput: unescapeShellPath,
       onSubmit: (filename) => {
+        // Use default filename if user submitted empty
+        const finalFilename = filename.trim() || defaultFilename;
         (async (): Promise<void> => {
           setDialog({ type: 'loading', message: 'Saving plan...' });
           try {
+            // If we have a directory path, auto-add .cidr extension if not present
+            let filenameWithExt = finalFilename;
+            if (
+              directoryPath &&
+              !finalFilename.endsWith('.cidr') &&
+              !finalFilename.endsWith('.json')
+            ) {
+              filenameWithExt = `${finalFilename}.cidr`;
+            }
+
             // If we have a directory path, join it with the filename
-            const finalPath = directoryPath ? `${directoryPath}/${filename}` : filename;
+            const finalPath = directoryPath
+              ? `${directoryPath}/${filenameWithExt}`
+              : filenameWithExt;
 
             // Check if user entered a directory (no extension and exists as directory)
             if (!directoryPath) {
@@ -565,7 +585,8 @@ This cannot be undone.`,
     setDialog({
       type: 'input',
       title: 'Load Plan',
-      label: 'File path (from ~/cidrly/saved-plans or absolute path):',
+      label: 'Filename or path:',
+      preprocessInput: unescapeShellPath,
       onSubmit: (filepath: string) => {
         handleLoadSelectedPlan(filepath);
       },
@@ -679,20 +700,24 @@ This cannot be undone.`,
     const baseName = currentFilename ? currentFilename.replace(/\.(cidr|json)$/, '') : 'untitled';
     const defaultFilename = `${baseName}.cidr`;
     const label = directoryPath
-      ? `Filename (will save to ${directoryPath}):`
-      : 'File path (from ~/cidrly/saved-plans or absolute path):';
+      ? `Filename (empty = ${baseName}):`
+      : `Filename or path (empty = ${defaultFilename}):`;
+    const helperText = directoryPath ? `Will save to: ${directoryPath}` : undefined;
 
     setDialog({
       type: 'input',
       title: 'Save Plan',
       label,
-      defaultValue: defaultFilename,
+      helperText,
+      defaultValue: '',
       onSubmit: (filename) => {
+        // Use default filename if user submitted empty
+        const finalFilename = filename.trim() || defaultFilename;
         (async (): Promise<void> => {
           setDialog({ type: 'loading', message: 'Saving plan...' });
           try {
             // If we have a directory path, join it with the filename
-            const finalPath = directoryPath ? `${directoryPath}/${filename}` : filename;
+            const finalPath = directoryPath ? `${directoryPath}/${finalFilename}` : finalFilename;
 
             // Check if user entered a directory (no extension and exists as directory)
             if (!directoryPath) {
@@ -809,8 +834,17 @@ This cannot be undone.`,
     (async (): Promise<void> => {
       setDialog({ type: 'loading', message: 'Exporting plan...' });
       try {
+        // If we have a directory path, auto-add extension if not present
+        let filenameWithExt = filename;
+        if (directoryPath) {
+          const extension = `.${format}`;
+          if (!filename.endsWith(extension)) {
+            filenameWithExt = `${filename}${extension}`;
+          }
+        }
+
         // If we have a directory path, join it with the filename
-        const finalPath = directoryPath ? `${directoryPath}/${filename}` : filename;
+        const finalPath = directoryPath ? `${directoryPath}/${filenameWithExt}` : filenameWithExt;
 
         // Check if user entered a directory (no extension and exists as directory)
         if (!directoryPath) {
@@ -1204,11 +1238,13 @@ This cannot be undone.`,
           <InputDialog
             title={dialog.title}
             label={dialog.label}
+            helperText={dialog.helperText}
             defaultValue={dialog.defaultValue}
             onSubmit={dialog.onSubmit}
             onCancel={() => setDialog({ type: 'none' })}
             validate={dialog.validate}
             allowedChars={dialog.allowedChars}
+            preprocessInput={dialog.preprocessInput}
           />
         </Modal>
       )}
@@ -1416,6 +1452,7 @@ Unsaved changes will be lost.`}
             title="Saved Plans Directory"
             label="Enter custom directory path (or leave blank for default):"
             defaultValue={preferences.savedPlansDir ?? ''}
+            preprocessInput={unescapeShellPath}
             onSubmit={(dir) => {
               (async (): Promise<void> => {
                 try {
@@ -1447,6 +1484,7 @@ Unsaved changes will be lost.`}
             title="Exports Directory"
             label="Enter custom directory path (or leave blank for default):"
             defaultValue={preferences.exportsDir ?? ''}
+            preprocessInput={unescapeShellPath}
             onSubmit={(dir) => {
               (async (): Promise<void> => {
                 try {
@@ -1573,23 +1611,36 @@ Edit another preference?`}
         </Modal>
       )}
       {/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */}
-      {dialog.type === 'export-filename' && plan && (
-        <Modal>
-          <InputDialog
-            title="Export Plan"
-            label={
-              dialog.directoryPath
-                ? `Filename (will export to ${dialog.directoryPath}):`
-                : 'File path (from ~/cidrly/exports or absolute path):'
-            }
-            defaultValue={`${plan.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.${dialog.format}`}
-            onSubmit={(filename) =>
-              handleExportWithFilename(dialog.format, filename, dialog.directoryPath)
-            }
-            onCancel={() => setDialog({ type: 'export-format-select' })}
-          />
-        </Modal>
-      )}
+      {dialog.type === 'export-filename' &&
+        plan &&
+        (() => {
+          const defaultName = `${plan.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}`;
+          const defaultWithExt = `${defaultName}.${dialog.format}`;
+          return (
+            <Modal>
+              <InputDialog
+                title="Export Plan"
+                label={
+                  dialog.directoryPath
+                    ? `Filename (empty = ${defaultWithExt}):`
+                    : `Filename or path (empty = ${defaultWithExt}):`
+                }
+                helperText={
+                  dialog.directoryPath ? `Will export to: ${dialog.directoryPath}` : undefined
+                }
+                defaultValue=""
+                preprocessInput={unescapeShellPath}
+                onSubmit={(filename) => {
+                  const finalFilename =
+                    filename.trim() ||
+                    (dialog.directoryPath ? defaultName : `${defaultName}.${dialog.format}`);
+                  handleExportWithFilename(dialog.format, finalFilename, dialog.directoryPath);
+                }}
+                onCancel={() => setDialog({ type: 'export-format-select' })}
+              />
+            </Modal>
+          );
+        })()}
       {dialog.type === 'mod-menu' && (
         <Modal>
           <ModifyDialog

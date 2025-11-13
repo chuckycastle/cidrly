@@ -17,6 +17,7 @@ export interface InputDialogProps {
   onCancel: () => void;
   validate?: (value: string) => boolean | string;
   allowedChars?: RegExp; // Optional regex to restrict input characters
+  preprocessInput?: (value: string) => string; // Optional preprocessing function (e.g., path unescaping)
 }
 
 export const InputDialog: React.FC<InputDialogProps> = ({
@@ -28,6 +29,7 @@ export const InputDialog: React.FC<InputDialogProps> = ({
   onCancel,
   validate,
   allowedChars,
+  preprocessInput,
 }) => {
   const [value, setValue] = useState(defaultValue);
   const [error, setError] = useState<string>('');
@@ -38,6 +40,24 @@ export const InputDialog: React.FC<InputDialogProps> = ({
     setError('');
   }, [defaultValue, title, label]);
 
+  // Reprocess value if it contains unescaped sequences
+  // This handles cases where ink-text-input doesn't call onChange for paste operations
+  useEffect(() => {
+    if (preprocessInput && value) {
+      const processed = preprocessInput(value);
+      if (processed !== value) {
+        // Use setTimeout to avoid infinite loops and allow React to batch updates
+        const timer = setTimeout(() => {
+          setValue(processed);
+        }, 0);
+        return () => {
+          clearTimeout(timer);
+        };
+      }
+    }
+    return undefined;
+  }, [value, preprocessInput]);
+
   // Handle Escape key to cancel dialog
   useInput((_input, key) => {
     if (key.escape) {
@@ -46,34 +66,41 @@ export const InputDialog: React.FC<InputDialogProps> = ({
     }
   });
 
-  // Handle value changes with character filtering
+  // Handle value changes with character filtering and preprocessing
   const handleChange = (newValue: string): void => {
-    // If allowedChars is specified, filter out invalid characters
+    let processedValue = newValue;
+
+    // Apply preprocessing first
+    if (preprocessInput) {
+      processedValue = preprocessInput(processedValue);
+    }
+
+    // Then apply character filtering if specified
     if (allowedChars) {
-      const filteredValue = newValue
+      processedValue = processedValue
         .split('')
         .filter((char) => allowedChars.test(char))
         .join('');
-      setValue(filteredValue);
-    } else {
-      setValue(newValue);
     }
+
+    setValue(processedValue);
+
     // Clear error when user starts typing
     if (error) setError('');
   };
 
   const handleSubmit = (): void => {
-    // Trim whitespace from input before validation and submission
-    const trimmedValue = value.trim();
+    // Trim whitespace from input (value is already preprocessed via computed value)
+    const submittedValue = value.trim();
 
     if (validate) {
-      const result = validate(trimmedValue);
+      const result = validate(submittedValue);
       if (result !== true) {
         setError(typeof result === 'string' ? result : 'Invalid input');
         return;
       }
     }
-    onSubmit(trimmedValue);
+    onSubmit(submittedValue);
   };
 
   return (
