@@ -14,6 +14,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Network field now displays `10.0.0.0/21` instead of `10.0.0.0/21/21`
   - `networkAddress` field already contains full CIDR notation
 
+- **Security Vulnerabilities** ([#113](https://github.com/chuckycastle/cidrly/issues/113), [#114](https://github.com/chuckycastle/cidrly/issues/114), [#115](https://github.com/chuckycastle/cidrly/issues/115))
+  - Fixed HIGH severity glob command injection vulnerability (CVE-2025-XXXX)
+    - Updated glob from 10.4.5 to 10.5.0 via npm overrides
+    - Only affected CLI usage (not applicable to cidrly)
+  - Fixed MEDIUM severity js-yaml prototype pollution vulnerabilities
+    - Updated js-yaml from 4.1.0/3.14.1 to 4.1.1 via npm overrides
+    - Affects ESLint config parsing and test tooling
+  - All Dependabot security alerts resolved
+
+### Changed
+
+- **Node.js Requirement** ([#116](https://github.com/chuckycastle/cidrly/issues/116))
+  - Node.js requirement already updated to >= 24.0.0
+  - Addresses Homebrew node@20 deprecation warning
+  - Node 20 will be disabled in Homebrew on 2026-10-28
+
+- **Dependencies**
+  - Updated eslint from 9.38.0 to 9.39.1
+  - Updated ts-jest from 29.4.5 to 29.4.6
+  - Added npm overrides for glob (^10.5.0) and js-yaml (^4.1.1)
+
 For planned features and enhancements, see [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) and [Milestones](https://github.com/chuckycastle/cidrly/milestones).
 
 ## [0.4.4] - 2025-11-13
