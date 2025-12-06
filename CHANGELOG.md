@@ -33,7 +33,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dependencies**
   - Updated eslint from 9.38.0 to 9.39.1
   - Updated ts-jest from 29.4.5 to 29.4.6
-  - Added npm overrides for glob (^10.5.0) and js-yaml (^4.1.1)
+  - Added npm overrides for glob (^10.5.0), js-yaml (^4.1.1), and test-exclude (^7.0.1)
+  - Fixed Node 24 compatibility issue with test-exclude package
+
+- **CI/CD**
+  - Updated release workflow to use Node.js 24.x
+  - Fixed CI test failures on Node.js 24.x
+
+- **TypeScript Configuration**
+  - Updated module resolution from "node20" to "NodeNext" for future compatibility
 
 For planned features and enhancements, see [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) and [Milestones](https://github.com/chuckycastle/cidrly/milestones).
 
