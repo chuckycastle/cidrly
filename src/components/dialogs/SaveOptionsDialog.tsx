@@ -100,8 +100,7 @@ export const SaveOptionsDialog: React.FC<SaveOptionsDialogProps> = ({
           <Text>{focusedField === 'toggle' ? colors.accent('▶ ') : '  '}</Text>
           <Text>Auto-Save: </Text>
           <Text>
-            {autoSave ? '☑' : '☐'}{' '}
-            {autoSave ? colors.success('Enabled') : colors.muted('Disabled')}
+            {autoSave ? '☑' : '☐'} {autoSave ? colors.success('Enabled') : colors.muted('Disabled')}
           </Text>
         </Box>
         {focusedField === 'toggle' && (
