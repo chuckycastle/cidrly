@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+For planned features and enhancements, see [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) and [Milestones](https://github.com/chuckycastle/cidrly/milestones).
+
+## [0.4.5] - 2025-12-05
+
 ### Fixed
 
 - **PDF Export CIDR Notation** ([#112](https://github.com/chuckycastle/cidrly/issues/112))
@@ -42,8 +46,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **TypeScript Configuration**
   - Updated module resolution from "node20" to "NodeNext" for future compatibility
-
-For planned features and enhancements, see [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) and [Milestones](https://github.com/chuckycastle/cidrly/milestones).
 
 ## [0.4.4] - 2025-11-13
 
@@ -931,7 +933,8 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 - **PATCH** version for backwards-compatible bug fixes
 - **Pre-release** suffixes: `-alpha`, `-beta`, `-rc` for pre-release versions
 
-[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.4.3...HEAD
+[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.4.5...HEAD
+[0.4.5]: https://github.com/chuckycastle/cidrly/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/chuckycastle/cidrly/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/chuckycastle/cidrly/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/chuckycastle/cidrly/compare/v0.4.1...v0.4.2
