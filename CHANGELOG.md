@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **PDF Export CIDR Notation** ([#112](https://github.com/chuckycastle/cidrly/issues/112))
+  - Fixed duplicate CIDR notation in PDF supernet summary
+  - Network field now displays `10.0.0.0/21` instead of `10.0.0.0/21/21`
+  - `networkAddress` field already contains full CIDR notation
+
 For planned features and enhancements, see [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) and [Milestones](https://github.com/chuckycastle/cidrly/milestones).
 
 ## [0.4.4] - 2025-11-13

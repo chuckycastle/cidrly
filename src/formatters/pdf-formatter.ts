@@ -358,7 +358,7 @@ function renderSupernet(
 
   // Build compact inline format: "Network: 10.0.0.0/21  •  Total: 2048  •  Used: 1216  •  Efficiency: 59.38%  •  Range: 100.00%"
   const supernetText = [
-    `Network: ${supernet.networkAddress}/${supernet.cidrPrefix}`,
+    `Network: ${supernet.networkAddress}`,
     `Total: ${supernet.totalSize}`,
     `Used: ${supernet.usedSize}`,
     `Utilization: ${supernet.utilization.toFixed(2)}%`,
