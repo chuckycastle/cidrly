@@ -1,14 +1,19 @@
 /**
  * PDF Formatter
  * Generates professional PDF reports from NetworkPlan
+ *
+ * Note: The pdfkit package is loaded dynamically to reduce CLI startup time.
  */
 
 import fs, { readFileSync } from 'fs';
 import { dirname, join } from 'path';
-import PDFDocument from 'pdfkit';
 import { fileURLToPath } from 'url';
 import type { NetworkPlan, Subnet } from '../core/models/network-plan.js';
 import type { Preferences } from '../schemas/preferences.schema.js';
+
+// Type for PDFKit document (pdfkit is loaded dynamically)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type PDFDocument = any;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -58,6 +63,9 @@ export async function generatePdfReport(
   options: PDFOptions = DEFAULT_OPTIONS,
   preferences?: Preferences,
 ): Promise<void> {
+  // Lazy-load pdfkit to reduce CLI startup time
+  const PDFDocument = (await import('pdfkit')).default;
+
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({
@@ -98,7 +106,7 @@ export async function generatePdfReport(
 /**
  * Render document header
  */
-function renderHeader(doc: PDFKit.PDFDocument, plan: NetworkPlan, options: PDFOptions): void {
+function renderHeader(doc: PDFDocument, plan: NetworkPlan, options: PDFOptions): void {
   doc
     .fontSize(options.fontSize.title)
     .fillColor(options.colors.primary)
@@ -124,7 +132,7 @@ function renderHeader(doc: PDFKit.PDFDocument, plan: NetworkPlan, options: PDFOp
 /**
  * Render metadata section with compact inline layout
  */
-function renderMetadata(doc: PDFKit.PDFDocument, plan: NetworkPlan, options: PDFOptions): void {
+function renderMetadata(doc: PDFDocument, plan: NetworkPlan, options: PDFOptions): void {
   doc.fontSize(options.fontSize.heading).fillColor(options.colors.primary).text('Plan Details');
 
   doc.moveDown(0.3);
@@ -223,7 +231,7 @@ const PDF_COLUMNS: Record<PdfColumnKey, PdfColumn> = {
  * Render subnet allocation table
  */
 function renderSubnetTable(
-  doc: PDFKit.PDFDocument,
+  doc: PDFDocument,
   subnets: Subnet[],
   options: PDFOptions,
   preferences?: Preferences,
@@ -342,7 +350,7 @@ function renderSubnetTable(
  * Render supernet summary with compact inline layout
  */
 function renderSupernet(
-  doc: PDFKit.PDFDocument,
+  doc: PDFDocument,
   supernet: NonNullable<NetworkPlan['supernet']>,
   options: PDFOptions,
 ): void {
@@ -376,7 +384,7 @@ function renderSupernet(
 /**
  * Render footer at bottom of current page
  */
-function renderFooter(doc: PDFKit.PDFDocument, options: PDFOptions): void {
+function renderFooter(doc: PDFDocument, options: PDFOptions): void {
   doc.moveDown(1);
 
   const tableWidth = doc.page.width - 2 * options.margin;

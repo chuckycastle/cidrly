@@ -12,12 +12,12 @@ import {
 
 describe('YamlFormatter', () => {
   describe('formatPlanToYaml', () => {
-    it('should convert a basic network plan to valid YAML', () => {
+    it('should convert a basic network plan to valid YAML', async () => {
       const plan = createNetworkPlan('Test Plan', '10.0.0.0');
       const subnet = createSubnet('Engineering', 10, 50);
       plan.subnets.push(subnet);
 
-      const yamlString = formatPlanToYaml(plan);
+      const yamlString = await formatPlanToYaml(plan);
 
       // Should be valid YAML
       expect(() => YAML.parse(yamlString)).not.toThrow();
@@ -32,7 +32,7 @@ describe('YamlFormatter', () => {
       expect(parsed.subnets[0].devices).toBe(50);
     });
 
-    it('should include subnet info when present', () => {
+    it('should include subnet info when present', async () => {
       const plan = createNetworkPlan('Test Plan', '10.0.0.0');
       const subnet = createSubnet('Engineering', 10, 50);
       subnet.subnetInfo = {
@@ -46,7 +46,7 @@ describe('YamlFormatter', () => {
       };
       plan.subnets.push(subnet);
 
-      const yamlString = formatPlanToYaml(plan);
+      const yamlString = await formatPlanToYaml(plan);
       const parsed = YAML.parse(yamlString);
 
       // New flattened structure - subnet info fields are at top level
@@ -57,7 +57,7 @@ describe('YamlFormatter', () => {
       expect(parsed.subnets[0].subnetSize).toBe(256);
     });
 
-    it('should include supernet when present', () => {
+    it('should include supernet when present', async () => {
       const plan = createNetworkPlan('Test Plan', '10.0.0.0');
       plan.supernet = {
         networkAddress: '10.0.0.0',
@@ -68,7 +68,7 @@ describe('YamlFormatter', () => {
         rangeEfficiency: 100,
       };
 
-      const yamlString = formatPlanToYaml(plan);
+      const yamlString = await formatPlanToYaml(plan);
       const parsed = YAML.parse(yamlString);
 
       expect(parsed.supernet).toBeDefined();
@@ -77,10 +77,10 @@ describe('YamlFormatter', () => {
       expect(parsed.supernet.utilization).toBe(1.56);
     });
 
-    it('should include metadata with timestamps', () => {
+    it('should include metadata with timestamps', async () => {
       const plan = createNetworkPlan('Test Plan', '10.0.0.0');
 
-      const yamlString = formatPlanToYaml(plan);
+      const yamlString = await formatPlanToYaml(plan);
       const parsed = YAML.parse(yamlString);
 
       expect(parsed.metadata).toBeDefined();
@@ -92,13 +92,13 @@ describe('YamlFormatter', () => {
       expect(() => new Date(parsed.metadata.updatedAt)).not.toThrow();
     });
 
-    it('should handle multiple subnets', () => {
+    it('should handle multiple subnets', async () => {
       const plan = createNetworkPlan('Test Plan', '10.0.0.0');
       plan.subnets.push(createSubnet('Engineering', 10, 50));
       plan.subnets.push(createSubnet('Sales', 20, 30));
       plan.subnets.push(createSubnet('Guest WiFi', 30, 100));
 
-      const yamlString = formatPlanToYaml(plan);
+      const yamlString = await formatPlanToYaml(plan);
       const parsed = YAML.parse(yamlString);
 
       expect(parsed.subnets).toHaveLength(3);
@@ -134,7 +134,7 @@ describe('YamlFormatter', () => {
   });
 
   describe('exportToYaml', () => {
-    it('should produce YAML with comments', () => {
+    it('should produce YAML with comments', async () => {
       const plan = createNetworkPlan('Test Plan', '10.0.0.0');
       plan.subnets.push(createSubnet('Engineering', 10, 50));
       plan.supernet = {
@@ -146,7 +146,7 @@ describe('YamlFormatter', () => {
         rangeEfficiency: 100,
       };
 
-      const yamlString = exportToYaml(plan);
+      const yamlString = await exportToYaml(plan);
 
       // Should include header comments
       expect(yamlString).toContain('# cidrly Network Plan');
@@ -164,11 +164,11 @@ describe('YamlFormatter', () => {
       expect(() => YAML.parse(withoutComments)).not.toThrow();
     });
 
-    it('should produce parseable YAML', () => {
+    it('should produce parseable YAML', async () => {
       const plan = createNetworkPlan('Test Plan', '10.0.0.0');
       plan.subnets.push(createSubnet('Engineering', 10, 50));
 
-      const yamlString = exportToYaml(plan);
+      const yamlString = await exportToYaml(plan);
 
       // YAML parsers should handle comments, so this should work
       expect(() => YAML.parse(yamlString)).not.toThrow();
@@ -179,7 +179,7 @@ describe('YamlFormatter', () => {
   });
 
   describe('Round-trip consistency', () => {
-    it('should preserve data through export and parse cycle', () => {
+    it('should preserve data through export and parse cycle', async () => {
       const plan = createNetworkPlan('Complex Plan', '192.168.0.0');
       plan.growthPercentage = 150;
       plan.subnets.push(createSubnet('Engineering', 10, 50));
@@ -193,7 +193,7 @@ describe('YamlFormatter', () => {
         rangeEfficiency: 100,
       };
 
-      const yamlString = exportToYaml(plan);
+      const yamlString = await exportToYaml(plan);
       const parsed = YAML.parse(yamlString);
 
       expect(parsed.name).toBe(plan.name);

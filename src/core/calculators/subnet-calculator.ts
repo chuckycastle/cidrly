@@ -3,6 +3,17 @@
  * Provides core functionality for calculating subnet sizes and supernets
  */
 
+/**
+ * Calculate 2^n using bit shifting for performance
+ * Uses `>>> 0` to convert to unsigned 32-bit integer
+ * Falls back to Math.pow for n >= 32 (edge case for /0 supernets)
+ */
+function pow2(n: number): number {
+  // Bit shifting: faster than Math.pow for common IPv4 calculations
+  // 1 << n wraps at 32 bits, so use Math.pow for n >= 32
+  return n < 32 ? (1 << n) >>> 0 : Math.pow(2, n);
+}
+
 export interface SubnetInfo {
   expectedDevices: number;
   plannedDevices: number;
@@ -60,11 +71,8 @@ export function calculateHostBits(hostCount: number): number {
 
   // Find the smallest power of 2 that can fit totalAddresses
   // Example: 50 hosts + 2 = 52, need 2^6 = 64 addresses (6 host bits)
-  //
-  // Note: Math.pow() is safe for powers of 2 up to 2^53 (JavaScript's max safe integer).
-  // In practice, IPv4 subnet calculations never exceed 2^32, well within safe limits.
   let hostBits = 0;
-  while (Math.pow(2, hostBits) < totalAddresses) {
+  while (pow2(hostBits) < totalAddresses) {
     hostBits++;
   }
 
@@ -91,9 +99,7 @@ export function calculateSubnetSize(cidr: number): number {
   }
 
   const hostBits = 32 - cidr;
-  // Math.pow(2, hostBits) is safe here: max is 2^32 for /0, well within JavaScript's
-  // Number.MAX_SAFE_INTEGER (2^53 - 1). All IPv4 calculations stay within safe precision.
-  return Math.pow(2, hostBits);
+  return pow2(hostBits);
 }
 
 /**
@@ -180,8 +186,7 @@ export function calculateHostMin(networkAddress: string): string {
 export function calculateHostMax(networkAddress: string): string {
   const { ipInt, cidr } = parseNetworkAddress(networkAddress);
   const hostBits = 32 - cidr;
-  // Math.pow(2, hostBits) safe: max 2^32, within Number.MAX_SAFE_INTEGER (2^53 - 1)
-  const subnetSize = Math.pow(2, hostBits);
+  const subnetSize = pow2(hostBits);
   const broadcastInt = ipInt + subnetSize - 1;
   return ipIntToString(broadcastInt - 1);
 }
@@ -192,8 +197,7 @@ export function calculateHostMax(networkAddress: string): string {
 export function calculateBroadcast(networkAddress: string): string {
   const { ipInt, cidr } = parseNetworkAddress(networkAddress);
   const hostBits = 32 - cidr;
-  // Math.pow(2, hostBits) safe: max 2^32, within Number.MAX_SAFE_INTEGER (2^53 - 1)
-  const subnetSize = Math.pow(2, hostBits);
+  const subnetSize = pow2(hostBits);
   return ipIntToString(ipInt + subnetSize - 1);
 }
 
@@ -312,9 +316,8 @@ export function calculateSupernet(subnetInfos: SubnetInfo[]): {
   const totalAddresses = subnetInfos.reduce((sum, subnet) => sum + subnet.subnetSize, 0);
 
   // Find the smallest power of 2 that can fit all addresses
-  // Math.pow(2, hostBits) safe: max 2^32, within Number.MAX_SAFE_INTEGER (2^53 - 1)
   let hostBits = 0;
-  while (Math.pow(2, hostBits) < totalAddresses) {
+  while (pow2(hostBits) < totalAddresses) {
     hostBits++;
   }
 

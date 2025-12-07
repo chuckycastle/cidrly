@@ -177,8 +177,9 @@ export const useNotify = (): {
 };
 
 /**
- * Hook to access selection navigation
+ * Hook to access selection navigation with wrap-around support
  *
+ * @param maxIndex - Maximum selectable index (total items - 1)
  * @returns Object with selection navigation functions
  *
  * @example
@@ -204,10 +205,13 @@ export const useSelection = (
   const moveSelectionUp = useUIStore.use.moveSelectionUp();
   const moveSelectionDown = useUIStore.use.moveSelectionDown();
 
+  // Convert maxIndex to totalItems (maxIndex = totalItems - 1)
+  const totalItems = maxIndex + 1;
+
   return {
     selectedIndex,
     select: setSelectedIndex,
-    moveUp: (): void => moveSelectionUp(maxIndex),
-    moveDown: (): void => moveSelectionDown(maxIndex),
+    moveUp: (): void => moveSelectionUp(totalItems),
+    moveDown: (): void => moveSelectionDown(totalItems),
   };
 };

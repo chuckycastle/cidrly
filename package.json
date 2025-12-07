@@ -17,6 +17,8 @@
   ],
   "scripts": {
     "build": "tsc",
+    "build:bundle": "node esbuild.config.mjs",
+    "build:bundle:dev": "node esbuild.config.mjs --dev",
     "build:prod": "npm run clean && tsc --sourceMap false --declarationMap false --removeComments true",
     "clean": "rm -rf dist coverage *.tsbuildinfo",
     "dev": "tsx src/cli.tsx",
@@ -31,6 +33,11 @@
     "security": "semgrep --config=.semgrep.yml --error",
     "security:verbose": "semgrep --config=.semgrep.yml --verbose",
     "verify": "npm run format:check && npm run lint && npm run test && npm run security",
+    "profile:startup": "node --cpu-prof dist/cli.js --version",
+    "profile:view": "node --cpu-prof dist/cli.js view --plan examples/example-campus-network.json",
+    "bench:cold-start": "node scripts/benchmark.mjs cold-start",
+    "bench:large-plan": "node scripts/benchmark.mjs large-plan",
+    "bench:all": "node scripts/benchmark.mjs all",
     "prepack": "npm run build:prod",
     "prepublishOnly": "npm run prepack",
     "postinstall": "node scripts/postinstall.cjs"
@@ -102,6 +109,7 @@
     "@types/pdfkit": "^0.17.3",
     "@typescript-eslint/eslint-plugin": "^8.46.2",
     "@typescript-eslint/parser": "^8.46.2",
+    "esbuild": "^0.27.1",
     "eslint": "^9.38.0",
     "ink-testing-library": "^4.0.0",
     "jest": "^30.2.0",

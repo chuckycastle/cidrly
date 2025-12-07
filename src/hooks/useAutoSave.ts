@@ -48,7 +48,8 @@ export function useAutoSave({
   const debouncedSaveRef = useRef<
     (((plan: NetworkPlan) => void) & { flush: () => void; cancel: () => void }) | null
   >(null);
-  const lastSavedPlanRef = useRef<string | null>(null);
+  // Track last saved timestamp instead of JSON string for O(1) comparison
+  const lastSavedTimestampRef = useRef<number | null>(null);
 
   // Create debounced save function
   useEffect((): (() => void) | undefined => {
@@ -71,7 +72,8 @@ export function useAutoSave({
           return;
         }
 
-        lastSavedPlanRef.current = JSON.stringify(planToSave);
+        // Store timestamp of saved plan for efficient O(1) comparison
+        lastSavedTimestampRef.current = planToSave.updatedAt.getTime();
         onSuccess?.();
       } catch (error) {
         if (abortController.signal.aborted) {
@@ -108,9 +110,9 @@ export function useAutoSave({
       return;
     }
 
-    // Don't save if plan hasn't changed
-    const currentPlanJson = JSON.stringify(plan);
-    if (currentPlanJson === lastSavedPlanRef.current) {
+    // Don't save if plan hasn't changed - O(1) timestamp comparison
+    const currentTimestamp = plan.updatedAt.getTime();
+    if (currentTimestamp === lastSavedTimestampRef.current) {
       return;
     }
 

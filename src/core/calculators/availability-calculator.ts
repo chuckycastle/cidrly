@@ -3,6 +3,15 @@
  * Calculates unallocated IP space from assigned blocks
  */
 
+/**
+ * Calculate 2^n using bit shifting for performance
+ * Uses `>>> 0` to convert to unsigned 32-bit integer
+ * Falls back to Math.pow for n >= 32 (edge case for /0 supernets)
+ */
+function pow2(n: number): number {
+  return n < 32 ? (1 << n) >>> 0 : Math.pow(2, n);
+}
+
 import type {
   AssignedBlock,
   AvailableFragment,
@@ -48,7 +57,7 @@ function cidrToRange(cidr: string): IpRange {
   }
   const prefix = parseInt(prefixStr, 10);
   const startInt = ipToInt(ip);
-  const size = Math.pow(2, 32 - prefix);
+  const size = pow2(32 - prefix);
   return {
     startInt,
     endInt: startInt + size - 1,
@@ -62,7 +71,7 @@ function cidrToRange(cidr: string): IpRange {
 function findLargestValidPrefix(startInt: number, remainingCapacity: number): number {
   // Try progressively smaller block sizes (larger prefix numbers)
   for (let hostBits = 24; hostBits >= 0; hostBits--) {
-    const blockSize = Math.pow(2, hostBits);
+    const blockSize = pow2(hostBits);
     const prefix = 32 - hostBits;
 
     // Check if block fits in remaining capacity
@@ -93,7 +102,7 @@ export function rangeToOptimalCIDRBlocks(
   while (currentStart <= endInt) {
     const remainingCapacity = endInt - currentStart + 1;
     const prefix = findLargestValidPrefix(currentStart, remainingCapacity);
-    const blockSize = Math.pow(2, 32 - prefix);
+    const blockSize = pow2(32 - prefix);
 
     fragments.push({
       parentBlockId,

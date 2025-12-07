@@ -1,9 +1,10 @@
 /**
  * YAML Formatter
  * Converts NetworkPlan to YAML format for IaC workflows
+ *
+ * Note: The yaml package is loaded dynamically to reduce CLI startup time.
  */
 
-import YAML from 'yaml';
 import type { NetworkPlan, Subnet } from '../core/models/network-plan.js';
 import type { Preferences } from '../schemas/preferences.schema.js';
 
@@ -87,7 +88,12 @@ function buildSubnetObject(
  * @param preferences - Optional preferences for column visibility and order
  * @returns YAML string representation of the plan
  */
-export function formatPlanToYaml(plan: NetworkPlan, preferences?: Preferences): string {
+export async function formatPlanToYaml(
+  plan: NetworkPlan,
+  preferences?: Preferences,
+): Promise<string> {
+  // Lazy-load yaml package to reduce CLI startup time
+  const YAML = (await import('yaml')).default;
   const columnOrder = preferences?.columnPreferences.columnOrder;
   const visibleColumns = preferences?.columnPreferences.visibleColumns;
 
@@ -186,7 +192,7 @@ export function addYamlComments(yamlString: string): string {
  * @param preferences - Optional preferences for column visibility and order
  * @returns Formatted YAML string with comments
  */
-export function exportToYaml(plan: NetworkPlan, preferences?: Preferences): string {
-  const yamlString = formatPlanToYaml(plan, preferences);
+export async function exportToYaml(plan: NetworkPlan, preferences?: Preferences): Promise<string> {
+  const yamlString = await formatPlanToYaml(plan, preferences);
   return addYamlComments(yamlString);
 }

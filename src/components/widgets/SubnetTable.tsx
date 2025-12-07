@@ -19,6 +19,8 @@ export interface SubnetTableProps {
   selectedHeaderIndex?: number;
   visibleColumns?: string[];
   columnOrder?: string[];
+  viewportStart?: number;
+  viewportSize?: number;
 }
 
 export const SubnetTable: React.FC<SubnetTableProps> = React.memo(
@@ -31,6 +33,8 @@ export const SubnetTable: React.FC<SubnetTableProps> = React.memo(
     selectedHeaderIndex = 0,
     visibleColumns,
     columnOrder,
+    viewportStart = 0,
+    viewportSize = 12,
   }) => {
     const terminalWidth = useTerminalWidth();
 
@@ -166,11 +170,19 @@ export const SubnetTable: React.FC<SubnetTableProps> = React.memo(
 
     return (
       <Box flexDirection="column" paddingX={2} paddingY={0} flexGrow={1}>
-        {/* Table Header */}
+        {/* Table Header with virtualization indicator */}
         <Box marginBottom={0}>
           <Text bold>{colors.slate('Subnets')}</Text>
           <Text> </Text>
-          <Text>{colors.dim(`(${subnets.length})`)}</Text>
+          {subnets.length > viewportSize ? (
+            <Text>
+              {colors.dim(
+                `(${viewportStart + 1}-${Math.min(viewportStart + viewportSize, subnets.length)} of ${subnets.length})`,
+              )}
+            </Text>
+          ) : (
+            <Text>{colors.dim(`(${subnets.length})`)}</Text>
+          )}
         </Box>
 
         {/* Column Headers - interactive with sort indicators */}
@@ -198,64 +210,71 @@ export const SubnetTable: React.FC<SubnetTableProps> = React.memo(
           </Text>
         </Box>
 
-        {/* Data Rows */}
+        {/* Data Rows - only render visible rows for virtualization */}
         <Box flexDirection="column">
-          {/* Minimum 12 rows to ensure consistent height for dialogs */}
-          {subnets.map((subnet, index) => {
-            const isSelected = index === selectedIndex;
-            const rowNumber = (index + 1).toString().padStart(2);
+          {/* Slice subnets to only show visible viewport */}
+          {subnets
+            .slice(viewportStart, viewportStart + viewportSize)
+            .map((subnet, viewportIndex) => {
+              const actualIndex = viewportStart + viewportIndex;
+              const isSelected = actualIndex === selectedIndex;
+              const rowNumber = (actualIndex + 1).toString().padStart(2);
 
-            return (
-              <Box key={index} marginBottom={0}>
-                {/* Row selector */}
-                {isSelected ? (
-                  <Text>{colors.highlight(symbols.selected)}</Text>
-                ) : (
-                  <Text>{colors.dim(symbols.unselected)}</Text>
-                )}
-                <Text> </Text>
-                {/* Row number */}
-                {isSelected ? (
-                  <Text>{colors.accent(rowNumber)}</Text>
-                ) : (
-                  <Text>{colors.dim(rowNumber)}</Text>
-                )}
-                <Text> {colors.dim(symbols.divider)} </Text>
-                {/* Dynamic columns */}
-                {columns.map((column, colIndex) => {
-                  const value = getColumnValue(subnet, column.key, column.width);
-                  const hasData =
-                    column.key === 'planned' || column.key === 'usable' || column.key === 'network'
-                      ? subnet.subnetInfo !== undefined
-                      : true;
+              return (
+                <Box key={actualIndex} marginBottom={0}>
+                  {/* Row selector */}
+                  {isSelected ? (
+                    <Text>{colors.highlight(symbols.selected)}</Text>
+                  ) : (
+                    <Text>{colors.dim(symbols.unselected)}</Text>
+                  )}
+                  <Text> </Text>
+                  {/* Row number */}
+                  {isSelected ? (
+                    <Text>{colors.accent(rowNumber)}</Text>
+                  ) : (
+                    <Text>{colors.dim(rowNumber)}</Text>
+                  )}
+                  <Text> {colors.dim(symbols.divider)} </Text>
+                  {/* Dynamic columns */}
+                  {columns.map((column, colIndex) => {
+                    const value = getColumnValue(subnet, column.key, column.width);
+                    const hasData =
+                      column.key === 'planned' ||
+                      column.key === 'usable' ||
+                      column.key === 'network'
+                        ? subnet.subnetInfo !== undefined
+                        : true;
 
-                  return (
-                    <React.Fragment key={column.key}>
-                      {isSelected ? (
-                        <Text>{colors.accent(value)}</Text>
-                      ) : hasData ? (
-                        <Text>
-                          {column.key === 'name'
-                            ? colors.slate(value)
-                            : column.key === 'description' && value.trim() === ''
-                              ? colors.dim(value)
-                              : colors.muted(value)}
-                        </Text>
-                      ) : (
-                        <Text>{colors.dim(value)}</Text>
-                      )}
-                      {colIndex < columns.length - 1 && (
-                        <Text> {colors.dim(symbols.divider)} </Text>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </Box>
-            );
-          })}
+                    return (
+                      <React.Fragment key={column.key}>
+                        {isSelected ? (
+                          <Text>{colors.accent(value)}</Text>
+                        ) : hasData ? (
+                          <Text>
+                            {column.key === 'name'
+                              ? colors.slate(value)
+                              : column.key === 'description' && value.trim() === ''
+                                ? colors.dim(value)
+                                : colors.muted(value)}
+                          </Text>
+                        ) : (
+                          <Text>{colors.dim(value)}</Text>
+                        )}
+                        {colIndex < columns.length - 1 && (
+                          <Text> {colors.dim(symbols.divider)} </Text>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </Box>
+              );
+            })}
 
-          {/* Add empty placeholder rows to ensure minimum 12 rows */}
-          {Array.from({ length: Math.max(0, 12 - subnets.length) }).map((_, index) => (
+          {/* Add empty placeholder rows to ensure consistent height */}
+          {Array.from({
+            length: Math.max(0, viewportSize - Math.min(subnets.length, viewportSize)),
+          }).map((_, index) => (
             <Box key={`empty-${index}`} minHeight={1}>
               <Text> </Text>
             </Box>

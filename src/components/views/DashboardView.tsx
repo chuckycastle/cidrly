@@ -6,7 +6,7 @@
 import fs from 'fs';
 import { Box, Text, useApp } from 'ink';
 import Spinner from 'ink-spinner';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AutoFitResult } from '../../core/calculators/auto-fit.js';
 import {
   autoFitSubnets,
@@ -32,6 +32,7 @@ import { isFileOperationError } from '../../errors/index.js';
 import { useAutoSave } from '../../hooks/useAutoSave.js';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts.js';
 import { usePlan, usePlanActions, useSubnets } from '../../hooks/usePlan.js';
+import { useTerminalHeight } from '../../hooks/useTerminalHeight.js';
 import { useNotify, useSelection } from '../../hooks/useUI.js';
 import {
   FILE_RULES,
@@ -179,6 +180,15 @@ export const DashboardView: React.FC = () => {
   const sortDirection = useUIStore.use.sortDirection();
   const setSortColumn = useUIStore.use.setSortColumn();
 
+  // Viewport state for row virtualization
+  const viewportStart = useUIStore.use.viewportStart();
+  const viewportSize = useUIStore.use.viewportSize();
+  const setViewportSize = useUIStore.use.setViewportSize();
+  const adjustViewport = useUIStore.use.adjustViewport();
+
+  // Terminal height for dynamic viewport sizing
+  const terminalHeight = useTerminalHeight();
+
   // Preferences store
   const preferences = usePreferencesStore.use.preferences();
   const setPreferences = usePreferencesStore.use.setPreferences();
@@ -237,6 +247,20 @@ export const DashboardView: React.FC = () => {
     }
   }, [columns.length, selectedHeaderIndex]);
 
+  // Update viewport size based on terminal height
+  // Header (1) + Title (1) + Column headers (1) + Divider (1) + Footer (3) = 7 lines reserved
+  // Leave extra room for status bar and borders
+  useEffect(() => {
+    const reservedLines = 12; // Header + footer + borders + padding
+    const availableRows = Math.max(6, terminalHeight - reservedLines);
+    setViewportSize(availableRows);
+  }, [terminalHeight, setViewportSize]);
+
+  // Adjust viewport when subnets change (ensure selection stays visible)
+  useEffect(() => {
+    adjustViewport(selectedIndex, sortedSubnets.length);
+  }, [sortedSubnets.length, adjustViewport, selectedIndex]);
+
   // Reset selected index when sorted subnets array changes
   useEffect(() => {
     if (selectedIndex >= sortedSubnets.length && sortedSubnets.length > 0) {
@@ -246,8 +270,8 @@ export const DashboardView: React.FC = () => {
     }
   }, [sortedSubnets.length, selectedIndex, setSelectedIndex]);
 
-  // Helper to get the selected subnet from sorted array and find its original index
-  const getSelectedSubnet = (): {
+  // Helper to get the selected subnet from sorted array and find its original index (memoized)
+  const getSelectedSubnet = useCallback((): {
     subnet: (typeof subnets)[number];
     originalIndex: number;
   } | null => {
@@ -256,31 +280,31 @@ export const DashboardView: React.FC = () => {
     const originalIndex = subnets.findIndex((s) => s.id === selectedSubnet.id);
     if (originalIndex === -1) return null;
     return { subnet: selectedSubnet, originalIndex };
-  };
+  }, [sortedSubnets, selectedIndex, subnets]);
 
-  // Header mode navigation handlers
-  const moveHeaderLeft = (): void => {
+  // Header mode navigation handlers (memoized for performance)
+  const moveHeaderLeft = useCallback((): void => {
     setSelectedHeaderIndex((prev) => Math.max(0, prev - 1));
-  };
+  }, []);
 
-  const moveHeaderRight = (): void => {
+  const moveHeaderRight = useCallback((): void => {
     setSelectedHeaderIndex((prev) => Math.min(columns.length - 1, prev + 1));
-  };
+  }, [columns.length]);
 
-  const activateSort = (): void => {
+  const activateSort = useCallback((): void => {
     const column = columns[selectedHeaderIndex];
     if (column) {
       setSortColumn(column);
       notify.info(`Sorted by ${column} ${sortDirection === 'asc' ? '↑' : '↓'}`);
     }
-  };
+  }, [columns, selectedHeaderIndex, setSortColumn, notify, sortDirection]);
 
-  const toggleHeaderMode = (): void => {
+  const toggleHeaderMode = useCallback((): void => {
     setHeaderMode((prev) => !prev);
     if (!headerMode) {
       notify.info('Header mode: Use ← → to navigate, Enter to sort, Tab/Esc to exit');
     }
-  };
+  }, [headerMode, notify]);
 
   // Action handlers (need to be defined before keyboard shortcuts)
   const handleShowSubnetDetails = (): void => {
@@ -1312,9 +1336,9 @@ This cannot be undone.`,
     setDialog({ type: 'none' });
   };
 
-  // Keyboard shortcuts configuration
-  useKeyboardShortcuts({
-    shortcuts: [
+  // Keyboard shortcuts configuration (memoized to prevent recreation on every render)
+  const keyboardShortcuts = useMemo(
+    () => [
       // Tab: Toggle header mode
       {
         key: 'tab',
@@ -1322,7 +1346,7 @@ This cannot be undone.`,
         handler: (): void => {
           if (plan && subnets.length > 0) toggleHeaderMode();
         },
-        category: 'navigation',
+        category: 'navigation' as const,
         enabled: subnets.length > 0,
       },
       // T: Toggle header mode (alternative to tab)
@@ -1332,7 +1356,7 @@ This cannot be undone.`,
         handler: (): void => {
           if (plan && subnets.length > 0) toggleHeaderMode();
         },
-        category: 'navigation',
+        category: 'navigation' as const,
         enabled: subnets.length > 0,
       },
       // Navigation - Up/Down (row mode only)
@@ -1342,7 +1366,7 @@ This cannot be undone.`,
         handler: (): void => {
           if (plan && !headerMode) moveUp();
         },
-        category: 'navigation',
+        category: 'navigation' as const,
         enabled: !headerMode,
       },
       {
@@ -1358,7 +1382,7 @@ This cannot be undone.`,
             }
           }
         },
-        category: 'navigation',
+        category: 'navigation' as const,
         enabled: !headerMode,
       },
       {
@@ -1367,7 +1391,7 @@ This cannot be undone.`,
         handler: (): void => {
           if (plan && !headerMode) moveDown();
         },
-        category: 'navigation',
+        category: 'navigation' as const,
         enabled: !headerMode,
       },
       {
@@ -1384,7 +1408,7 @@ This cannot be undone.`,
             }
           }
         },
-        category: 'navigation',
+        category: 'navigation' as const,
         enabled: true, // Now enabled in both modes
       },
       // Navigation - Left/Right (header mode only)
@@ -1394,7 +1418,7 @@ This cannot be undone.`,
         handler: (): void => {
           if (plan && headerMode) moveHeaderLeft();
         },
-        category: 'navigation',
+        category: 'navigation' as const,
         enabled: headerMode,
       },
       {
@@ -1403,7 +1427,7 @@ This cannot be undone.`,
         handler: (): void => {
           if (plan && headerMode) moveHeaderLeft();
         },
-        category: 'navigation',
+        category: 'navigation' as const,
         enabled: headerMode,
       },
       {
@@ -1412,7 +1436,7 @@ This cannot be undone.`,
         handler: (): void => {
           if (plan && headerMode) moveHeaderRight();
         },
-        category: 'navigation',
+        category: 'navigation' as const,
         enabled: headerMode,
       },
       // Enter: Dual-purpose (row mode = details, header mode = sort)
@@ -1427,7 +1451,7 @@ This cannot be undone.`,
             handleShowSubnetDetails();
           }
         },
-        category: 'actions',
+        category: 'actions' as const,
         enabled: subnets.length > 0,
       },
       {
@@ -1436,7 +1460,7 @@ This cannot be undone.`,
         handler: (): void => {
           if (plan && headerMode) activateSort();
         },
-        category: 'actions',
+        category: 'actions' as const,
         enabled: headerMode,
       },
       // Escape from header mode
@@ -1449,7 +1473,7 @@ This cannot be undone.`,
             notify.info('Exited header mode');
           }
         },
-        category: 'navigation',
+        category: 'navigation' as const,
         enabled: headerMode,
       },
       // Actions (row mode only)
@@ -1457,7 +1481,7 @@ This cannot be undone.`,
         key: 'a',
         description: 'Add new subnet',
         handler: handleAddSubnet,
-        category: 'actions',
+        category: 'actions' as const,
       },
       {
         key: 'e',
@@ -1465,7 +1489,7 @@ This cannot be undone.`,
         handler: (): void => {
           if (plan && subnets.length > 0) handleEditSubnet();
         },
-        category: 'actions',
+        category: 'actions' as const,
         enabled: subnets.length > 0,
       },
       {
@@ -1474,14 +1498,14 @@ This cannot be undone.`,
         handler: (): void => {
           if (plan && subnets.length > 0) handleDeleteSubnet();
         },
-        category: 'actions',
+        category: 'actions' as const,
         enabled: subnets.length > 0,
       },
       {
         key: 'c',
         description: 'Calculate network plan',
         handler: handleCalculatePlan,
-        category: 'actions',
+        category: 'actions' as const,
         enabled: subnets.length > 0,
       },
       {
@@ -1490,7 +1514,7 @@ This cannot be undone.`,
         handler: (): void => {
           if (plan && subnets.length > 0) setDialog({ type: 'mod-menu' });
         },
-        category: 'actions',
+        category: 'actions' as const,
         enabled: subnets.length > 0,
       },
       {
@@ -1499,21 +1523,21 @@ This cannot be undone.`,
         handler: (): void => {
           void handleSavePlan();
         },
-        category: 'actions',
+        category: 'actions' as const,
         enabled: !!plan?.supernet,
       },
       {
         key: 'x',
         description: 'Export plan',
         handler: handleExport,
-        category: 'actions',
+        category: 'actions' as const,
         enabled: !!plan?.supernet,
       },
       {
         key: 'i',
         description: 'Import from file',
         handler: handleImportPlan,
-        category: 'actions',
+        category: 'actions' as const,
       },
       {
         key: 'v',
@@ -1521,7 +1545,7 @@ This cannot be undone.`,
         handler: (): void => {
           if (plan) setDialog({ type: 'available-space' });
         },
-        category: 'actions',
+        category: 'actions' as const,
         enabled: !!plan,
       },
       // 'l' key: Dual-purpose (row mode = load, header mode = vim right)
@@ -1535,19 +1559,19 @@ This cannot be undone.`,
             void handleLoadPlan();
           }
         },
-        category: 'actions',
+        category: 'actions' as const,
       },
       {
         key: 'n',
         description: 'Create new plan',
         handler: handleNewPlan,
-        category: 'actions',
+        category: 'actions' as const,
       },
       {
         key: 'p',
         description: 'Open preferences',
         handler: handleOpenPreferences,
-        category: 'actions',
+        category: 'actions' as const,
       },
       // 'q' key: Quit or exit header mode
       // Note: Dialog closing is handled by each dialog component's own useInput handler
@@ -1565,9 +1589,28 @@ This cannot be undone.`,
           // Otherwise quit the app
           exit();
         },
-        category: 'system',
+        category: 'system' as const,
       },
     ],
+    // Dependencies: handlers and state that affects shortcut behavior
+    [
+      plan,
+      subnets.length,
+      headerMode,
+      selectedIndex,
+      toggleHeaderMode,
+      moveUp,
+      moveDown,
+      moveHeaderLeft,
+      moveHeaderRight,
+      activateSort,
+      notify,
+      exit,
+    ],
+  );
+
+  useKeyboardShortcuts({
+    shortcuts: keyboardShortcuts,
     enabled: dialog.type === 'none',
   });
 
@@ -1592,6 +1635,8 @@ This cannot be undone.`,
           selectedHeaderIndex={selectedHeaderIndex}
           visibleColumns={preferences.columnPreferences.visibleColumns}
           columnOrder={preferences.columnPreferences.columnOrder}
+          viewportStart={viewportStart}
+          viewportSize={viewportSize}
         />
       )}
 

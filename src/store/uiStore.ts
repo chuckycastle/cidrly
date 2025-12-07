@@ -46,11 +46,17 @@ interface UIState {
   sortDirection: SortDirection;
   notificationTimers: Map<string, NodeJS.Timeout>; // Timer tracking for cleanup
 
+  // Viewport state for row virtualization
+  viewportStart: number; // First visible row index
+  viewportSize: number; // Number of visible rows (based on terminal height)
+
   // Actions
   setView: (view: ViewType) => void;
   setSelectedIndex: (index: number) => void;
-  moveSelectionUp: (maxIndex: number) => void;
-  moveSelectionDown: (maxIndex: number) => void;
+  moveSelectionUp: (totalItems: number) => void;
+  moveSelectionDown: (totalItems: number) => void;
+  setViewportSize: (size: number) => void;
+  adjustViewport: (selectedIndex: number, totalItems: number) => void;
   showNotification: (
     message: string,
     type?: 'info' | 'success' | 'error' | 'warning',
@@ -78,12 +84,15 @@ const useUIStoreBase = create<UIState>()(
       sortColumn: null,
       sortDirection: 'asc',
       notificationTimers: new Map(),
+      viewportStart: 0,
+      viewportSize: 12, // Default minimum rows
 
       // Actions
       setView: (view: ViewType): void => {
         set((state) => {
           state.currentView = view;
           state.selectedIndex = 0;
+          state.viewportStart = 0;
         });
       },
 
@@ -93,15 +102,70 @@ const useUIStoreBase = create<UIState>()(
         });
       },
 
-      moveSelectionUp: (_maxIndex: number): void => {
+      moveSelectionUp: (totalItems: number): void => {
         set((state) => {
-          state.selectedIndex = Math.max(0, state.selectedIndex - 1);
+          if (totalItems === 0) return;
+
+          // Wrap-around: if at first item, go to last
+          if (state.selectedIndex === 0) {
+            state.selectedIndex = totalItems - 1;
+            // Adjust viewport to show last item
+            state.viewportStart = Math.max(0, totalItems - state.viewportSize);
+          } else {
+            state.selectedIndex = state.selectedIndex - 1;
+            // Scroll viewport up if selection goes above visible area
+            if (state.selectedIndex < state.viewportStart) {
+              state.viewportStart = state.selectedIndex;
+            }
+          }
         });
       },
 
-      moveSelectionDown: (maxIndex: number): void => {
+      moveSelectionDown: (totalItems: number): void => {
         set((state) => {
-          state.selectedIndex = Math.min(maxIndex, state.selectedIndex + 1);
+          if (totalItems === 0) return;
+
+          // Wrap-around: if at last item, go to first
+          if (state.selectedIndex >= totalItems - 1) {
+            state.selectedIndex = 0;
+            state.viewportStart = 0;
+          } else {
+            state.selectedIndex = state.selectedIndex + 1;
+            // Scroll viewport down if selection goes below visible area
+            if (state.selectedIndex >= state.viewportStart + state.viewportSize) {
+              state.viewportStart = state.selectedIndex - state.viewportSize + 1;
+            }
+          }
+        });
+      },
+
+      setViewportSize: (size: number): void => {
+        set((state) => {
+          state.viewportSize = Math.max(1, size);
+          // Ensure viewport start is still valid
+          const maxStart = Math.max(0, state.selectedIndex - state.viewportSize + 1);
+          if (state.viewportStart > maxStart + state.viewportSize - 1) {
+            state.viewportStart = Math.max(0, state.selectedIndex);
+          }
+        });
+      },
+
+      adjustViewport: (selectedIndex: number, totalItems: number): void => {
+        set((state) => {
+          // Ensure selection is within bounds
+          state.selectedIndex = Math.min(Math.max(0, selectedIndex), Math.max(0, totalItems - 1));
+
+          // Adjust viewport to keep selection visible
+          if (state.selectedIndex < state.viewportStart) {
+            state.viewportStart = state.selectedIndex;
+          } else if (state.selectedIndex >= state.viewportStart + state.viewportSize) {
+            state.viewportStart = state.selectedIndex - state.viewportSize + 1;
+          }
+
+          // Ensure viewport start is valid
+          const maxViewportStart = Math.max(0, totalItems - state.viewportSize);
+          state.viewportStart = Math.min(state.viewportStart, maxViewportStart);
+          state.viewportStart = Math.max(0, state.viewportStart);
         });
       },
 

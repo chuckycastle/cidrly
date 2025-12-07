@@ -69,6 +69,7 @@ const usePlanStoreBase = create<PlanState>()(
       set((state) => {
         if (state.plan) {
           state.plan.name = name;
+          state.plan.updatedAt = new Date();
         }
       });
     },

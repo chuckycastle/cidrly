@@ -255,7 +255,7 @@ describe('useUI hooks', () => {
       expect(result.current.selectedIndex).toBe(4);
     });
 
-    it('should clamp to 0 when moving up from 0', () => {
+    it('should wrap to last item when moving up from 0', () => {
       const { result } = renderHook(() => useSelection(10));
 
       expect(result.current.selectedIndex).toBe(0);
@@ -264,10 +264,11 @@ describe('useUI hooks', () => {
         result.current.moveUp();
       });
 
-      expect(result.current.selectedIndex).toBe(0);
+      // Wrap-around: 0 → 10 (last item)
+      expect(result.current.selectedIndex).toBe(10);
     });
 
-    it('should clamp to max when moving down from max', () => {
+    it('should wrap to first item when moving down from max', () => {
       const { result } = renderHook(() => useSelection(10));
 
       act(() => {
@@ -280,7 +281,8 @@ describe('useUI hooks', () => {
         result.current.moveDown();
       });
 
-      expect(result.current.selectedIndex).toBe(10);
+      // Wrap-around: 10 → 0 (first item)
+      expect(result.current.selectedIndex).toBe(0);
     });
   });
 });

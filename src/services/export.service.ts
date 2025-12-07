@@ -146,7 +146,7 @@ export class ExportService {
     filepath: string,
     preferences?: Preferences,
   ): Promise<void> {
-    const yamlContent = exportToYaml(plan, preferences);
+    const yamlContent = await exportToYaml(plan, preferences);
     await fs.writeFile(filepath, yamlContent, 'utf-8');
   }
 

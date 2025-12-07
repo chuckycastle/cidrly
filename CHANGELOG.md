@@ -9,6 +9,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 For planned features and enhancements, see [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) and [Milestones](https://github.com/chuckycastle/cidrly/milestones).
 
+## [0.5.0] - 2025-12-07
+
+### Performance Improvements
+
+- **Bit Shifting Optimization** ([#126](https://github.com/chuckycastle/cidrly/issues/126))
+  - Replaced `Math.pow(2, x)` with `1 << x` in subnet calculations
+  - Affects subnet-calculator.ts, availability-calculator.ts, auto-fit.ts
+
+- **useAutoSave Change Detection** ([#127](https://github.com/chuckycastle/cidrly/issues/127))
+  - Replaced JSON.stringify comparison with timestamp-based change detection
+  - Uses `plan.updatedAt` field for efficient dirty checking
+
+- **Handler Memoization** ([#128](https://github.com/chuckycastle/cidrly/issues/128))
+  - Memoized DashboardView handlers with useCallback
+  - Memoized keyboard shortcuts array with useMemo
+
+- **Lazy-Loading Heavy Modules** ([#125](https://github.com/chuckycastle/cidrly/issues/125))
+  - PDF formatter: Dynamic import of pdfkit
+  - YAML formatter: Dynamic import of yaml
+  - Reduces cold-start time by deferring heavy module loading
+
+- **Row Virtualization** ([#129](https://github.com/chuckycastle/cidrly/issues/129))
+  - SubnetTable renders only visible rows based on terminal height
+  - Added viewport state management to uiStore
+  - Wrap-around navigation: up at row 0 → last row, down at last row → row 0
+  - Shows "Showing X-Y of Z" indicator when virtualized
+
+### Added
+
+- **Performance Profiling Infrastructure** ([#130](https://github.com/chuckycastle/cidrly/issues/130))
+  - `npm run profile:startup` - CPU profile for startup
+  - `npm run profile:view` - CPU profile for plan viewing
+  - `npm run bench:cold-start` - Cold-start timing (10 iterations)
+  - `npm run bench:large-plan` - Large plan calculation timing (100/250/500 subnets)
+  - `npm run bench:all` - Run all benchmarks and save results
+  - Added docs/PERFORMANCE.md profiling guide
+
+- **esbuild Bundler Configuration** ([#124](https://github.com/chuckycastle/cidrly/issues/124))
+  - Added esbuild.config.mjs for optional bundling
+  - `npm run build:bundle` creates minified single-file bundle
+  - Note: Pastel framework requires tsc build for command discovery
+
+### Changed
+
+- **SubnetTable Props**
+  - Added `viewportStart` and `viewportSize` props for virtualization
+
+- **uiStore State**
+  - Added `viewportStart`, `viewportSize`, `setViewportSize`
+  - Selection navigation methods now support wrap-around behavior
+
 ## [0.4.5] - 2025-12-05
 
 ### Fixed
@@ -933,7 +984,8 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 - **PATCH** version for backwards-compatible bug fixes
 - **Pre-release** suffixes: `-alpha`, `-beta`, `-rc` for pre-release versions
 
-[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.4.5...HEAD
+[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/chuckycastle/cidrly/compare/v0.4.5...v0.5.0
 [0.4.5]: https://github.com/chuckycastle/cidrly/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/chuckycastle/cidrly/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/chuckycastle/cidrly/compare/v0.4.2...v0.4.3

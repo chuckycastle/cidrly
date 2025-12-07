@@ -3,6 +3,15 @@
  * Bin-packing optimization for subnet allocation into available IP blocks
  */
 
+/**
+ * Calculate 2^n using bit shifting for performance
+ * Uses `>>> 0` to convert to unsigned 32-bit integer
+ * Falls back to Math.pow for n >= 32 (edge case for /0 supernets)
+ */
+function pow2(n: number): number {
+  return n < 32 ? (1 << n) >>> 0 : Math.pow(2, n);
+}
+
 import type { AvailableBlock } from '../../utils/block-parser.js';
 import type { AssignedBlock, Subnet } from '../models/network-plan.js';
 import { generateBlockId } from '../models/network-plan.js';
@@ -49,7 +58,7 @@ function findNextAlignedAddress(
   currentInt: number,
   cidrPrefix: number,
 ): number | null {
-  const subnetSize = Math.pow(2, 32 - cidrPrefix);
+  const subnetSize = pow2(32 - cidrPrefix);
   const mask = ~(subnetSize - 1);
 
   // Start from current position or block start
@@ -77,7 +86,7 @@ function tryAllocateInBlock(
   block: AvailableBlock,
   currentPosition: number,
 ): number | null {
-  const subnetSize = Math.pow(2, 32 - subnetInfo.cidrPrefix);
+  const subnetSize = pow2(32 - subnetInfo.cidrPrefix);
 
   // Find next aligned address in block
   const alignedAddress = findNextAlignedAddress(
