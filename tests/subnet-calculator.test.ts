@@ -14,6 +14,8 @@ import {
   calculateUsableHosts,
   calculateWildcard,
   generateNetworkAddress,
+  intToIp,
+  ipToInt,
 } from '../src/core/calculators/subnet-calculator.js';
 
 describe('Subnet Calculator', () => {
@@ -354,6 +356,155 @@ describe('Subnet Calculator', () => {
       expect(allocated[0].networkAddress).toBe('10.0.0.0/27');
       expect(allocated[1].networkAddress).toBe('10.0.0.64/26');
       expect(allocated[2].networkAddress).toBe('10.0.0.128/25');
+    });
+
+    describe('gap-aware allocation with occupied ranges', () => {
+      it('should allocate normally when no occupied ranges provided', () => {
+        const subnets = [
+          calculateSubnet(25, 0), // 25×1=25 → /27 - 32 addresses
+          calculateSubnet(25, 0), // 25×1=25 → /27 - 32 addresses
+        ];
+
+        const allocated = allocateSubnetAddresses('10.0.0.0', subnets, []);
+
+        expect(allocated[0].networkAddress).toBe('10.0.0.0/27');
+        expect(allocated[1].networkAddress).toBe('10.0.0.32/27');
+      });
+
+      it('should skip over a single occupied range', () => {
+        const subnets = [calculateSubnet(25, 0)]; // /27 - 32 addresses
+
+        // First /27 (10.0.0.0-10.0.0.31) is occupied
+        const occupied = [{ start: ipToInt('10.0.0.0'), end: ipToInt('10.0.0.31') }];
+
+        const allocated = allocateSubnetAddresses('10.0.0.0', subnets, occupied);
+
+        // Should skip to next /27 boundary
+        expect(allocated[0].networkAddress).toBe('10.0.0.32/27');
+      });
+
+      it('should skip over multiple occupied ranges', () => {
+        const subnets = [calculateSubnet(25, 0)]; // /27 - 32 addresses
+
+        // First two /27s are occupied
+        const occupied = [
+          { start: ipToInt('10.0.0.0'), end: ipToInt('10.0.0.31') },
+          { start: ipToInt('10.0.0.32'), end: ipToInt('10.0.0.63') },
+        ];
+
+        const allocated = allocateSubnetAddresses('10.0.0.0', subnets, occupied);
+
+        // Should skip to third /27 boundary
+        expect(allocated[0].networkAddress).toBe('10.0.0.64/27');
+      });
+
+      it('should fit smaller subnet into gap between occupied ranges', () => {
+        // Gap: 10.0.0.128 - 10.0.0.255 (128 addresses)
+        // Large occupied ranges before and after
+        const occupied = [
+          { start: ipToInt('10.0.0.0'), end: ipToInt('10.0.0.127') }, // First /25
+          { start: ipToInt('10.0.1.0'), end: ipToInt('10.0.1.255') }, // Third /24
+        ];
+
+        // Allocate a /26 (64 addresses) - should fit in the gap at 10.0.0.128
+        const subnets = [calculateSubnet(25, 50)]; // 25×1.5=38 → /26 - 64 addresses
+
+        const allocated = allocateSubnetAddresses('10.0.0.0', subnets, occupied);
+
+        expect(allocated[0].networkAddress).toBe('10.0.0.128/26');
+      });
+
+      it('should allocate multiple subnets avoiding occupied ranges', () => {
+        // Occupied: 10.0.0.0/25 (0-127) and 10.0.1.0/25 (256-383)
+        const occupied = [
+          { start: ipToInt('10.0.0.0'), end: ipToInt('10.0.0.127') },
+          { start: ipToInt('10.0.1.0'), end: ipToInt('10.0.1.127') },
+        ];
+
+        const subnets = [
+          calculateSubnet(25, 0), // /27 - 32 addresses
+          calculateSubnet(25, 0), // /27 - 32 addresses
+          calculateSubnet(25, 0), // /27 - 32 addresses
+        ];
+
+        const allocated = allocateSubnetAddresses('10.0.0.0', subnets, occupied);
+
+        // First subnet: 10.0.0.128/27 (fits in gap after first occupied)
+        expect(allocated[0].networkAddress).toBe('10.0.0.128/27');
+        // Second subnet: 10.0.0.160/27 (continues in same gap)
+        expect(allocated[1].networkAddress).toBe('10.0.0.160/27');
+        // Third subnet: 10.0.0.192/27 (continues in same gap)
+        expect(allocated[2].networkAddress).toBe('10.0.0.192/27');
+      });
+
+      it('should handle partial overlap with occupied range', () => {
+        // Occupied range starts mid-boundary
+        const occupied = [{ start: ipToInt('10.0.0.16'), end: ipToInt('10.0.0.47') }];
+
+        const subnets = [calculateSubnet(25, 0)]; // /27 - 32 addresses (needs 32-aligned start)
+
+        const allocated = allocateSubnetAddresses('10.0.0.0', subnets, occupied);
+
+        // 10.0.0.0/27 (0-31) would overlap with occupied (16-47)
+        // Should skip to 10.0.0.64/27 (64-95, first non-overlapping aligned boundary)
+        expect(allocated[0].networkAddress).toBe('10.0.0.64/27');
+      });
+
+      it('should handle large subnet needing to skip many occupied ranges', () => {
+        // Many small occupied ranges
+        const occupied = [
+          { start: ipToInt('10.0.0.0'), end: ipToInt('10.0.0.63') },
+          { start: ipToInt('10.0.0.64'), end: ipToInt('10.0.0.127') },
+          { start: ipToInt('10.0.0.128'), end: ipToInt('10.0.0.191') },
+        ];
+
+        // Large subnet that needs /25 boundary alignment (128 addresses)
+        const subnets = [calculateSubnet(50, 50)]; // 50×1.5=75 → /25 - 128 addresses
+
+        const allocated = allocateSubnetAddresses('10.0.0.0', subnets, occupied);
+
+        // First aligned /25 is 10.0.0.0, but occupied
+        // Next aligned /25 is 10.0.0.128, but overlaps with occupied (128-191)
+        // Next aligned /25 is 10.0.1.0 (256-383), should be free
+        expect(allocated[0].networkAddress).toBe('10.0.1.0/25');
+      });
+    });
+  });
+
+  describe('ipToInt and intToIp', () => {
+    it('should convert IP to integer correctly', () => {
+      expect(ipToInt('0.0.0.0')).toBe(0);
+      expect(ipToInt('0.0.0.1')).toBe(1);
+      expect(ipToInt('0.0.1.0')).toBe(256);
+      expect(ipToInt('0.1.0.0')).toBe(65536);
+      expect(ipToInt('1.0.0.0')).toBe(16777216);
+      expect(ipToInt('10.0.0.0')).toBe(167772160);
+      expect(ipToInt('192.168.1.1')).toBe(3232235777);
+      expect(ipToInt('255.255.255.255')).toBe(4294967295);
+    });
+
+    it('should convert integer to IP correctly', () => {
+      expect(intToIp(0)).toBe('0.0.0.0');
+      expect(intToIp(1)).toBe('0.0.0.1');
+      expect(intToIp(256)).toBe('0.0.1.0');
+      expect(intToIp(65536)).toBe('0.1.0.0');
+      expect(intToIp(16777216)).toBe('1.0.0.0');
+      expect(intToIp(167772160)).toBe('10.0.0.0');
+      expect(intToIp(3232235777)).toBe('192.168.1.1');
+      expect(intToIp(4294967295)).toBe('255.255.255.255');
+    });
+
+    it('should round-trip IP conversions', () => {
+      const ips = ['10.0.0.0', '192.168.0.1', '172.16.0.0', '255.255.255.0'];
+      for (const ip of ips) {
+        expect(intToIp(ipToInt(ip))).toBe(ip);
+      }
+    });
+
+    it('should throw error for invalid IP addresses', () => {
+      expect(() => ipToInt('invalid')).toThrow('Invalid IP address');
+      expect(() => ipToInt('10.0.0')).toThrow('Invalid IP address');
+      expect(() => ipToInt('10.0.0.0.0')).toThrow('Invalid IP address');
     });
   });
 });

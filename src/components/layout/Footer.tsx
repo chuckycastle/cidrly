@@ -74,8 +74,10 @@ export const Footer: React.FC<FooterProps> = React.memo(({ hasSubnets, hasCalcul
       commands: [
         { key: 's', label: 'ave', enabled: hasCalculation },
         { key: 'l', label: 'oad', enabled: true },
+        { format: '(key)i(label)mport', enabled: true },
         { key: 'n', label: 'ew', enabled: true },
         { format: '(label)e(key)x(label)port', enabled: hasCalculation },
+        { key: 'v', label: 'iew', enabled: hasCalculation },
         { key: 'p', label: 'refs', enabled: true },
       ],
     },
@@ -144,7 +146,9 @@ export const Footer: React.FC<FooterProps> = React.memo(({ hasSubnets, hasCalcul
       { key: 'c', label: 'alc', enabled: hasSubnets },
       { key: 's', label: 'ave', enabled: hasCalculation },
       { key: 'l', label: 'oad', enabled: true },
+      { format: '(key)i(label)mport', enabled: true },
       { format: '(label)e(key)x(label)port', enabled: hasCalculation },
+      { key: 'v', label: 'iew', enabled: hasCalculation },
       { key: 'p', label: 'refs', enabled: true },
       { key: 'q', label: 'uit', enabled: true },
     ];

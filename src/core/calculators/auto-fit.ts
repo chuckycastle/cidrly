@@ -4,7 +4,8 @@
  */
 
 import type { AvailableBlock } from '../../utils/block-parser.js';
-import type { Subnet } from '../models/network-plan.js';
+import type { AssignedBlock, Subnet } from '../models/network-plan.js';
+import { generateBlockId } from '../models/network-plan.js';
 import type { SubnetInfo } from './subnet-calculator.js';
 
 export interface SubnetAllocation {
@@ -132,19 +133,19 @@ export function autoFitSubnets(subnets: Subnet[], blocks: AvailableBlock[]): Aut
     remainingCapacity: block.totalCapacity,
   }));
 
-  // Sort subnets by VLAN ID ascending, then by size descending (largest first within same VLAN)
-  // This ensures logical allocation order while maintaining VLSM optimization
+  // Sort subnets by size descending (largest first) for optimal VLSM bin-packing
+  // VLAN ID ascending as tie-breaker for deterministic allocation order
   const sortedSubnets = subnets
     .map((subnet, index) => ({ subnet, index }))
     .sort((a, b) => {
-      // Primary sort: VLAN ID ascending (1006 before 1007)
-      const vlanCompare = a.subnet.vlanId - b.subnet.vlanId;
-      if (vlanCompare !== 0) return vlanCompare;
-
-      // Secondary sort: size descending (larger subnets first within same VLAN)
+      // Primary sort: size descending (larger subnets first)
       const aSize = a.subnet.subnetInfo?.subnetSize ?? 0;
       const bSize = b.subnet.subnetInfo?.subnetSize ?? 0;
-      return bSize - aSize;
+      const sizeCompare = bSize - aSize;
+      if (sizeCompare !== 0) return sizeCompare;
+
+      // Secondary sort: VLAN ID ascending (tie-breaker for consistent results)
+      return a.subnet.vlanId - b.subnet.vlanId;
     });
 
   // Try to allocate each subnet
@@ -237,4 +238,45 @@ export function autoFitSubnets(subnets: Subnet[], blocks: AvailableBlock[]): Aut
   }
 
   return result;
+}
+
+/**
+ * Convert AvailableBlock array to AssignedBlock array for IPAM-lite tracking
+ * Each block gets a unique ID that can be referenced by subnets
+ *
+ * @param blocks - Array of AvailableBlock from block parser
+ * @returns Array of AssignedBlock for storage in NetworkPlan
+ */
+export function convertToAssignedBlocks(blocks: AvailableBlock[]): AssignedBlock[] {
+  return blocks.map((block) => ({
+    id: generateBlockId(),
+    networkAddress: block.networkAddress,
+    cidrPrefix: block.cidrPrefix,
+    totalCapacity: block.totalCapacity,
+    startInt: block.startInt,
+    endInt: block.endInt,
+    assignedAt: new Date(),
+  }));
+}
+
+/**
+ * Create a mapping from block index to AssignedBlock ID
+ * Used when applying auto-fit results to set sourceBlockId on subnets
+ *
+ * @param availableBlocks - Original AvailableBlock array used in auto-fit
+ * @param assignedBlocks - Converted AssignedBlock array
+ * @returns Map from blockIndex to assignedBlock.id
+ */
+export function createBlockIndexMap(
+  availableBlocks: AvailableBlock[],
+  assignedBlocks: AssignedBlock[],
+): Map<number, string> {
+  const map = new Map<number, string>();
+
+  // Match by networkAddress since blocks are in same order
+  for (let i = 0; i < availableBlocks.length && i < assignedBlocks.length; i++) {
+    map.set(i, assignedBlocks[i]!.id);
+  }
+
+  return map;
 }

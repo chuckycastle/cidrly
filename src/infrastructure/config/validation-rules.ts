@@ -8,12 +8,30 @@ import path from 'path';
 
 /**
  * VLAN ID validation rules
- * Based on IEEE 802.1Q standard
+ * Based on IEEE 802.1Q standard and vendor-specific reservations
  */
 export const VLAN_RULES = {
   MIN: 1,
   MAX: 4094,
-  RESERVED_START: 4095, // VLANs 4095 and higher are reserved
+  // Universally reserved (IEEE 802.1Q + Cisco Token Ring/FDDI)
+  RESERVED: [0, 1002, 1003, 1004, 1005, 4095] as number[],
+  // VLANs that work but require confirmation (default VLANs)
+  CONFIRMATION_REQUIRED: [1] as number[],
+  // Vendor-specific warnings (shown on export)
+  VENDOR_WARNINGS: {
+    'juniper-junos': {
+      range: [3968, 4094] as [number, number],
+      message: 'May conflict with internal VLANs on SRX Ethernet switching',
+    },
+    'arista-eos': {
+      range: [1006, 4094] as [number, number],
+      message: 'May conflict with dynamic internal VLAN allocation',
+    },
+    fortinet: {
+      vlans: [4094] as number[],
+      message: '4094 is FortiLink default management VLAN',
+    },
+  },
 } as const;
 
 /**
@@ -165,7 +183,7 @@ export const FILE_RULES = {
   /**
    * Supported file extensions
    */
-  ALLOWED_EXTENSIONS: ['.json', '.yaml', '.yml', '.csv', '.pdf'] as const,
+  ALLOWED_EXTENSIONS: ['.json', '.yaml', '.yml', '.csv', '.pdf', '.cfg', '.conf'] as const,
 
   /**
    * Export format extensions
@@ -175,6 +193,14 @@ export const FILE_RULES = {
     YAML: '.yaml',
     CSV: '.csv',
     PDF: '.pdf',
+    // Vendor configuration formats
+    CISCO_IOS: '.ios.cfg',
+    CISCO_NXOS: '.nxos.cfg',
+    ARISTA_EOS: '.eos.cfg',
+    JUNIPER_JUNOS: '.junos.conf',
+    FORTINET: '.forti.cfg',
+    NETGEAR: '.netgear.cfg',
+    UBIQUITI: '.ubnt.cfg',
   } as const,
 
   /**
@@ -335,4 +361,47 @@ export function isMulticastIp(ip: string): boolean {
  */
 export function isBroadcastIp(ip: string): boolean {
   return ip === IP_ADDRESS_RULES.BROADCAST;
+}
+
+/**
+ * Check if a VLAN ID is reserved (universally blocked)
+ * @param vlanId - VLAN ID to check
+ * @returns True if VLAN is reserved and should not be used
+ */
+export function isReservedVlan(vlanId: number): boolean {
+  return VLAN_RULES.RESERVED.includes(vlanId);
+}
+
+/**
+ * Check if a VLAN ID requires user confirmation
+ * @param vlanId - VLAN ID to check
+ * @returns True if VLAN requires confirmation before use
+ */
+export function isConfirmationRequiredVlan(vlanId: number): boolean {
+  return VLAN_RULES.CONFIRMATION_REQUIRED.includes(vlanId);
+}
+
+/**
+ * Get vendor-specific warning for a VLAN ID
+ * @param vlanId - VLAN ID to check
+ * @param format - Export format (vendor identifier)
+ * @returns Warning message if VLAN may conflict with vendor-specific reservations
+ */
+export function getVendorVlanWarning(vlanId: number, format: string): string | undefined {
+  // Explicitly handle unknown format keys
+  if (!(format in VLAN_RULES.VENDOR_WARNINGS)) {
+    return undefined;
+  }
+
+  const vendorKey = format as keyof typeof VLAN_RULES.VENDOR_WARNINGS;
+  const warning = VLAN_RULES.VENDOR_WARNINGS[vendorKey];
+
+  if ('range' in warning) {
+    const [min, max] = warning.range;
+    if (vlanId >= min && vlanId <= max) return warning.message;
+  } else if ('vlans' in warning) {
+    if (warning.vlans.includes(vlanId)) return warning.message;
+  }
+
+  return undefined;
 }

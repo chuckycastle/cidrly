@@ -10,6 +10,8 @@ import { colors, symbols } from '../../themes/colors.js';
 export interface ModifyDialogProps {
   onSelectManualEdit: () => void;
   onSelectAutoFit: () => void;
+  onSelectManageBlocks: () => void;
+  hasAssignedBlocks: boolean;
   onCancel: () => void;
 }
 
@@ -24,11 +26,18 @@ const OPTIONS = [
     label: 'Auto-Fit',
     description: 'Automatically allocate subnets into available IP blocks',
   },
+  {
+    value: 'manage-blocks',
+    label: 'Manage Blocks',
+    description: 'Add, remove, or view assigned IP blocks',
+  },
 ];
 
 export const ModifyDialog: React.FC<ModifyDialogProps> = ({
   onSelectManualEdit,
   onSelectAutoFit,
+  onSelectManageBlocks,
+  hasAssignedBlocks,
   onCancel,
 }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -46,6 +55,8 @@ export const ModifyDialog: React.FC<ModifyDialogProps> = ({
         onSelectManualEdit();
       } else if (selected?.value === 'autofit') {
         onSelectAutoFit();
+      } else if (selected?.value === 'manage-blocks') {
+        onSelectManageBlocks();
       }
     }
   });
@@ -66,6 +77,7 @@ export const ModifyDialog: React.FC<ModifyDialogProps> = ({
       <Box flexDirection="column" marginBottom={1}>
         {OPTIONS.map((option, index) => {
           const isSelected = index === selectedIndex;
+          const showBlockIndicator = option.value === 'manage-blocks' && hasAssignedBlocks;
 
           return (
             <Box
@@ -81,6 +93,12 @@ export const ModifyDialog: React.FC<ModifyDialogProps> = ({
                 <Text bold={isSelected}>
                   {isSelected ? colors.accent(option.label) : colors.slate(option.label)}
                 </Text>
+                {showBlockIndicator && (
+                  <>
+                    <Text> </Text>
+                    <Text>{colors.success('●')}</Text>
+                  </>
+                )}
               </Box>
               <Box marginLeft={4}>
                 <Text dimColor>{option.description}</Text>

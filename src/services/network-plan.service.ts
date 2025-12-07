@@ -3,6 +3,10 @@
  * Centralized business logic for network plan operations
  */
 
+import {
+  calculateAvailableSpace,
+  findSourceBlock,
+} from '../core/calculators/availability-calculator.js';
 import { detectOverlaps, type OverlapResult } from '../core/calculators/overlap-detector.js';
 import {
   calculateBroadcast,
@@ -11,8 +15,8 @@ import {
   calculateSubnetSize,
   calculateUsableHosts,
 } from '../core/calculators/subnet-calculator.js';
-import type { NetworkPlan, Subnet } from '../core/models/network-plan.js';
-import { calculateSubnetRanges } from '../core/models/network-plan.js';
+import type { AssignedBlock, NetworkPlan, Subnet } from '../core/models/network-plan.js';
+import { calculateSubnetRanges, generateBlockId } from '../core/models/network-plan.js';
 import { ErrorCode, ValidationError } from '../errors/network-plan-errors.js';
 
 /**
@@ -21,12 +25,13 @@ import { ErrorCode, ValidationError } from '../errors/network-plan-errors.js';
 export class NetworkPlanService {
   /**
    * Calculate or recalculate the network plan
-   * Updates subnet information, supernet, and network addresses
+   * Returns a new plan with updated subnet information, supernet, and network addresses
    * Uses the plan's growthPercentage setting
    *
    * @param plan - Network plan to calculate
+   * @returns New NetworkPlan with calculated values
    */
-  calculatePlan(plan: NetworkPlan): void {
+  calculatePlan(plan: NetworkPlan): NetworkPlan {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
     if (!plan) {
       throw new ValidationError(
@@ -43,12 +48,12 @@ export class NetworkPlanService {
     }
 
     // Use VLSM optimization for subnet allocation with plan's growth percentage
-    const updatedPlan = calculateSubnetRanges(plan);
+    const calculated = calculateSubnetRanges(plan);
 
-    // Copy results back to the plan (mutate in place)
-    plan.subnets = updatedPlan.subnets;
-    plan.supernet = updatedPlan.supernet;
-    plan.updatedAt = updatedPlan.updatedAt;
+    return {
+      ...calculated,
+      updatedAt: new Date(),
+    };
   }
 
   /**
@@ -56,8 +61,9 @@ export class NetworkPlanService {
    *
    * @param plan - Network plan to modify
    * @param subnet - Subnet to add
+   * @returns New NetworkPlan with subnet added and recalculated
    */
-  addSubnet(plan: NetworkPlan, subnet: Subnet): void {
+  addSubnet(plan: NetworkPlan, subnet: Subnet): NetworkPlan {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
     if (!plan) {
       throw new ValidationError(
@@ -74,21 +80,23 @@ export class NetworkPlanService {
       );
     }
 
-    plan.subnets.push(subnet);
-    plan.updatedAt = new Date();
+    const withSubnet: NetworkPlan = {
+      ...plan,
+      subnets: [...plan.subnets, subnet],
+    };
 
     // Automatically recalculate the plan
-    this.calculatePlan(plan);
+    return this.calculatePlan(withSubnet);
   }
 
   /**
    * Remove a subnet from the network plan and recalculate
-   * Returns the removed subnet
    *
    * @param plan - Network plan to modify
    * @param index - Index of subnet to remove
+   * @returns Object with new plan and removed subnet (null if not found)
    */
-  removeSubnet(plan: NetworkPlan, index: number): Subnet {
+  removeSubnet(plan: NetworkPlan, index: number): { plan: NetworkPlan; removed: Subnet | null } {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
     if (!plan) {
       throw new ValidationError(
@@ -104,24 +112,22 @@ export class NetworkPlanService {
       );
     }
 
-    const removedSubnet = plan.subnets[index];
-    if (!removedSubnet) {
-      throw new ValidationError(
-        `Failed to remove subnet at index ${index}`,
-        ErrorCode.NO_SUBNETS_DEFINED,
-      );
-    }
-    plan.subnets = plan.subnets.filter((_, i) => i !== index);
-    plan.updatedAt = new Date();
+    const removed = plan.subnets[index] ?? null;
+    const withoutSubnet: NetworkPlan = {
+      ...plan,
+      subnets: plan.subnets.filter((_, i) => i !== index),
+      updatedAt: new Date(),
+    };
 
     // Recalculate plan if subnets remain, otherwise clear supernet
-    if (plan.subnets.length > 0) {
-      this.calculatePlan(plan);
-    } else {
-      plan.supernet = undefined;
+    if (withoutSubnet.subnets.length > 0) {
+      return { plan: this.calculatePlan(withoutSubnet), removed };
     }
 
-    return removedSubnet;
+    return {
+      plan: { ...withoutSubnet, supernet: undefined },
+      removed,
+    };
   }
 
   /**
@@ -129,8 +135,9 @@ export class NetworkPlanService {
    *
    * @param plan - Network plan to modify
    * @param newBaseIp - New base IP address
+   * @returns New NetworkPlan with updated base IP
    */
-  updateBaseIp(plan: NetworkPlan, newBaseIp: string): void {
+  updateBaseIp(plan: NetworkPlan, newBaseIp: string): NetworkPlan {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
     if (!plan) {
       throw new ValidationError(
@@ -146,13 +153,18 @@ export class NetworkPlanService {
       );
     }
 
-    plan.baseIp = newBaseIp;
-    plan.updatedAt = new Date();
+    const withNewBaseIp: NetworkPlan = {
+      ...plan,
+      baseIp: newBaseIp,
+      updatedAt: new Date(),
+    };
 
     // Recalculate plan if there are subnets
-    if (plan.subnets.length > 0) {
-      this.calculatePlan(plan);
+    if (withNewBaseIp.subnets.length > 0) {
+      return this.calculatePlan(withNewBaseIp);
     }
+
+    return withNewBaseIp;
   }
 
   /**
@@ -164,6 +176,7 @@ export class NetworkPlanService {
    * @param vlanId - New VLAN ID
    * @param expectedDevices - New expected device count
    * @param description - Optional subnet description
+   * @returns New NetworkPlan with updated subnet
    */
   updateSubnet(
     plan: NetworkPlan,
@@ -172,7 +185,7 @@ export class NetworkPlanService {
     vlanId: number,
     expectedDevices: number,
     description?: string,
-  ): void {
+  ): NetworkPlan {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
     if (!plan) {
       throw new ValidationError(
@@ -192,13 +205,16 @@ export class NetworkPlanService {
     if (!subnet) {
       throw new ValidationError(`Subnet at index ${index} not found`, ErrorCode.NO_SUBNETS_DEFINED);
     }
-    plan.subnets = plan.subnets.map((s, i) =>
-      i === index ? { ...s, name, vlanId, expectedDevices, description } : s,
-    );
-    plan.updatedAt = new Date();
+
+    const withUpdatedSubnet: NetworkPlan = {
+      ...plan,
+      subnets: plan.subnets.map((s, i) =>
+        i === index ? { ...s, name, vlanId, expectedDevices, description } : s,
+      ),
+    };
 
     // Automatically recalculate the plan
-    this.calculatePlan(plan);
+    return this.calculatePlan(withUpdatedSubnet);
   }
 
   /**
@@ -206,8 +222,9 @@ export class NetworkPlanService {
    *
    * @param plan - Network plan to modify
    * @param growthPercentage - New growth percentage (0-300%)
+   * @returns New NetworkPlan with updated growth percentage
    */
-  setGrowthPercentage(plan: NetworkPlan, growthPercentage: number): void {
+  setGrowthPercentage(plan: NetworkPlan, growthPercentage: number): NetworkPlan {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
     if (!plan) {
       throw new ValidationError(
@@ -216,13 +233,18 @@ export class NetworkPlanService {
       );
     }
 
-    plan.growthPercentage = growthPercentage;
-    plan.updatedAt = new Date();
+    const withGrowth: NetworkPlan = {
+      ...plan,
+      growthPercentage,
+      updatedAt: new Date(),
+    };
 
     // Recalculate plan if there are subnets
-    if (plan.subnets.length > 0) {
-      this.calculatePlan(plan);
+    if (withGrowth.subnets.length > 0) {
+      return this.calculatePlan(withGrowth);
     }
+
+    return withGrowth;
   }
 
   /**
@@ -273,13 +295,14 @@ export class NetworkPlanService {
    * @param index - Index of subnet to update
    * @param networkAddress - Manual network address in CIDR format
    * @param lock - Whether to lock the subnet to prevent recalculation
+   * @returns New NetworkPlan with updated manual network address
    */
   setManualNetworkAddress(
     plan: NetworkPlan,
     index: number,
     networkAddress: string,
     lock: boolean,
-  ): void {
+  ): NetworkPlan {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
     if (!plan) {
       throw new ValidationError(
@@ -320,7 +343,7 @@ export class NetworkPlanService {
     const hostMax = calculateHostMax(networkAddress);
 
     // Update subnet with manual network address
-    plan.subnets = plan.subnets.map((s, i) => {
+    const updatedSubnets = plan.subnets.map((s, i) => {
       if (i !== index) return s;
 
       // Calculate or use existing subnet info fields
@@ -349,7 +372,12 @@ export class NetworkPlanService {
         },
       };
     });
-    plan.updatedAt = new Date();
+
+    return {
+      ...plan,
+      subnets: updatedSubnets,
+      updatedAt: new Date(),
+    };
   }
 
   /**
@@ -358,8 +386,9 @@ export class NetworkPlanService {
    * @param plan - Network plan to modify
    * @param index - Index of subnet to update
    * @param locked - Whether to lock the subnet
+   * @returns New NetworkPlan with updated lock status
    */
-  setNetworkLocked(plan: NetworkPlan, index: number, locked: boolean): void {
+  setNetworkLocked(plan: NetworkPlan, index: number, locked: boolean): NetworkPlan {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
     if (!plan) {
       throw new ValidationError(
@@ -380,7 +409,216 @@ export class NetworkPlanService {
       throw new ValidationError(`Subnet at index ${index} not found`, ErrorCode.NO_SUBNETS_DEFINED);
     }
 
-    plan.subnets = plan.subnets.map((s, i) => (i === index ? { ...s, networkLocked: locked } : s));
-    plan.updatedAt = new Date();
+    return {
+      ...plan,
+      subnets: plan.subnets.map((s, i) => (i === index ? { ...s, networkLocked: locked } : s)),
+      updatedAt: new Date(),
+    };
+  }
+
+  // ============================================
+  // IPAM-lite: Assigned Blocks & Space Tracking
+  // ============================================
+
+  /**
+   * Set the assigned blocks for the plan
+   *
+   * @param plan - Network plan to modify
+   * @param blocks - Array of assigned blocks
+   * @returns New NetworkPlan with assigned blocks and updated space report
+   */
+  setAssignedBlocks(plan: NetworkPlan, blocks: AssignedBlock[]): NetworkPlan {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
+    if (!plan) {
+      throw new ValidationError(
+        'Cannot set assigned blocks: Plan is null or undefined',
+        ErrorCode.NO_PLAN_LOADED,
+      );
+    }
+
+    const withBlocks: NetworkPlan = {
+      ...plan,
+      assignedBlocks: blocks,
+      updatedAt: new Date(),
+    };
+
+    // Regenerate space report
+    return this.updateSpaceReport(withBlocks);
+  }
+
+  /**
+   * Add a single assigned block to the plan
+   *
+   * @param plan - Network plan to modify
+   * @param block - Block to add (without id, will be generated)
+   * @returns Object with new plan and the created block
+   */
+  addAssignedBlock(
+    plan: NetworkPlan,
+    block: Omit<AssignedBlock, 'id' | 'assignedAt'>,
+  ): { plan: NetworkPlan; block: AssignedBlock } {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
+    if (!plan) {
+      throw new ValidationError(
+        'Cannot add assigned block: Plan is null or undefined',
+        ErrorCode.NO_PLAN_LOADED,
+      );
+    }
+
+    const newBlock: AssignedBlock = {
+      ...block,
+      id: generateBlockId(),
+      assignedAt: new Date(),
+    };
+
+    const withBlock: NetworkPlan = {
+      ...plan,
+      assignedBlocks: [...(plan.assignedBlocks ?? []), newBlock],
+      updatedAt: new Date(),
+    };
+
+    // Regenerate space report
+    return {
+      plan: this.updateSpaceReport(withBlock),
+      block: newBlock,
+    };
+  }
+
+  /**
+   * Remove an assigned block by ID
+   *
+   * @param plan - Network plan to modify
+   * @param blockId - ID of the block to remove
+   * @returns Object with new plan and whether block was removed
+   */
+  removeAssignedBlock(plan: NetworkPlan, blockId: string): { plan: NetworkPlan; removed: boolean } {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
+    if (!plan) {
+      throw new ValidationError(
+        'Cannot remove assigned block: Plan is null or undefined',
+        ErrorCode.NO_PLAN_LOADED,
+      );
+    }
+
+    if (!plan.assignedBlocks) {
+      return { plan, removed: false };
+    }
+
+    const filteredBlocks = plan.assignedBlocks.filter((b) => b.id !== blockId);
+
+    if (filteredBlocks.length < plan.assignedBlocks.length) {
+      // Clear sourceBlockId from any subnets that referenced this block
+      const withRemovedBlock: NetworkPlan = {
+        ...plan,
+        assignedBlocks: filteredBlocks,
+        subnets: plan.subnets.map((s) =>
+          s.sourceBlockId === blockId ? { ...s, sourceBlockId: undefined } : s,
+        ),
+        updatedAt: new Date(),
+      };
+
+      // Regenerate space report
+      return {
+        plan: this.updateSpaceReport(withRemovedBlock),
+        removed: true,
+      };
+    }
+
+    return { plan, removed: false };
+  }
+
+  /**
+   * Set sourceBlockId for a subnet at index
+   *
+   * @param plan - Network plan to modify
+   * @param index - Index of subnet
+   * @param sourceBlockId - ID of the source assigned block
+   * @returns New NetworkPlan with updated source block
+   */
+  setSourceBlockId(
+    plan: NetworkPlan,
+    index: number,
+    sourceBlockId: string | undefined,
+  ): NetworkPlan {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
+    if (!plan) {
+      throw new ValidationError(
+        'Cannot set source block: Plan is null or undefined',
+        ErrorCode.NO_PLAN_LOADED,
+      );
+    }
+
+    if (index < 0 || index >= plan.subnets.length) {
+      throw new ValidationError(
+        `Cannot set source block: Index ${index} is out of bounds`,
+        ErrorCode.NO_SUBNETS_DEFINED,
+      );
+    }
+
+    return {
+      ...plan,
+      subnets: plan.subnets.map((s, i) => (i === index ? { ...s, sourceBlockId } : s)),
+      updatedAt: new Date(),
+    };
+  }
+
+  /**
+   * Update the space allocation report
+   * Called automatically when assigned blocks or subnets change
+   *
+   * @param plan - Network plan to update
+   * @returns New NetworkPlan with updated space report
+   */
+  updateSpaceReport(plan: NetworkPlan): NetworkPlan {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
+    if (!plan) {
+      return plan;
+    }
+
+    if (!plan.assignedBlocks || plan.assignedBlocks.length === 0) {
+      return {
+        ...plan,
+        spaceReport: undefined,
+      };
+    }
+
+    return {
+      ...plan,
+      spaceReport: calculateAvailableSpace(plan.assignedBlocks, plan.subnets),
+    };
+  }
+
+  /**
+   * Auto-detect and set sourceBlockId for a subnet based on its network address
+   * Used when manually setting network addresses
+   *
+   * @param plan - Network plan
+   * @param index - Index of subnet
+   * @returns Object with new plan and detected sourceBlockId (undefined if no match)
+   */
+  autoDetectSourceBlock(
+    plan: NetworkPlan,
+    index: number,
+  ): { plan: NetworkPlan; sourceBlockId: string | undefined } {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
+    if (!plan || index < 0 || index >= plan.subnets.length) {
+      return { plan, sourceBlockId: undefined };
+    }
+
+    const subnet = plan.subnets[index];
+    if (!subnet) return { plan, sourceBlockId: undefined };
+
+    const networkAddress = subnet.subnetInfo?.networkAddress ?? subnet.manualNetworkAddress;
+    if (!networkAddress) return { plan, sourceBlockId: undefined };
+
+    const sourceBlockId = findSourceBlock(networkAddress, plan.assignedBlocks);
+    if (sourceBlockId) {
+      return {
+        plan: this.setSourceBlockId(plan, index, sourceBlockId),
+        sourceBlockId,
+      };
+    }
+
+    return { plan, sourceBlockId: undefined };
   }
 }

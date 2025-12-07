@@ -8,7 +8,16 @@ import { Box, Text, useApp } from 'ink';
 import Spinner from 'ink-spinner';
 import React, { useEffect, useMemo, useState } from 'react';
 import type { AutoFitResult } from '../../core/calculators/auto-fit.js';
-import { autoFitSubnets } from '../../core/calculators/auto-fit.js';
+import {
+  autoFitSubnets,
+  convertToAssignedBlocks,
+  createBlockIndexMap,
+} from '../../core/calculators/auto-fit.js';
+import {
+  calculateAvailableSpace,
+  tryAllocateSubnetToAvailableSpace,
+} from '../../core/calculators/availability-calculator.js';
+import type { NetworkPlan } from '../../core/models/network-plan.js';
 import { createNetworkPlan, createSubnet } from '../../core/models/network-plan.js';
 import {
   validateDeviceCount,
@@ -17,19 +26,28 @@ import {
   validateSubnetDescription,
   validateSubnetName,
   validateVlanId,
+  validateVlanIdUnique,
 } from '../../core/validators/validators.js';
 import { isFileOperationError } from '../../errors/index.js';
 import { useAutoSave } from '../../hooks/useAutoSave.js';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts.js';
 import { usePlan, usePlanActions, useSubnets } from '../../hooks/usePlan.js';
 import { useNotify, useSelection } from '../../hooks/useUI.js';
-import { getDirectory } from '../../infrastructure/config/validation-rules.js';
+import {
+  FILE_RULES,
+  getDirectory,
+  isConfirmationRequiredVlan,
+} from '../../infrastructure/config/validation-rules.js';
 import { FileSystemRepository } from '../../repositories/index.js';
 import { parseNetworkPlan } from '../../schemas/network-plan.schema.js';
+import type { ExportFormat } from '../../services/export.service.js';
 import { ExportService } from '../../services/export.service.js';
 import type { SavedPlanFile } from '../../services/file.service.js';
 import { FileService } from '../../services/file.service.js';
+import { importService } from '../../services/import/import.service.js';
+import type { ImportFormat } from '../../services/import/import.types.js';
 import { PreferencesService } from '../../services/preferences.service.js';
+import { terraformExportService } from '../../services/terraform-export.service.js';
 import { usePlanStore } from '../../store/planStore.js';
 import { usePreferencesStore } from '../../store/preferencesStore.js';
 import type { SortColumn } from '../../store/uiStore.js';
@@ -42,10 +60,13 @@ import { unescapeShellPath } from '../../utils/path-helpers.js';
 import { sortSubnets } from '../../utils/subnet-sorters.js';
 import { AutoFitPreviewDialog } from '../dialogs/AutoFitPreviewDialog.js';
 import { AvailableBlocksDialog } from '../dialogs/AvailableBlocksDialog.js';
+import { AvailableSpaceDialog } from '../dialogs/AvailableSpaceDialog.js';
 import { ColumnConfigDialog } from '../dialogs/ColumnConfigDialog.js';
 import { ConfirmDialog } from '../dialogs/ConfirmDialog.js';
 import { EditNetworkDialog } from '../dialogs/EditNetworkDialog.js';
+import { ImportPreviewDialog } from '../dialogs/ImportPreviewDialog.js';
 import { InputDialog } from '../dialogs/InputDialog.js';
+import { ManageBlocksDialog } from '../dialogs/ManageBlocksDialog.js';
 import { Modal } from '../dialogs/Modal.js';
 import { ModifyDialog } from '../dialogs/ModifyDialog.js';
 import { SaveOptionsDialog } from '../dialogs/SaveOptionsDialog.js';
@@ -86,7 +107,19 @@ type DialogType =
   | { type: 'new-plan-name' }
   | { type: 'new-plan-ip'; name: string }
   | { type: 'export-format-select' }
+  | { type: 'export-vendor-select' }
+  | { type: 'export-terraform-select' }
   | { type: 'export-filename'; format: string; directoryPath?: string }
+  | { type: 'import-format-select' }
+  | { type: 'import-router-select' }
+  | { type: 'import-file'; format?: string }
+  | {
+      type: 'import-preview';
+      plan: NetworkPlan;
+      importedCount: number;
+      skippedCount: number;
+      warnings: string[];
+    }
   | { type: 'preferences-menu' }
   | { type: 'preferences-growth' }
   | { type: 'preferences-base-ip' }
@@ -103,7 +136,11 @@ type DialogType =
       type: 'auto-fit-preview';
       result: AutoFitResult;
       blocks: AvailableBlock[];
-    };
+    }
+  | { type: 'available-space' }
+  | { type: 'manage-blocks' }
+  | { type: 'manage-blocks-add' }
+  | { type: 'manage-blocks-confirm-remove'; blockId: string; blockAddress: string };
 
 export const DashboardView: React.FC = () => {
   const { exit } = useApp();
@@ -120,6 +157,15 @@ export const DashboardView: React.FC = () => {
     setGrowthPercentage,
     setManualNetworkAddress,
   } = usePlanActions();
+
+  // IPAM-lite store actions
+  const setAssignedBlocks = usePlanStore.use.setAssignedBlocks();
+  const setSourceBlockId = usePlanStore.use.setSourceBlockId();
+  const removeAssignedBlock = usePlanStore.use.removeAssignedBlock();
+  const updateSpaceReport = usePlanStore.use.updateSpaceReport();
+  const allocateSubnetFromAvailableSpace = usePlanStore.use.allocateSubnetFromAvailableSpace();
+  const setPlanName = usePlanStore.use.setPlanName();
+
   const notify = useNotify();
   const {
     selectedIndex,
@@ -252,6 +298,44 @@ export const DashboardView: React.FC = () => {
   };
 
   const handleAddSubnet = (): void => {
+    // Helper to continue add flow after VLAN validation and confirmation
+    const continueAddFlow = (name: string, vlanId: number): void => {
+      setDialog({
+        type: 'input',
+        title: 'Add Subnet',
+        label: 'Enter expected number of devices:',
+        onSubmit: (expectedDevicesStr) => {
+          setDialog({
+            type: 'input',
+            title: 'Add Subnet',
+            label: 'Enter description (optional, press Enter to skip):',
+            onSubmit: (description) => {
+              const expectedDevices = parseDeviceCount(expectedDevicesStr);
+              const trimmedDescription = description.trim();
+              const subnet = createSubnet(
+                name,
+                vlanId,
+                expectedDevices,
+                trimmedDescription || undefined,
+              );
+              addSubnet(subnet);
+              if (plan) {
+                const plannedDevices = Math.ceil(
+                  expectedDevices * (1 + plan.growthPercentage / 100),
+                );
+                notify.success(
+                  `Subnet "${name}" added! (Planning for ${plannedDevices} devices with ${plan.growthPercentage}% growth)`,
+                );
+              }
+              setDialog({ type: 'none' });
+            },
+            validate: validateSubnetDescription,
+          });
+        },
+        validate: validateDeviceCount,
+      });
+    };
+
     setDialog({
       type: 'input',
       title: 'Add Subnet',
@@ -262,43 +346,45 @@ export const DashboardView: React.FC = () => {
           title: 'Add Subnet',
           label: 'Enter VLAN ID (1-4094):',
           onSubmit: (vlanIdStr) => {
-            setDialog({
-              type: 'input',
-              title: 'Add Subnet',
-              label: 'Enter expected number of devices:',
-              onSubmit: (expectedDevicesStr) => {
-                setDialog({
-                  type: 'input',
-                  title: 'Add Subnet',
-                  label: 'Enter description (optional, press Enter to skip):',
-                  onSubmit: (description) => {
-                    const vlanId = parseVlanId(vlanIdStr);
-                    const expectedDevices = parseDeviceCount(expectedDevicesStr);
-                    const trimmedDescription = description.trim();
-                    const subnet = createSubnet(
-                      name,
-                      vlanId,
-                      expectedDevices,
-                      trimmedDescription || undefined,
-                    );
-                    addSubnet(subnet);
-                    if (plan) {
-                      const plannedDevices = Math.ceil(
-                        expectedDevices * (1 + plan.growthPercentage / 100),
-                      );
-                      notify.success(
-                        `Subnet "${name}" added! (Planning for ${plannedDevices} devices with ${plan.growthPercentage}% growth)`,
-                      );
-                    }
-                    setDialog({ type: 'none' });
-                  },
-                  validate: validateSubnetDescription,
-                });
-              },
-              validate: validateDeviceCount,
-            });
+            const vlanId = parseVlanId(vlanIdStr);
+
+            // Check if VLAN 1 requires confirmation
+            if (isConfirmationRequiredVlan(vlanId)) {
+              setDialog({
+                type: 'confirm',
+                title: 'VLAN 1 Warning',
+                message: `VLAN 1 is the default VLAN on most network devices.
+
+Many network administrators avoid using it for security.
+
+Continue with VLAN 1?`,
+                onConfirm: (confirmed) => {
+                  if (confirmed) {
+                    continueAddFlow(name, vlanId);
+                  } else {
+                    // Return to VLAN input
+                    handleAddSubnet();
+                  }
+                },
+              });
+              return;
+            }
+
+            continueAddFlow(name, vlanId);
           },
-          validate: validateVlanId,
+          validate: (value) => {
+            // First check basic VLAN validity (range, reserved)
+            const basicValidation = validateVlanId(value);
+            if (basicValidation !== true) return basicValidation;
+
+            // Then check for duplicates
+            const vlanId = parseVlanId(value);
+            const existingVlans = subnets.map((s) => s.vlanId);
+            const uniqueCheck = validateVlanIdUnique(vlanId, existingVlans);
+            if (uniqueCheck !== true) return uniqueCheck;
+
+            return true;
+          },
         });
       },
       validate: validateSubnetName,
@@ -313,6 +399,39 @@ export const DashboardView: React.FC = () => {
       return;
     }
     const { subnet, originalIndex } = selected;
+
+    // Helper to continue edit flow after VLAN validation and confirmation
+    const continueEditFlow = (name: string, vlanId: number): void => {
+      setDialog({
+        type: 'input',
+        title: 'Edit Subnet',
+        label: 'Enter expected number of devices:',
+        defaultValue: subnet.expectedDevices.toString(),
+        onSubmit: (expectedDevicesStr) => {
+          setDialog({
+            type: 'input',
+            title: 'Edit Subnet',
+            label: 'Enter description (optional, press Enter to skip):',
+            defaultValue: subnet.description ?? '',
+            onSubmit: (description) => {
+              const trimmedDescription = description.trim();
+              updateSubnet(
+                originalIndex,
+                name,
+                vlanId,
+                parseDeviceCount(expectedDevicesStr),
+                trimmedDescription ? trimmedDescription : undefined,
+              );
+              notify.success(`Subnet "${name}" updated successfully!`);
+              setDialog({ type: 'none' });
+            },
+            validate: validateSubnetDescription,
+          });
+        },
+        validate: validateDeviceCount,
+      });
+    };
+
     setDialog({
       type: 'input',
       title: 'Edit Subnet',
@@ -325,36 +444,45 @@ export const DashboardView: React.FC = () => {
           label: 'Enter VLAN ID (1-4094):',
           defaultValue: subnet.vlanId.toString(),
           onSubmit: (vlanIdStr) => {
-            setDialog({
-              type: 'input',
-              title: 'Edit Subnet',
-              label: 'Enter expected number of devices:',
-              defaultValue: subnet.expectedDevices.toString(),
-              onSubmit: (expectedDevicesStr) => {
-                setDialog({
-                  type: 'input',
-                  title: 'Edit Subnet',
-                  label: 'Enter description (optional, press Enter to skip):',
-                  defaultValue: subnet.description ?? '',
-                  onSubmit: (description) => {
-                    const trimmedDescription = description.trim();
-                    updateSubnet(
-                      originalIndex,
-                      name,
-                      parseVlanId(vlanIdStr),
-                      parseDeviceCount(expectedDevicesStr),
-                      trimmedDescription ? trimmedDescription : undefined,
-                    );
-                    notify.success(`Subnet "${name}" updated successfully!`);
-                    setDialog({ type: 'none' });
-                  },
-                  validate: validateSubnetDescription,
-                });
-              },
-              validate: validateDeviceCount,
-            });
+            const vlanId = parseVlanId(vlanIdStr);
+
+            // Check if VLAN 1 requires confirmation (only if changing to VLAN 1)
+            if (isConfirmationRequiredVlan(vlanId) && subnet.vlanId !== vlanId) {
+              setDialog({
+                type: 'confirm',
+                title: 'VLAN 1 Warning',
+                message: `VLAN 1 is the default VLAN on most network devices.
+
+Many network administrators avoid using it for security.
+
+Continue with VLAN 1?`,
+                onConfirm: (confirmed) => {
+                  if (confirmed) {
+                    continueEditFlow(name, vlanId);
+                  } else {
+                    // Return to edit flow
+                    handleEditSubnet();
+                  }
+                },
+              });
+              return;
+            }
+
+            continueEditFlow(name, vlanId);
           },
-          validate: validateVlanId,
+          validate: (value) => {
+            // First check basic VLAN validity (range, reserved)
+            const basicValidation = validateVlanId(value);
+            if (basicValidation !== true) return basicValidation;
+
+            // Then check for duplicates (exclude current subnet)
+            const vlanId = parseVlanId(value);
+            const existingVlans = subnets.map((s) => s.vlanId);
+            const uniqueCheck = validateVlanIdUnique(vlanId, existingVlans, originalIndex);
+            if (uniqueCheck !== true) return uniqueCheck;
+
+            return true;
+          },
         });
       },
       validate: validateSubnetName,
@@ -393,7 +521,52 @@ This cannot be undone.`,
       notify.error('Please add at least one subnet before calculating.');
       return;
     }
+
+    // Run normal calculation first (calculates subnet sizes)
     calculatePlan();
+
+    // If assigned blocks exist, try to allocate unassigned subnets from available space
+    if (plan.assignedBlocks && plan.assignedBlocks.length > 0) {
+      // Find subnets that have been calculated but not yet assigned to a block
+      const unassignedSubnets = plan.subnets.filter(
+        (s) => s.subnetInfo && !s.sourceBlockId && !s.networkLocked,
+      );
+
+      if (unassignedSubnets.length > 0) {
+        // Generate fresh space report, excluding subnets we're about to allocate
+        // (otherwise their current addresses would be marked as occupied)
+        const unassignedIds = new Set(unassignedSubnets.map((s) => s.id));
+        const alreadyAllocated = plan.subnets.filter((s) => !unassignedIds.has(s.id));
+        const report = calculateAvailableSpace(plan.assignedBlocks, alreadyAllocated);
+        const failures: string[] = [];
+        let allocatedCount = 0;
+
+        for (const subnet of unassignedSubnets) {
+          const result = tryAllocateSubnetToAvailableSpace(subnet, report);
+          if (result.success && result.networkAddress && result.sourceBlockId) {
+            allocateSubnetFromAvailableSpace(
+              subnet.id,
+              result.networkAddress,
+              result.sourceBlockId,
+            );
+            allocatedCount++;
+          } else {
+            failures.push(subnet.name);
+          }
+        }
+
+        // Update space report after allocations
+        updateSpaceReport();
+
+        if (failures.length > 0) {
+          notify.warning(`Insufficient space for: ${failures.join(', ')}`);
+        } else if (allocatedCount > 0) {
+          notify.success(`Allocated ${allocatedCount} subnet(s) to available space.`);
+          return;
+        }
+      }
+    }
+
     notify.success('Network plan calculated successfully!');
   };
 
@@ -407,6 +580,69 @@ This cannot be undone.`,
       return;
     }
     setDialog({ type: 'auto-fit-blocks' });
+  };
+
+  const handleModManageBlocks = (): void => {
+    setDialog({ type: 'manage-blocks' });
+  };
+
+  const handleManageBlocksAdd = (): void => {
+    setDialog({ type: 'manage-blocks-add' });
+  };
+
+  const handleManageBlocksAddSubmit = (blocks: AvailableBlock[]): void => {
+    if (!plan) {
+      notify.error('No plan loaded.');
+      setDialog({ type: 'none' });
+      return;
+    }
+
+    // Convert and add the new blocks
+    const newAssignedBlocks = convertToAssignedBlocks(blocks);
+    const existingBlocks = plan.assignedBlocks ?? [];
+    setAssignedBlocks([...existingBlocks, ...newAssignedBlocks]);
+
+    // Update the space report
+    updateSpaceReport();
+
+    notify.success(`Added ${blocks.length} block(s).`);
+    setDialog({ type: 'manage-blocks' });
+  };
+
+  const handleManageBlocksRemove = (blockId: string): void => {
+    if (!plan) return;
+
+    const block = plan.assignedBlocks?.find((b) => b.id === blockId);
+    if (!block) {
+      notify.error('Block not found.');
+      return;
+    }
+
+    // Check if any subnets are allocated from this block
+    const allocatedSubnets = subnets.filter((s) => s.sourceBlockId === blockId);
+
+    if (allocatedSubnets.length > 0) {
+      setDialog({
+        type: 'manage-blocks-confirm-remove',
+        blockId,
+        blockAddress: block.networkAddress,
+      });
+    } else {
+      // Safe to remove directly
+      removeAssignedBlock(blockId);
+      updateSpaceReport();
+      notify.success(`Removed block ${block.networkAddress}.`);
+    }
+  };
+
+  const handleConfirmBlockRemove = (confirmed: boolean, blockId: string): void => {
+    if (confirmed) {
+      const block = plan?.assignedBlocks?.find((b) => b.id === blockId);
+      removeAssignedBlock(blockId);
+      updateSpaceReport();
+      notify.success(`Removed block ${block?.networkAddress ?? blockId}.`);
+    }
+    setDialog({ type: 'manage-blocks' });
   };
 
   const handleAutoFitBlocksSubmit = (blocks: AvailableBlock[]): void => {
@@ -433,20 +669,33 @@ This cannot be undone.`,
     });
   };
 
-  const handleAutoFitAccept = (result: AutoFitResult): void => {
+  const handleAutoFitAccept = (result: AutoFitResult, blocks: AvailableBlock[]): void => {
     if (!plan) {
       notify.error('No plan loaded.');
       setDialog({ type: 'none' });
       return;
     }
 
-    // Apply allocations to subnets
+    // Convert AvailableBlocks to AssignedBlocks for IPAM-lite tracking
+    const assignedBlocks = convertToAssignedBlocks(blocks);
+    const blockIndexMap = createBlockIndexMap(blocks, assignedBlocks);
+
+    // Store assigned blocks in the plan
+    setAssignedBlocks(assignedBlocks);
+
+    // Apply allocations to subnets and set sourceBlockId
     for (const allocation of result.allocations) {
       const subnet = plan.subnets[allocation.subnetIndex];
       if (subnet) {
         subnet.subnetInfo = allocation.subnetInfo;
         subnet.manualNetworkAddress = allocation.networkAddress;
         subnet.networkLocked = true;
+
+        // Set the sourceBlockId for IPAM tracking
+        const sourceBlockId = blockIndexMap.get(allocation.blockIndex);
+        if (sourceBlockId !== undefined) {
+          setSourceBlockId(allocation.subnetIndex, sourceBlockId);
+        }
       }
     }
 
@@ -455,6 +704,9 @@ This cannot be undone.`,
 
     // Recalculate to update supernet
     calculatePlan();
+
+    // Generate the space allocation report
+    updateSpaceReport();
 
     notify.success(
       `Auto-fit complete! Allocated ${result.allocations.length} subnet(s) and locked them.`,
@@ -522,7 +774,7 @@ This cannot be undone.`,
             // Update plan name to match saved filename (without extension)
             const savedFilename = filepath.split('/').pop() ?? finalPath;
             const planName = savedFilename.replace(/\.(cidr|json)$/, '');
-            plan.name = planName;
+            setPlanName(planName);
 
             setCurrentFilename(savedFilename); // Track filename for auto-save
             notify.success(`Plan saved to ${filepath}`);
@@ -741,7 +993,7 @@ This cannot be undone.`,
             // Update plan name to match saved filename (without extension)
             const savedFilename = filepath.split('/').pop() ?? finalPath;
             const planName = savedFilename.replace(/\.(cidr|json)$/, '');
-            plan.name = planName;
+            setPlanName(planName);
 
             setCurrentFilename(savedFilename); // Track filename for auto-save
             notify.success(`Plan saved to ${filepath}`);
@@ -814,7 +1066,33 @@ This cannot be undone.`,
       setDialog({ type: 'none' });
       return;
     }
-    // Open filename input dialog
+
+    // Check for vendor-specific VLAN warnings before proceeding
+    const exportFormat = format as ExportFormat;
+    const exportWarnings = exportService.getExportWarnings(plan, exportFormat);
+
+    if (exportWarnings.length > 0) {
+      // Show confirmation dialog with warnings
+      setDialog({
+        type: 'confirm',
+        title: 'VLAN Compatibility Warning',
+        message: `The following VLANs may conflict with ${format} internal reservations:\n\n${exportWarnings.join('\n')}\n\nContinue with export?`,
+        onConfirm: (confirmed) => {
+          if (confirmed) {
+            setDialog({
+              type: 'export-filename',
+              format,
+            });
+          } else {
+            // Go back to format selection
+            setDialog({ type: 'export-vendor-select' });
+          }
+        },
+      });
+      return;
+    }
+
+    // No warnings, proceed to filename input
     setDialog({
       type: 'export-filename',
       format,
@@ -834,6 +1112,22 @@ This cannot be undone.`,
     (async (): Promise<void> => {
       setDialog({ type: 'loading', message: 'Exporting plan...' });
       try {
+        // Handle Terraform exports (create directory structure)
+        if (format.startsWith('terraform-')) {
+          const provider = format.replace('terraform-', '') as 'aws' | 'azure' | 'gcp';
+          const baseDir = filename && filename !== '.' ? filename : FILE_RULES.EXPORTS_DIR;
+          const result = await terraformExportService.exportToDirectory(plan, baseDir, {
+            provider,
+          });
+          if (result.success) {
+            notify.success(`Terraform files exported to ${result.outputDir}`);
+          } else {
+            notify.error(`Export failed: ${result.error}`);
+          }
+          setDialog({ type: 'none' });
+          return;
+        }
+
         // If we have a directory path, auto-add extension if not present
         let filenameWithExt = filename;
         if (directoryPath) {
@@ -868,7 +1162,7 @@ This cannot be undone.`,
           }
         }
 
-        const exportFormat = format as 'yaml' | 'csv' | 'pdf';
+        const exportFormat = format as ExportFormat;
         const filepath = await exportService.export(plan, exportFormat, finalPath, preferences);
         notify.success(`Plan exported to ${filepath}`);
         setDialog({ type: 'none' });
@@ -890,6 +1184,132 @@ This cannot be undone.`,
       notify.error(`Unexpected error: ${getErrorMessage(error)}`);
       setDialog({ type: 'none' });
     });
+  };
+
+  // Import handlers
+  const handleImportPlan = (): void => {
+    setDialog({ type: 'import-format-select' });
+  };
+
+  const handleImportFormatSelected = (format: string): void => {
+    if (format === 'auto') {
+      setDialog({ type: 'import-file' });
+    } else {
+      setDialog({ type: 'import-file', format });
+    }
+  };
+
+  const handleImportFile = (filepath: string, format?: string): void => {
+    (async (): Promise<void> => {
+      setDialog({ type: 'loading', message: 'Importing file...' });
+      try {
+        // Check if path exists
+        let stats;
+        try {
+          stats = fs.statSync(filepath);
+        } catch (error) {
+          if (isErrnoException(error) && error.code === 'ENOENT') {
+            notify.error('File not found. Please check the path.');
+            setDialog({ type: 'import-file', format });
+            return;
+          }
+          throw error;
+        }
+
+        // Check for native cidrly format files - these should use Load, not Import
+        const lowerPath = filepath.toLowerCase();
+        if (lowerPath.endsWith('.cidr') || lowerPath.endsWith('.json')) {
+          notify.warning('Use "Load" (L key) for cidrly plan files');
+          setDialog({ type: 'none' });
+          return;
+        }
+
+        // Handle directory - list files with supported extensions
+        if (stats.isDirectory()) {
+          const supportedExtensions = ['.csv', '.yaml', '.yml', '.cfg', '.conf'];
+          const files = fs
+            .readdirSync(filepath)
+            .filter((file) => supportedExtensions.some((ext) => file.toLowerCase().endsWith(ext)))
+            .map((file) => ({
+              filename: file,
+              path: `${filepath}/${file}`,
+              modifiedAt: fs.statSync(`${filepath}/${file}`).mtime,
+            }));
+
+          if (files.length === 0) {
+            notify.error('No importable files found in directory.');
+            setDialog({ type: 'import-file', format });
+            return;
+          }
+
+          // Show file picker for directory contents
+          const filesWithCustomOption: SavedPlanFile[] = [
+            ...files,
+            {
+              filename: '→ Enter custom path...',
+              path: '__custom__',
+              modifiedAt: new Date(),
+            },
+          ];
+
+          setDialog({
+            type: 'filepicker',
+            title: `Import from ${filepath.split('/').pop() ?? filepath}`,
+            files: filesWithCustomOption,
+            onSelect: (selectedPath: string) => {
+              if (selectedPath === '__custom__') {
+                setDialog({ type: 'import-file', format });
+              } else {
+                handleImportFile(selectedPath, format);
+              }
+            },
+          });
+          return;
+        }
+
+        // Parse the file
+        const importFormat = format as ImportFormat | undefined;
+        const result = await importService.importFromFile(filepath, importFormat, {
+          options: { mode: 'create', skipDuplicateVlans: true },
+        });
+
+        if (!result.parseResult.success) {
+          const errorMsg = result.parseResult.errors[0]?.message ?? 'Parse failed';
+          notify.error(`Import failed: ${errorMsg}`);
+          setDialog({ type: 'import-file', format });
+          return;
+        }
+
+        if (!result.plan || !result.importResult?.success) {
+          notify.error('Import failed: Could not create plan');
+          setDialog({ type: 'import-file', format });
+          return;
+        }
+
+        // Show preview
+        setDialog({
+          type: 'import-preview',
+          plan: result.plan,
+          importedCount: result.importResult.importedCount,
+          skippedCount: result.importResult.skippedCount,
+          warnings: result.importResult.warnings,
+        });
+      } catch (error) {
+        notify.error(`Import failed: ${getErrorMessage(error)}`);
+        setDialog({ type: 'import-file', format });
+      }
+    })().catch((error: unknown) => {
+      notify.error(`Unexpected error: ${getErrorMessage(error)}`);
+      setDialog({ type: 'none' });
+    });
+  };
+
+  const handleImportConfirm = (importedPlan: NetworkPlan): void => {
+    loadPlan(importedPlan);
+    notify.success(
+      `Imported plan "${importedPlan.name}" with ${importedPlan.subnets.length} subnets`,
+    );
+    setDialog({ type: 'none' });
   };
 
   // Keyboard shortcuts configuration
@@ -1089,6 +1509,21 @@ This cannot be undone.`,
         category: 'actions',
         enabled: !!plan?.supernet,
       },
+      {
+        key: 'i',
+        description: 'Import from file',
+        handler: handleImportPlan,
+        category: 'actions',
+      },
+      {
+        key: 'v',
+        description: 'View available space',
+        handler: (): void => {
+          if (plan) setDialog({ type: 'available-space' });
+        },
+        category: 'actions',
+        enabled: !!plan,
+      },
       // 'l' key: Dual-purpose (row mode = load, header mode = vim right)
       {
         key: 'l',
@@ -1114,25 +1549,12 @@ This cannot be undone.`,
         handler: handleOpenPreferences,
         category: 'actions',
       },
-      // 'q' key: Multi-purpose (quit / exit header mode / close dialogs)
+      // 'q' key: Quit or exit header mode
+      // Note: Dialog closing is handled by each dialog component's own useInput handler
       {
         key: 'q',
-        description: 'Quit / Exit header mode / Close dialog',
+        description: 'Quit / Exit header mode',
         handler: (): void => {
-          // Close non-text-input dialogs (input dialogs excluded to allow typing 'q')
-          const closeableDialogs = [
-            'info',
-            'confirm',
-            'new-plan-confirm',
-            'preferences',
-            'filepicker',
-            'select',
-          ];
-          if (closeableDialogs.includes(dialog.type)) {
-            setDialog({ type: 'none' });
-            return;
-          }
-
           // Exit header mode if active
           if (headerMode) {
             setHeaderMode(false);
@@ -1146,11 +1568,7 @@ This cannot be undone.`,
         category: 'system',
       },
     ],
-    enabled:
-      dialog.type === 'none' ||
-      ['info', 'confirm', 'new-plan-confirm', 'preferences', 'filepicker', 'select'].includes(
-        dialog.type,
-      ),
+    enabled: dialog.type === 'none',
   });
 
   if (!plan) {
@@ -1604,9 +2022,51 @@ Edit another preference?`}
               { label: 'YAML', value: 'yaml' },
               { label: 'CSV', value: 'csv' },
               { label: 'PDF', value: 'pdf' },
+              { label: 'Network Vendor Config →', value: 'vendor-menu' },
+              { label: 'Terraform IaC →', value: 'terraform-menu' },
+            ]}
+            onSelect={(value) => {
+              if (value === 'vendor-menu') {
+                setDialog({ type: 'export-vendor-select' });
+              } else if (value === 'terraform-menu') {
+                setDialog({ type: 'export-terraform-select' });
+              } else {
+                handleExportFormatSelected(value);
+              }
+            }}
+            onCancel={() => setDialog({ type: 'none' })}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'export-vendor-select' && (
+        <Modal>
+          <SelectDialog
+            title="Export to Network Vendor"
+            items={[
+              { label: 'Cisco IOS/IOS-XE', value: 'cisco-ios' },
+              { label: 'Cisco NX-OS', value: 'cisco-nxos' },
+              { label: 'Arista EOS', value: 'arista-eos' },
+              { label: 'Juniper JUNOS', value: 'juniper-junos' },
+              { label: 'Fortinet FortiOS', value: 'fortinet' },
+              { label: 'Netgear', value: 'netgear' },
+              { label: 'Ubiquiti EdgeOS', value: 'ubiquiti' },
             ]}
             onSelect={handleExportFormatSelected}
-            onCancel={() => setDialog({ type: 'none' })}
+            onCancel={() => setDialog({ type: 'export-format-select' })}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'export-terraform-select' && (
+        <Modal>
+          <SelectDialog
+            title="Export to Terraform"
+            items={[
+              { label: 'AWS VPC', value: 'terraform-aws' },
+              { label: 'Azure vNet', value: 'terraform-azure' },
+              { label: 'GCP VPC', value: 'terraform-gcp' },
+            ]}
+            onSelect={handleExportFormatSelected}
+            onCancel={() => setDialog({ type: 'export-format-select' })}
           />
         </Modal>
       )}
@@ -1614,8 +2074,28 @@ Edit another preference?`}
       {dialog.type === 'export-filename' &&
         plan &&
         (() => {
+          const isTerraform = dialog.format.startsWith('terraform-');
           const defaultName = `${plan.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}`;
-          const defaultWithExt = `${defaultName}.${dialog.format}`;
+          const defaultWithExt = isTerraform ? '.' : `${defaultName}.${dialog.format}`;
+
+          if (isTerraform) {
+            return (
+              <Modal>
+                <InputDialog
+                  title="Export Terraform"
+                  label={`Output directory (empty = ~/cidrly/exports/):`}
+                  helperText="Creates {plan}-{provider}/ with main.tf, variables.tf, outputs.tf"
+                  defaultValue=""
+                  preprocessInput={unescapeShellPath}
+                  onSubmit={(dir) => {
+                    handleExportWithFilename(dialog.format, dir.trim(), undefined);
+                  }}
+                  onCancel={() => setDialog({ type: 'export-terraform-select' })}
+                />
+              </Modal>
+            );
+          }
+
           return (
             <Modal>
               <InputDialog
@@ -1641,11 +2121,77 @@ Edit another preference?`}
             </Modal>
           );
         })()}
+      {dialog.type === 'import-format-select' && (
+        <Modal>
+          <SelectDialog
+            title="Import From"
+            items={[
+              { label: 'Auto-detect format', value: 'auto' },
+              { label: 'CSV', value: 'csv' },
+              { label: 'YAML', value: 'yaml' },
+              { label: 'Network Config →', value: 'router-menu' },
+            ]}
+            onSelect={(value) => {
+              if (value === 'router-menu') {
+                setDialog({ type: 'import-router-select' });
+              } else {
+                handleImportFormatSelected(value);
+              }
+            }}
+            onCancel={() => setDialog({ type: 'none' })}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'import-router-select' && (
+        <Modal>
+          <SelectDialog
+            title="Import Network Config"
+            items={[
+              { label: 'Cisco IOS/IOS-XE', value: 'cisco-ios' },
+              { label: 'Cisco NX-OS', value: 'cisco-nxos' },
+              { label: 'Arista EOS', value: 'arista-eos' },
+              { label: 'Juniper JUNOS', value: 'juniper-junos' },
+              { label: 'Fortinet FortiOS', value: 'fortinet' },
+              { label: 'Netgear', value: 'netgear' },
+              { label: 'Ubiquiti EdgeOS', value: 'ubiquiti' },
+            ]}
+            onSelect={handleImportFormatSelected}
+            onCancel={() => setDialog({ type: 'import-format-select' })}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'import-file' && (
+        <Modal>
+          <InputDialog
+            title="Import File"
+            label="File path (drag & drop supported):"
+            helperText={dialog.format ? `Format: ${dialog.format}` : 'Format: auto-detect'}
+            defaultValue=""
+            preprocessInput={unescapeShellPath}
+            onSubmit={(filepath) => handleImportFile(filepath, dialog.format)}
+            onCancel={() => setDialog({ type: 'import-format-select' })}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'import-preview' && (
+        <Modal>
+          <ImportPreviewDialog
+            plan={dialog.plan}
+            importedCount={dialog.importedCount}
+            skippedCount={dialog.skippedCount}
+            warnings={dialog.warnings}
+            onConfirm={() => handleImportConfirm(dialog.plan)}
+            onCancel={() => setDialog({ type: 'import-format-select' })}
+          />
+        </Modal>
+      )}
       {dialog.type === 'mod-menu' && (
         <Modal>
           <ModifyDialog
             onSelectManualEdit={handleModManualEdit}
             onSelectAutoFit={handleModAutoFit}
+            onSelectManageBlocks={handleModManageBlocks}
+            hasAssignedBlocks={(plan?.assignedBlocks?.length ?? 0) > 0}
             onCancel={() => setDialog({ type: 'none' })}
           />
         </Modal>
@@ -1662,8 +2208,43 @@ Edit another preference?`}
         <Modal>
           <AutoFitPreviewDialog
             result={dialog.result}
-            onAccept={() => handleAutoFitAccept(dialog.result)}
+            onAccept={() => handleAutoFitAccept(dialog.result, dialog.blocks)}
             onCancel={() => setDialog({ type: 'none' })}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'available-space' && (
+        <Modal>
+          <AvailableSpaceDialog
+            report={plan?.spaceReport}
+            onClose={() => setDialog({ type: 'none' })}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'manage-blocks' && (
+        <Modal>
+          <ManageBlocksDialog
+            blocks={plan?.assignedBlocks ?? []}
+            onAddBlock={handleManageBlocksAdd}
+            onRemoveBlock={handleManageBlocksRemove}
+            onClose={() => setDialog({ type: 'none' })}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'manage-blocks-add' && (
+        <Modal>
+          <AvailableBlocksDialog
+            onSubmit={handleManageBlocksAddSubmit}
+            onCancel={() => setDialog({ type: 'manage-blocks' })}
+          />
+        </Modal>
+      )}
+      {dialog.type === 'manage-blocks-confirm-remove' && (
+        <Modal>
+          <ConfirmDialog
+            title="Remove Block"
+            message={`Block ${dialog.blockAddress} has subnets allocated from it. Remove anyway?`}
+            onConfirm={(result) => handleConfirmBlockRemove(result, dialog.blockId)}
           />
         </Modal>
       )}

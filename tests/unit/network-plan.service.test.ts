@@ -33,34 +33,34 @@ describe('NetworkPlanService', () => {
       const subnet2 = createSubnet('Marketing', 20, 25);
       plan.subnets.push(subnet1, subnet2);
 
-      service.calculatePlan(plan);
+      const result = service.calculatePlan(plan);
 
-      expect(plan.subnets[0].subnetInfo).toBeDefined();
-      expect(plan.subnets[1].subnetInfo).toBeDefined();
-      expect(plan.subnets[0].subnetInfo?.plannedDevices).toBe(100); // 50 × 2 (100% growth)
-      expect(plan.subnets[1].subnetInfo?.plannedDevices).toBe(50); // 25 × 2 (100% growth)
+      expect(result.subnets[0].subnetInfo).toBeDefined();
+      expect(result.subnets[1].subnetInfo).toBeDefined();
+      expect(result.subnets[0].subnetInfo?.plannedDevices).toBe(100); // 50 × 2 (100% growth)
+      expect(result.subnets[1].subnetInfo?.plannedDevices).toBe(50); // 25 × 2 (100% growth)
     });
 
     it('should calculate supernet', () => {
       const plan = createNetworkPlan('Test Plan');
       plan.subnets.push(createSubnet('Engineering', 10, 50));
 
-      service.calculatePlan(plan);
+      const result = service.calculatePlan(plan);
 
-      expect(plan.supernet).toBeDefined();
-      expect(plan.supernet?.cidrPrefix).toBeDefined();
-      expect(plan.supernet?.totalSize).toBeDefined();
-      expect(plan.supernet?.utilization).toBeDefined();
+      expect(result.supernet).toBeDefined();
+      expect(result.supernet?.cidrPrefix).toBeDefined();
+      expect(result.supernet?.totalSize).toBeDefined();
+      expect(result.supernet?.utilization).toBeDefined();
     });
 
     it('should allocate network addresses', () => {
       const plan = createNetworkPlan('Test Plan', '10.0.0.0');
       plan.subnets.push(createSubnet('Engineering', 10, 50));
 
-      service.calculatePlan(plan);
+      const result = service.calculatePlan(plan);
 
-      expect(plan.subnets[0].subnetInfo?.networkAddress).toBeDefined();
-      expect(plan.subnets[0].subnetInfo?.networkAddress).toMatch(/^10\.0\.\d+\.\d+\/\d+$/);
+      expect(result.subnets[0].subnetInfo?.networkAddress).toBeDefined();
+      expect(result.subnets[0].subnetInfo?.networkAddress).toMatch(/^10\.0\.\d+\.\d+\/\d+$/);
     });
 
     it('should update plan updatedAt timestamp', () => {
@@ -68,11 +68,23 @@ describe('NetworkPlanService', () => {
       plan.subnets.push(createSubnet('Engineering', 10, 50));
       const originalTime = plan.updatedAt;
 
-      // Wait a tiny bit to ensure timestamp difference
-      setTimeout(() => {
-        service.calculatePlan(plan);
-        expect(plan.updatedAt.getTime()).toBeGreaterThanOrEqual(originalTime.getTime());
-      }, 10);
+      const result = service.calculatePlan(plan);
+
+      expect(result.updatedAt.getTime()).toBeGreaterThanOrEqual(originalTime.getTime());
+    });
+
+    it('should not mutate the original plan', () => {
+      const plan = createNetworkPlan('Test Plan');
+      plan.subnets.push(createSubnet('Engineering', 10, 50));
+
+      const result = service.calculatePlan(plan);
+
+      // Original plan should be unchanged
+      expect(plan.subnets[0].subnetInfo).toBeUndefined();
+      expect(plan.supernet).toBeUndefined();
+      // Result should have calculated values
+      expect(result.subnets[0].subnetInfo).toBeDefined();
+      expect(result.supernet).toBeDefined();
     });
   });
 
@@ -97,23 +109,23 @@ describe('NetworkPlanService', () => {
       const plan = createNetworkPlan('Test Plan');
       const subnet = createSubnet('Engineering', 10, 50);
 
-      service.addSubnet(plan, subnet);
+      const result = service.addSubnet(plan, subnet);
 
-      expect(plan.subnets).toHaveLength(1);
+      expect(result.subnets).toHaveLength(1);
       // Check properties instead of object identity (VLSM creates new objects)
-      expect(plan.subnets[0].name).toBe('Engineering');
-      expect(plan.subnets[0].vlanId).toBe(10);
-      expect(plan.subnets[0].expectedDevices).toBe(50);
+      expect(result.subnets[0].name).toBe('Engineering');
+      expect(result.subnets[0].vlanId).toBe(10);
+      expect(result.subnets[0].expectedDevices).toBe(50);
     });
 
     it('should automatically recalculate plan after adding subnet', () => {
       const plan = createNetworkPlan('Test Plan');
       const subnet = createSubnet('Engineering', 10, 50);
 
-      service.addSubnet(plan, subnet);
+      const result = service.addSubnet(plan, subnet);
 
-      expect(plan.supernet).toBeDefined();
-      expect(plan.subnets[0].subnetInfo).toBeDefined();
+      expect(result.supernet).toBeDefined();
+      expect(result.subnets[0].subnetInfo).toBeDefined();
     });
 
     it('should update plan updatedAt timestamp', () => {
@@ -121,9 +133,21 @@ describe('NetworkPlanService', () => {
       const originalTime = plan.updatedAt;
       const subnet = createSubnet('Engineering', 10, 50);
 
-      service.addSubnet(plan, subnet);
+      const result = service.addSubnet(plan, subnet);
 
-      expect(plan.updatedAt.getTime()).toBeGreaterThanOrEqual(originalTime.getTime());
+      expect(result.updatedAt.getTime()).toBeGreaterThanOrEqual(originalTime.getTime());
+    });
+
+    it('should not mutate the original plan', () => {
+      const plan = createNetworkPlan('Test Plan');
+      const subnet = createSubnet('Engineering', 10, 50);
+
+      const result = service.addSubnet(plan, subnet);
+
+      // Original plan should be unchanged
+      expect(plan.subnets).toHaveLength(0);
+      // Result should have the new subnet
+      expect(result.subnets).toHaveLength(1);
     });
   });
 
@@ -153,35 +177,33 @@ describe('NetworkPlanService', () => {
 
       // After adding, subnets are reordered by size (Engineering is larger)
       // Index 0: Engineering (128 addresses), Index 1: Marketing (64 addresses)
-      const removed = service.removeSubnet(plan, 0);
+      const { plan: resultPlan, removed } = service.removeSubnet(plan, 0);
 
       // Check properties instead of object identity
-      expect(removed.name).toBe('Engineering'); // Engineering was at index 0 (larger)
-      expect(plan.subnets).toHaveLength(1);
-      expect(plan.subnets[0].name).toBe('Marketing'); // Marketing remains
+      expect(removed?.name).toBe('Engineering'); // Engineering was at index 0 (larger)
+      expect(resultPlan.subnets).toHaveLength(1);
+      expect(resultPlan.subnets[0].name).toBe('Marketing'); // Marketing remains
     });
 
     it('should recalculate plan if subnets remain', () => {
       const plan = createNetworkPlan('Test Plan');
       plan.subnets.push(createSubnet('Engineering', 10, 50));
       plan.subnets.push(createSubnet('Marketing', 20, 25));
-      service.calculatePlan(plan);
 
-      service.removeSubnet(plan, 0);
+      const { plan: resultPlan } = service.removeSubnet(plan, 0);
 
-      expect(plan.supernet).toBeDefined();
-      expect(plan.subnets[0].subnetInfo).toBeDefined();
+      expect(resultPlan.supernet).toBeDefined();
+      expect(resultPlan.subnets[0].subnetInfo).toBeDefined();
     });
 
     it('should clear supernet if no subnets remain', () => {
       const plan = createNetworkPlan('Test Plan');
       plan.subnets.push(createSubnet('Engineering', 10, 50));
-      service.calculatePlan(plan);
 
-      service.removeSubnet(plan, 0);
+      const { plan: resultPlan } = service.removeSubnet(plan, 0);
 
-      expect(plan.subnets).toHaveLength(0);
-      expect(plan.supernet).toBeUndefined();
+      expect(resultPlan.subnets).toHaveLength(0);
+      expect(resultPlan.supernet).toBeUndefined();
     });
 
     it('should update plan updatedAt timestamp', () => {
@@ -189,9 +211,22 @@ describe('NetworkPlanService', () => {
       plan.subnets.push(createSubnet('Engineering', 10, 50));
       const originalTime = plan.updatedAt;
 
-      service.removeSubnet(plan, 0);
+      const { plan: resultPlan } = service.removeSubnet(plan, 0);
 
-      expect(plan.updatedAt.getTime()).toBeGreaterThanOrEqual(originalTime.getTime());
+      expect(resultPlan.updatedAt.getTime()).toBeGreaterThanOrEqual(originalTime.getTime());
+    });
+
+    it('should not mutate the original plan', () => {
+      const plan = createNetworkPlan('Test Plan');
+      plan.subnets.push(createSubnet('Engineering', 10, 50));
+      plan.subnets.push(createSubnet('Marketing', 20, 25));
+
+      const { plan: resultPlan } = service.removeSubnet(plan, 0);
+
+      // Original plan should be unchanged
+      expect(plan.subnets).toHaveLength(2);
+      // Result should have one fewer subnet
+      expect(resultPlan.subnets).toHaveLength(1);
     });
   });
 
@@ -215,39 +250,51 @@ describe('NetworkPlanService', () => {
     it('should update base IP', () => {
       const plan = createNetworkPlan('Test Plan', '10.0.0.0');
 
-      service.updateBaseIp(plan, '192.168.0.0');
+      const result = service.updateBaseIp(plan, '192.168.0.0');
 
-      expect(plan.baseIp).toBe('192.168.0.0');
+      expect(result.baseIp).toBe('192.168.0.0');
     });
 
     it('should recalculate plan if subnets exist', () => {
       const plan = createNetworkPlan('Test Plan', '10.0.0.0');
       plan.subnets.push(createSubnet('Engineering', 10, 50));
-      service.calculatePlan(plan);
+      const calculatedPlan = service.calculatePlan(plan);
 
-      const oldNetworkAddress = plan.subnets[0].subnetInfo?.networkAddress;
+      const oldNetworkAddress = calculatedPlan.subnets[0].subnetInfo?.networkAddress;
 
-      service.updateBaseIp(plan, '192.168.0.0');
+      const result = service.updateBaseIp(calculatedPlan, '192.168.0.0');
 
-      expect(plan.subnets[0].subnetInfo?.networkAddress).toBeDefined();
-      expect(plan.subnets[0].subnetInfo?.networkAddress).not.toBe(oldNetworkAddress);
-      expect(plan.subnets[0].subnetInfo?.networkAddress).toMatch(/^192\.168\.\d+\.\d+\/\d+$/);
+      expect(result.subnets[0].subnetInfo?.networkAddress).toBeDefined();
+      expect(result.subnets[0].subnetInfo?.networkAddress).not.toBe(oldNetworkAddress);
+      expect(result.subnets[0].subnetInfo?.networkAddress).toMatch(/^192\.168\.\d+\.\d+\/\d+$/);
     });
 
     it('should not fail if no subnets exist', () => {
       const plan = createNetworkPlan('Test Plan', '10.0.0.0');
 
-      expect(() => service.updateBaseIp(plan, '192.168.0.0')).not.toThrow();
-      expect(plan.baseIp).toBe('192.168.0.0');
+      const result = service.updateBaseIp(plan, '192.168.0.0');
+
+      expect(result.baseIp).toBe('192.168.0.0');
     });
 
     it('should update plan updatedAt timestamp', () => {
       const plan = createNetworkPlan('Test Plan');
       const originalTime = plan.updatedAt;
 
-      service.updateBaseIp(plan, '192.168.0.0');
+      const result = service.updateBaseIp(plan, '192.168.0.0');
 
-      expect(plan.updatedAt.getTime()).toBeGreaterThanOrEqual(originalTime.getTime());
+      expect(result.updatedAt.getTime()).toBeGreaterThanOrEqual(originalTime.getTime());
+    });
+
+    it('should not mutate the original plan', () => {
+      const plan = createNetworkPlan('Test Plan', '10.0.0.0');
+
+      const result = service.updateBaseIp(plan, '192.168.0.0');
+
+      // Original plan should be unchanged
+      expect(plan.baseIp).toBe('10.0.0.0');
+      // Result should have new IP
+      expect(result.baseIp).toBe('192.168.0.0');
     });
   });
 
@@ -274,24 +321,24 @@ describe('NetworkPlanService', () => {
       const plan = createNetworkPlan('Test Plan');
       plan.subnets.push(createSubnet('Engineering', 10, 50));
 
-      service.updateSubnet(plan, 0, 'Updated Engineering', 20, 100);
+      const result = service.updateSubnet(plan, 0, 'Updated Engineering', 20, 100);
 
-      expect(plan.subnets[0].name).toBe('Updated Engineering');
-      expect(plan.subnets[0].vlanId).toBe(20);
-      expect(plan.subnets[0].expectedDevices).toBe(100);
+      expect(result.subnets[0].name).toBe('Updated Engineering');
+      expect(result.subnets[0].vlanId).toBe(20);
+      expect(result.subnets[0].expectedDevices).toBe(100);
     });
 
     it('should automatically recalculate plan after update', () => {
       const plan = createNetworkPlan('Test Plan');
       plan.subnets.push(createSubnet('Engineering', 10, 50));
-      service.calculatePlan(plan);
+      const calculatedPlan = service.calculatePlan(plan);
 
-      const oldSubnetSize = plan.subnets[0].subnetInfo?.subnetSize;
+      const oldSubnetSize = calculatedPlan.subnets[0].subnetInfo?.subnetSize;
 
-      service.updateSubnet(plan, 0, 'Engineering', 10, 200);
+      const result = service.updateSubnet(calculatedPlan, 0, 'Engineering', 10, 200);
 
-      expect(plan.subnets[0].subnetInfo?.subnetSize).toBeDefined();
-      expect(plan.subnets[0].subnetInfo?.subnetSize).not.toBe(oldSubnetSize);
+      expect(result.subnets[0].subnetInfo?.subnetSize).toBeDefined();
+      expect(result.subnets[0].subnetInfo?.subnetSize).not.toBe(oldSubnetSize);
     });
 
     it('should update plan updatedAt timestamp', () => {
@@ -299,9 +346,23 @@ describe('NetworkPlanService', () => {
       plan.subnets.push(createSubnet('Engineering', 10, 50));
       const originalTime = plan.updatedAt;
 
-      service.updateSubnet(plan, 0, 'Updated', 20, 100);
+      const result = service.updateSubnet(plan, 0, 'Updated', 20, 100);
 
-      expect(plan.updatedAt.getTime()).toBeGreaterThanOrEqual(originalTime.getTime());
+      expect(result.updatedAt.getTime()).toBeGreaterThanOrEqual(originalTime.getTime());
+    });
+
+    it('should not mutate the original plan', () => {
+      const plan = createNetworkPlan('Test Plan');
+      plan.subnets.push(createSubnet('Engineering', 10, 50));
+
+      const result = service.updateSubnet(plan, 0, 'Updated Engineering', 20, 100);
+
+      // Original plan should be unchanged
+      expect(plan.subnets[0].name).toBe('Engineering');
+      expect(plan.subnets[0].vlanId).toBe(10);
+      // Result should have updated values
+      expect(result.subnets[0].name).toBe('Updated Engineering');
+      expect(result.subnets[0].vlanId).toBe(20);
     });
   });
 
@@ -339,32 +400,32 @@ describe('NetworkPlanService', () => {
       const plan = createNetworkPlan('Test Plan');
       plan.subnets.push(createSubnet('Engineering', 10, 50));
 
-      service.setManualNetworkAddress(plan, 0, '10.0.1.0/24', true);
+      const result = service.setManualNetworkAddress(plan, 0, '10.0.1.0/24', true);
 
-      expect(plan.subnets[0].manualNetworkAddress).toBe('10.0.1.0/24');
-      expect(plan.subnets[0].networkLocked).toBe(true);
-      expect(plan.subnets[0].subnetInfo?.networkAddress).toBe('10.0.1.0/24');
-      expect(plan.subnets[0].subnetInfo?.cidrPrefix).toBe(24);
+      expect(result.subnets[0].manualNetworkAddress).toBe('10.0.1.0/24');
+      expect(result.subnets[0].networkLocked).toBe(true);
+      expect(result.subnets[0].subnetInfo?.networkAddress).toBe('10.0.1.0/24');
+      expect(result.subnets[0].subnetInfo?.cidrPrefix).toBe(24);
     });
 
     it('should set manual network address without locking', () => {
       const plan = createNetworkPlan('Test Plan');
       plan.subnets.push(createSubnet('Engineering', 10, 50));
 
-      service.setManualNetworkAddress(plan, 0, '10.0.2.0/25', false);
+      const result = service.setManualNetworkAddress(plan, 0, '10.0.2.0/25', false);
 
-      expect(plan.subnets[0].manualNetworkAddress).toBe('10.0.2.0/25');
-      expect(plan.subnets[0].networkLocked).toBe(false);
-      expect(plan.subnets[0].subnetInfo?.cidrPrefix).toBe(25);
+      expect(result.subnets[0].manualNetworkAddress).toBe('10.0.2.0/25');
+      expect(result.subnets[0].networkLocked).toBe(false);
+      expect(result.subnets[0].subnetInfo?.cidrPrefix).toBe(25);
     });
 
     it('should calculate correct subnet info for manual address', () => {
       const plan = createNetworkPlan('Test Plan');
       plan.subnets.push(createSubnet('Engineering', 10, 50));
 
-      service.setManualNetworkAddress(plan, 0, '192.168.1.0/26', true);
+      const result = service.setManualNetworkAddress(plan, 0, '192.168.1.0/26', true);
 
-      const subnetInfo = plan.subnets[0].subnetInfo;
+      const subnetInfo = result.subnets[0].subnetInfo;
       expect(subnetInfo?.networkAddress).toBe('192.168.1.0/26');
       expect(subnetInfo?.broadcastAddress).toBe('192.168.1.63');
       expect(subnetInfo?.usableHostRange.first).toBe('192.168.1.1');
@@ -379,15 +440,15 @@ describe('NetworkPlanService', () => {
       plan.subnets.push(subnet);
 
       // First calculate to set expectedDevices and plannedDevices
-      service.calculatePlan(plan);
-      const originalExpected = plan.subnets[0].subnetInfo?.expectedDevices;
-      const originalPlanned = plan.subnets[0].subnetInfo?.plannedDevices;
+      const calculatedPlan = service.calculatePlan(plan);
+      const originalExpected = calculatedPlan.subnets[0].subnetInfo?.expectedDevices;
+      const originalPlanned = calculatedPlan.subnets[0].subnetInfo?.plannedDevices;
 
       // Then set manual network address
-      service.setManualNetworkAddress(plan, 0, '10.0.3.0/24', true);
+      const result = service.setManualNetworkAddress(calculatedPlan, 0, '10.0.3.0/24', true);
 
-      expect(plan.subnets[0].subnetInfo?.expectedDevices).toBe(originalExpected);
-      expect(plan.subnets[0].subnetInfo?.plannedDevices).toBe(originalPlanned);
+      expect(result.subnets[0].subnetInfo?.expectedDevices).toBe(originalExpected);
+      expect(result.subnets[0].subnetInfo?.plannedDevices).toBe(originalPlanned);
     });
 
     it('should update plan updatedAt timestamp', () => {
@@ -395,20 +456,20 @@ describe('NetworkPlanService', () => {
       plan.subnets.push(createSubnet('Engineering', 10, 50));
       const originalTime = plan.updatedAt;
 
-      service.setManualNetworkAddress(plan, 0, '10.0.4.0/24', true);
+      const result = service.setManualNetworkAddress(plan, 0, '10.0.4.0/24', true);
 
-      expect(plan.updatedAt.getTime()).toBeGreaterThanOrEqual(originalTime.getTime());
+      expect(result.updatedAt.getTime()).toBeGreaterThanOrEqual(originalTime.getTime());
     });
 
     it('should handle /30 network address for point-to-point', () => {
       const plan = createNetworkPlan('Test Plan');
       plan.subnets.push(createSubnet('Point-to-Point', 10, 2));
 
-      service.setManualNetworkAddress(plan, 0, '10.0.5.0/30', true);
+      const result = service.setManualNetworkAddress(plan, 0, '10.0.5.0/30', true);
 
-      expect(plan.subnets[0].subnetInfo?.cidrPrefix).toBe(30);
-      expect(plan.subnets[0].subnetInfo?.totalHosts).toBe(4);
-      expect(plan.subnets[0].subnetInfo?.usableHosts).toBe(2);
+      expect(result.subnets[0].subnetInfo?.cidrPrefix).toBe(30);
+      expect(result.subnets[0].subnetInfo?.totalHosts).toBe(4);
+      expect(result.subnets[0].subnetInfo?.usableHosts).toBe(2);
     });
 
     it('should create subnet info if it does not exist', () => {
@@ -419,11 +480,25 @@ describe('NetworkPlanService', () => {
       // Don't call calculatePlan, so subnetInfo is undefined
       expect(subnet.subnetInfo).toBeUndefined();
 
-      service.setManualNetworkAddress(plan, 0, '10.0.6.0/24', true);
+      const result = service.setManualNetworkAddress(plan, 0, '10.0.6.0/24', true);
 
-      expect(plan.subnets[0].subnetInfo).toBeDefined();
-      expect(plan.subnets[0].subnetInfo?.expectedDevices).toBe(50);
-      expect(plan.subnets[0].subnetInfo?.networkAddress).toBe('10.0.6.0/24');
+      expect(result.subnets[0].subnetInfo).toBeDefined();
+      expect(result.subnets[0].subnetInfo?.expectedDevices).toBe(50);
+      expect(result.subnets[0].subnetInfo?.networkAddress).toBe('10.0.6.0/24');
+    });
+
+    it('should not mutate the original plan', () => {
+      const plan = createNetworkPlan('Test Plan');
+      plan.subnets.push(createSubnet('Engineering', 10, 50));
+
+      const result = service.setManualNetworkAddress(plan, 0, '10.0.1.0/24', true);
+
+      // Original plan should be unchanged
+      expect(plan.subnets[0].manualNetworkAddress).toBeUndefined();
+      expect(plan.subnets[0].networkLocked).toBe(false);
+      // Result should have the manual address
+      expect(result.subnets[0].manualNetworkAddress).toBe('10.0.1.0/24');
+      expect(result.subnets[0].networkLocked).toBe(true);
     });
   });
 
@@ -445,9 +520,9 @@ describe('NetworkPlanService', () => {
       const plan = createNetworkPlan('Test Plan');
       plan.subnets.push(createSubnet('Engineering', 10, 50));
 
-      service.setNetworkLocked(plan, 0, true);
+      const result = service.setNetworkLocked(plan, 0, true);
 
-      expect(plan.subnets[0].networkLocked).toBe(true);
+      expect(result.subnets[0].networkLocked).toBe(true);
     });
 
     it('should unlock a subnet', () => {
@@ -456,9 +531,9 @@ describe('NetworkPlanService', () => {
       subnet.networkLocked = true;
       plan.subnets.push(subnet);
 
-      service.setNetworkLocked(plan, 0, false);
+      const result = service.setNetworkLocked(plan, 0, false);
 
-      expect(plan.subnets[0].networkLocked).toBe(false);
+      expect(result.subnets[0].networkLocked).toBe(false);
     });
 
     it('should update plan updatedAt timestamp', () => {
@@ -466,9 +541,21 @@ describe('NetworkPlanService', () => {
       plan.subnets.push(createSubnet('Engineering', 10, 50));
       const originalTime = plan.updatedAt;
 
-      service.setNetworkLocked(plan, 0, true);
+      const result = service.setNetworkLocked(plan, 0, true);
 
-      expect(plan.updatedAt.getTime()).toBeGreaterThanOrEqual(originalTime.getTime());
+      expect(result.updatedAt.getTime()).toBeGreaterThanOrEqual(originalTime.getTime());
+    });
+
+    it('should not mutate the original plan', () => {
+      const plan = createNetworkPlan('Test Plan');
+      plan.subnets.push(createSubnet('Engineering', 10, 50));
+
+      const result = service.setNetworkLocked(plan, 0, true);
+
+      // Original plan should be unchanged
+      expect(plan.subnets[0].networkLocked).toBe(false);
+      // Result should have locked subnet
+      expect(result.subnets[0].networkLocked).toBe(true);
     });
   });
 });

@@ -53,6 +53,32 @@ function formatSupernetHeaders(plan: NetworkPlan): string[] {
 }
 
 /**
+ * Format available space summary as CSV comment headers
+ *
+ * @param plan - The network plan
+ * @returns Array of available space header lines
+ */
+function formatAvailableSpaceHeaders(plan: NetworkPlan): string[] {
+  if (!plan.spaceReport || !plan.assignedBlocks || plan.assignedBlocks.length === 0) {
+    return [];
+  }
+
+  const headers: string[] = [];
+  const report = plan.spaceReport;
+
+  headers.push('');
+  headers.push('# Available Space Summary');
+  headers.push(`# total_assigned: ${report.totalAssignedCapacity}`);
+  headers.push(`# total_used: ${report.totalUsedCapacity}`);
+  headers.push(`# total_available: ${report.totalAvailableCapacity}`);
+  headers.push(
+    `# utilization_percent: ${(Math.round(report.overallUtilizationPercent * 10) / 10).toFixed(1)}`,
+  );
+
+  return headers;
+}
+
+/**
  * Escape CSV values that contain commas, quotes, or newlines
  *
  * @param value - Value to escape
@@ -199,6 +225,9 @@ export function formatPlanToCsv(plan: NetworkPlan, preferences?: Preferences): s
 
   // Supernet summary section (if available)
   lines.push(...formatSupernetHeaders(plan));
+
+  // Available space summary section (if available)
+  lines.push(...formatAvailableSpaceHeaders(plan));
 
   return lines.join('\n');
 }

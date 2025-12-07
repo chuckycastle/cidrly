@@ -44,6 +44,57 @@ const SubnetSchema = z.object({
   subnetInfo: SubnetInfoSchema.optional(),
   networkLocked: z.boolean().optional().default(false),
   manualNetworkAddress: z.string().optional(),
+  sourceBlockId: z.string().optional(), // IPAM-lite: Reference to AssignedBlock
+});
+
+/**
+ * AssignedBlock schema - validates IP blocks assigned to the plan (IPAM-lite)
+ */
+const AssignedBlockSchema = z.object({
+  id: z.string().min(1),
+  networkAddress: z.string().regex(/^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/, 'Invalid CIDR notation'),
+  cidrPrefix: z.number().int().min(CIDR_RULES.ABSOLUTE_MIN).max(CIDR_RULES.ABSOLUTE_MAX),
+  totalCapacity: z.number().int().positive(),
+  startInt: z.number().int().nonnegative(),
+  endInt: z.number().int().nonnegative(),
+  label: z.string().max(100).optional(),
+  assignedAt: z.coerce.date(),
+});
+
+/**
+ * AvailableFragment schema - validates unallocated CIDR ranges (IPAM-lite)
+ */
+const AvailableFragmentSchema = z.object({
+  parentBlockId: z.string().min(1),
+  networkAddress: z.string().regex(/^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/, 'Invalid CIDR notation'),
+  capacity: z.number().int().positive(),
+  startInt: z.number().int().nonnegative(),
+  endInt: z.number().int().nonnegative(),
+});
+
+/**
+ * BlockAllocationSummary schema - validates per-block allocation summary (IPAM-lite)
+ */
+const BlockAllocationSummarySchema = z.object({
+  blockId: z.string().min(1),
+  block: AssignedBlockSchema,
+  allocatedSubnetIds: z.array(z.string()),
+  usedCapacity: z.number().int().nonnegative(),
+  availableCapacity: z.number().int().nonnegative(),
+  utilizationPercent: z.number().min(0).max(100),
+  fragments: z.array(AvailableFragmentSchema),
+});
+
+/**
+ * SpaceAllocationReport schema - validates complete space report (IPAM-lite)
+ */
+const SpaceAllocationReportSchema = z.object({
+  generatedAt: z.coerce.date(),
+  totalAssignedCapacity: z.number().int().nonnegative(),
+  totalUsedCapacity: z.number().int().nonnegative(),
+  totalAvailableCapacity: z.number().int().nonnegative(),
+  overallUtilizationPercent: z.number().min(0).max(100),
+  blockSummaries: z.array(BlockAllocationSummarySchema),
 });
 
 /**
@@ -106,6 +157,9 @@ const NetworkPlanSchema = z.object({
   supernet: SupernetSchema.optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
+  // IPAM-lite fields
+  assignedBlocks: z.array(AssignedBlockSchema).optional(),
+  spaceReport: SpaceAllocationReportSchema.optional(),
 });
 
 /**
@@ -180,3 +234,7 @@ export function parseSubnet(data: unknown): Subnet {
 export type NetworkPlan = z.infer<typeof NetworkPlanSchema>;
 export type Subnet = z.infer<typeof SubnetSchema>;
 export type SubnetInfo = z.infer<typeof SubnetInfoSchema>;
+export type AssignedBlock = z.infer<typeof AssignedBlockSchema>;
+export type AvailableFragment = z.infer<typeof AvailableFragmentSchema>;
+export type BlockAllocationSummary = z.infer<typeof BlockAllocationSummarySchema>;
+export type SpaceAllocationReport = z.infer<typeof SpaceAllocationReportSchema>;

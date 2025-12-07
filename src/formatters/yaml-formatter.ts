@@ -92,7 +92,7 @@ export function formatPlanToYaml(plan: NetworkPlan, preferences?: Preferences): 
   const visibleColumns = preferences?.columnPreferences.visibleColumns;
 
   // Create a clean object for YAML serialization
-  const yamlData = {
+  const yamlData: Record<string, unknown> = {
     name: plan.name,
     baseIp: plan.baseIp,
     growthPercentage: plan.growthPercentage,
@@ -112,6 +112,20 @@ export function formatPlanToYaml(plan: NetworkPlan, preferences?: Preferences): 
       },
     }),
   };
+
+  // Add available space summary if blocks are assigned
+  if (plan.spaceReport && plan.assignedBlocks && plan.assignedBlocks.length > 0) {
+    yamlData['availableSpace'] = {
+      totalAssigned: plan.spaceReport.totalAssignedCapacity,
+      totalUsed: plan.spaceReport.totalUsedCapacity,
+      totalAvailable: plan.spaceReport.totalAvailableCapacity,
+      utilizationPercent: Math.round(plan.spaceReport.overallUtilizationPercent * 10) / 10,
+      blocks: plan.spaceReport.blockSummaries.map((summary) => ({
+        address: summary.block.networkAddress,
+        available: summary.availableCapacity,
+      })),
+    };
+  }
 
   // Convert to YAML with custom options
   return YAML.stringify(yamlData, {
@@ -141,6 +155,7 @@ export function addYamlComments(yamlString: string): string {
 
   let inSubnets = false;
   let inSupernet = false;
+  let inAvailableSpace = false;
 
   for (const line of lines) {
     // Add section comments
@@ -152,6 +167,10 @@ export function addYamlComments(yamlString: string): string {
       commented.push('');
       commented.push('# Supernet Summary');
       inSupernet = true;
+    } else if (line.startsWith('availableSpace:') && !inAvailableSpace) {
+      commented.push('');
+      commented.push('# Available IP Space');
+      inAvailableSpace = true;
     }
 
     commented.push(line);

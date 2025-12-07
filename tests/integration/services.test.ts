@@ -30,16 +30,16 @@ describe('Services Integration', () => {
   describe('End-to-End Workflow', () => {
     it('should complete full workflow: create → add subnets → calculate → save → load → verify', async () => {
       // 1. Create plan
-      const plan = createNetworkPlan('Integration Test Plan', '10.0.0.0');
+      let plan = createNetworkPlan('Integration Test Plan', '10.0.0.0');
 
-      // 2. Add subnets
+      // 2. Add subnets (chaining return values)
       const subnet1 = createSubnet('Engineering', 10, 50);
       const subnet2 = createSubnet('Marketing', 20, 25);
       const subnet3 = createSubnet('Sales', 30, 100);
 
-      planService.addSubnet(plan, subnet1);
-      planService.addSubnet(plan, subnet2);
-      planService.addSubnet(plan, subnet3);
+      plan = planService.addSubnet(plan, subnet1);
+      plan = planService.addSubnet(plan, subnet2);
+      plan = planService.addSubnet(plan, subnet3);
 
       // Verify subnets were added and calculated
       expect(plan.subnets).toHaveLength(3);
@@ -72,19 +72,19 @@ describe('Services Integration', () => {
 
     it('should handle plan modifications and re-save', async () => {
       // Create and save initial plan
-      const plan = createNetworkPlan('Modifiable Plan', '192.168.0.0');
+      let plan = createNetworkPlan('Modifiable Plan', '192.168.0.0');
       const subnet1 = createSubnet('Initial Subnet', 10, 50);
-      planService.addSubnet(plan, subnet1);
+      plan = planService.addSubnet(plan, subnet1);
 
       await fileService.savePlan(plan, 'modifiable.json');
 
       // Load the plan
-      const loadedPlan = await fileService.loadPlan('modifiable.json');
+      let loadedPlan = await fileService.loadPlan('modifiable.json');
 
       // Modify the plan
       const subnet2 = createSubnet('New Subnet', 20, 75);
-      planService.addSubnet(loadedPlan, subnet2);
-      planService.updateBaseIp(loadedPlan, '172.16.0.0');
+      loadedPlan = planService.addSubnet(loadedPlan, subnet2);
+      loadedPlan = planService.updateBaseIp(loadedPlan, '172.16.0.0');
 
       // Save modified plan
       await fileService.savePlan(loadedPlan, 'modifiable.json');
@@ -101,11 +101,11 @@ describe('Services Integration', () => {
     });
 
     it('should handle subnet removal and recalculation', async () => {
-      const plan = createNetworkPlan('Removal Test', '10.0.0.0');
+      let plan = createNetworkPlan('Removal Test', '10.0.0.0');
 
-      planService.addSubnet(plan, createSubnet('Subnet A', 10, 50));
-      planService.addSubnet(plan, createSubnet('Subnet B', 20, 25));
-      planService.addSubnet(plan, createSubnet('Subnet C', 30, 100));
+      plan = planService.addSubnet(plan, createSubnet('Subnet A', 10, 50));
+      plan = planService.addSubnet(plan, createSubnet('Subnet B', 20, 25));
+      plan = planService.addSubnet(plan, createSubnet('Subnet C', 30, 100));
 
       expect(plan.subnets).toHaveLength(3);
 
@@ -118,9 +118,10 @@ describe('Services Integration', () => {
       // Index 2: Subnet B (smallest - 64 addresses)
 
       // Remove middle subnet (Subnet A)
-      const removed = planService.removeSubnet(plan, 1);
-      expect(removed.name).toBe('Subnet A'); // Subnet A is at index 1
-      expect(plan.subnets).toHaveLength(2);
+      const { plan: updatedPlan, removed } = planService.removeSubnet(plan, 1);
+      expect(removed?.name).toBe('Subnet A'); // Subnet A is at index 1
+      expect(updatedPlan.subnets).toHaveLength(2);
+      plan = updatedPlan;
 
       // Save with 2 subnets
       await fileService.savePlan(plan, 'removal-test.json');
@@ -133,13 +134,13 @@ describe('Services Integration', () => {
     });
 
     it('should handle subnet updates correctly', async () => {
-      const plan = createNetworkPlan('Update Test', '10.0.0.0');
-      planService.addSubnet(plan, createSubnet('Original Name', 10, 50));
+      let plan = createNetworkPlan('Update Test', '10.0.0.0');
+      plan = planService.addSubnet(plan, createSubnet('Original Name', 10, 50));
 
       await fileService.savePlan(plan, 'update-test.json');
 
       // Update the subnet
-      planService.updateSubnet(plan, 0, 'Updated Name', 99, 200);
+      plan = planService.updateSubnet(plan, 0, 'Updated Name', 99, 200);
 
       await fileService.savePlan(plan, 'update-test.json');
 
@@ -153,13 +154,13 @@ describe('Services Integration', () => {
 
   describe('Multiple Plans Management', () => {
     it('should handle saving and loading multiple plans', async () => {
-      const plan1 = createNetworkPlan('Plan 1', '10.0.0.0');
-      const plan2 = createNetworkPlan('Plan 2', '192.168.0.0');
-      const plan3 = createNetworkPlan('Plan 3', '172.16.0.0');
+      let plan1 = createNetworkPlan('Plan 1', '10.0.0.0');
+      let plan2 = createNetworkPlan('Plan 2', '192.168.0.0');
+      let plan3 = createNetworkPlan('Plan 3', '172.16.0.0');
 
-      planService.addSubnet(plan1, createSubnet('P1 Subnet', 10, 50));
-      planService.addSubnet(plan2, createSubnet('P2 Subnet', 20, 25));
-      planService.addSubnet(plan3, createSubnet('P3 Subnet', 30, 100));
+      plan1 = planService.addSubnet(plan1, createSubnet('P1 Subnet', 10, 50));
+      plan2 = planService.addSubnet(plan2, createSubnet('P2 Subnet', 20, 25));
+      plan3 = planService.addSubnet(plan3, createSubnet('P3 Subnet', 30, 100));
 
       await fileService.savePlan(plan1, 'plan1.json');
       await fileService.savePlan(plan2, 'plan2.json');
@@ -207,8 +208,8 @@ describe('Services Integration', () => {
 
   describe('Data Integrity', () => {
     it('should preserve subnet calculation results through save/load', async () => {
-      const plan = createNetworkPlan('Calculation Test', '10.0.0.0');
-      planService.addSubnet(plan, createSubnet('Engineering', 10, 50));
+      let plan = createNetworkPlan('Calculation Test', '10.0.0.0');
+      plan = planService.addSubnet(plan, createSubnet('Engineering', 10, 50));
 
       const originalSubnetInfo = plan.subnets[0].subnetInfo;
       const originalSupernet = plan.supernet;
@@ -242,14 +243,14 @@ describe('Services Integration', () => {
     });
 
     it('should handle base IP changes correctly', async () => {
-      const plan = createNetworkPlan('IP Change Test', '10.0.0.0');
-      planService.addSubnet(plan, createSubnet('Subnet', 10, 50));
+      let plan = createNetworkPlan('IP Change Test', '10.0.0.0');
+      plan = planService.addSubnet(plan, createSubnet('Subnet', 10, 50));
 
       const originalNetworkAddress = plan.subnets[0].subnetInfo?.networkAddress;
       expect(originalNetworkAddress).toMatch(/^10\.0\./);
 
       // Change base IP
-      planService.updateBaseIp(plan, '192.168.0.0');
+      plan = planService.updateBaseIp(plan, '192.168.0.0');
 
       const newNetworkAddress = plan.subnets[0].subnetInfo?.networkAddress;
       expect(newNetworkAddress).toMatch(/^192\.168\./);
@@ -266,8 +267,8 @@ describe('Services Integration', () => {
 
   describe('Error Handling', () => {
     it('should handle save errors without corrupting service state', async () => {
-      const plan = createNetworkPlan('Error Test');
-      planService.addSubnet(plan, createSubnet('Subnet', 10, 50));
+      let plan = createNetworkPlan('Error Test');
+      plan = planService.addSubnet(plan, createSubnet('Subnet', 10, 50));
 
       // Try to save with invalid filename
       await expect(fileService.savePlan(plan, '../invalid.json')).rejects.toThrow();
@@ -286,21 +287,21 @@ describe('Services Integration', () => {
     });
 
     it('should handle calculation errors without breaking plan', async () => {
-      const plan = createNetworkPlan('Empty Plan');
+      let plan = createNetworkPlan('Empty Plan');
 
       // Try to calculate empty plan
       expect(() => planService.calculatePlan(plan)).toThrow();
 
       // Plan should still be valid and we can add subnets
-      planService.addSubnet(plan, createSubnet('Subnet', 10, 50));
+      plan = planService.addSubnet(plan, createSubnet('Subnet', 10, 50));
       expect(plan.subnets).toHaveLength(1);
       expect(plan.supernet).toBeDefined();
     });
 
     it('should handle growth percentage changes and recalculation', async () => {
       // Create plan with default growth (100%)
-      const plan = createNetworkPlan('Growth Test', '10.0.0.0');
-      planService.addSubnet(plan, createSubnet('Engineering', 10, 50));
+      let plan = createNetworkPlan('Growth Test', '10.0.0.0');
+      plan = planService.addSubnet(plan, createSubnet('Engineering', 10, 50));
 
       // With 100% growth, 50 devices → 100 planned → /25 subnet (126 usable)
       expect(plan.subnets[0].subnetInfo?.cidrPrefix).toBe(25);
@@ -310,7 +311,7 @@ describe('Services Integration', () => {
       await fileService.savePlan(plan, 'growth-test.json');
 
       // Change growth to 0% (exact capacity)
-      planService.setGrowthPercentage(plan, 0);
+      plan = planService.setGrowthPercentage(plan, 0);
 
       // With 0% growth, 50 devices → 50 planned → /26 subnet (62 usable)
       expect(plan.subnets[0].subnetInfo?.cidrPrefix).toBe(26);
@@ -319,14 +320,14 @@ describe('Services Integration', () => {
 
       // Save and reload
       await fileService.savePlan(plan, 'growth-test.json');
-      const loadedPlan = await fileService.loadPlan('growth-test.json');
+      let loadedPlan = await fileService.loadPlan('growth-test.json');
 
       // Verify growth percentage persisted
       expect(loadedPlan.growthPercentage).toBe(0);
       expect(loadedPlan.subnets[0].subnetInfo?.cidrPrefix).toBe(26);
 
       // Change growth to 200% (triple capacity)
-      planService.setGrowthPercentage(loadedPlan, 200);
+      loadedPlan = planService.setGrowthPercentage(loadedPlan, 200);
 
       // With 200% growth, 50 devices → 150 planned → /24 subnet (254 usable)
       expect(loadedPlan.subnets[0].subnetInfo?.cidrPrefix).toBe(24);
@@ -334,11 +335,11 @@ describe('Services Integration', () => {
     });
 
     it('should detect subnet overlaps after recalculation', async () => {
-      const plan = createNetworkPlan('Overlap Test', '10.0.0.0');
+      let plan = createNetworkPlan('Overlap Test', '10.0.0.0');
 
       // Add subnets - VLSM should prevent overlaps
-      planService.addSubnet(plan, createSubnet('Subnet A', 10, 50));
-      planService.addSubnet(plan, createSubnet('Subnet B', 20, 25));
+      plan = planService.addSubnet(plan, createSubnet('Subnet A', 10, 50));
+      plan = planService.addSubnet(plan, createSubnet('Subnet B', 20, 25));
 
       // Check for overlaps (should be none with proper VLSM)
       const overlapResult = planService.checkOverlaps(plan);
@@ -359,7 +360,7 @@ describe('Services Integration', () => {
     });
 
     it('should preserve subnet descriptions through full workflow', async () => {
-      const plan = createNetworkPlan('Description Test', '192.168.0.0');
+      let plan = createNetworkPlan('Description Test', '192.168.0.0');
 
       // Add subnets with descriptions
       const subnet1 = createSubnet('Engineering', 10, 50);
@@ -367,8 +368,8 @@ describe('Services Integration', () => {
       const subnet2 = createSubnet('Guest WiFi', 20, 25);
       subnet2.description = 'Guest wireless access network';
 
-      planService.addSubnet(plan, subnet1);
-      planService.addSubnet(plan, subnet2);
+      plan = planService.addSubnet(plan, subnet1);
+      plan = planService.addSubnet(plan, subnet2);
 
       // Verify descriptions are set
       expect(plan.subnets[0].description).toBe('Primary engineering team network');
@@ -378,7 +379,7 @@ describe('Services Integration', () => {
       await fileService.savePlan(plan, 'description-test.json');
 
       // Load plan
-      const loadedPlan = await fileService.loadPlan('description-test.json');
+      let loadedPlan = await fileService.loadPlan('description-test.json');
 
       // Verify descriptions persisted (note: subnets are reordered by size after VLSM)
       const loadedEngineering = loadedPlan.subnets.find((s) => s.name === 'Engineering');
@@ -389,7 +390,7 @@ describe('Services Integration', () => {
 
       // Update description
       const engineeringIndex = loadedPlan.subnets.findIndex((s) => s.name === 'Engineering');
-      planService.updateSubnet(
+      loadedPlan = planService.updateSubnet(
         loadedPlan,
         engineeringIndex,
         'Engineering',
@@ -408,7 +409,7 @@ describe('Services Integration', () => {
 
     it('should handle complex workflow: create → add → edit → change base IP → adjust growth → save → load', async () => {
       // 1. Create plan with custom growth
-      const plan = createNetworkPlan('Complex Workflow', '10.0.0.0');
+      let plan = createNetworkPlan('Complex Workflow', '10.0.0.0');
       plan.growthPercentage = 50; // 50% growth
 
       // 2. Add multiple subnets with descriptions
@@ -418,29 +419,36 @@ describe('Services Integration', () => {
       sales.description = 'Sales team';
       const guest = createSubnet('Guest WiFi', 30, 20);
 
-      planService.addSubnet(plan, engineering);
-      planService.addSubnet(plan, sales);
-      planService.addSubnet(plan, guest);
+      plan = planService.addSubnet(plan, engineering);
+      plan = planService.addSubnet(plan, sales);
+      plan = planService.addSubnet(plan, guest);
 
       expect(plan.subnets).toHaveLength(3);
       expect(plan.baseIp).toBe('10.0.0.0');
 
       // 3. Edit a subnet
       const salesIndex = plan.subnets.findIndex((s) => s.name === 'Sales');
-      planService.updateSubnet(plan, salesIndex, 'Sales & Marketing', 20, 75, 'Combined team');
+      plan = planService.updateSubnet(
+        plan,
+        salesIndex,
+        'Sales & Marketing',
+        20,
+        75,
+        'Combined team',
+      );
 
       expect(plan.subnets[salesIndex].name).toBe('Sales & Marketing');
       expect(plan.subnets[salesIndex].expectedDevices).toBe(75);
 
       // 4. Change base IP
-      planService.updateBaseIp(plan, '172.16.0.0');
+      plan = planService.updateBaseIp(plan, '172.16.0.0');
       expect(plan.baseIp).toBe('172.16.0.0');
 
       // Verify addresses updated
       expect(plan.subnets[0].subnetInfo?.networkAddress).toContain('172.16.');
 
       // 5. Adjust growth percentage
-      planService.setGrowthPercentage(plan, 100); // Back to default
+      plan = planService.setGrowthPercentage(plan, 100); // Back to default
       expect(plan.growthPercentage).toBe(100);
 
       // 6. Check for overlaps

@@ -86,3 +86,8 @@ temp/
 *.tmp
 *.bak
 *~
+
+# Terraform export test outputs
+aws/
+azure/
+gcp/

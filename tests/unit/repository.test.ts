@@ -31,8 +31,8 @@ describe('FileSystemRepository', () => {
     const subnet2 = createSubnet('Users', 20, 100);
 
     const planService = new NetworkPlanService();
-    planService.addSubnet(testPlan, subnet1);
-    planService.addSubnet(testPlan, subnet2);
+    testPlan = planService.addSubnet(testPlan, subnet1);
+    testPlan = planService.addSubnet(testPlan, subnet2);
   });
 
   afterEach(() => {
@@ -261,9 +261,9 @@ describe('FileSystemRepository', () => {
       // Save complex plan
       const planService = new NetworkPlanService();
       const subnet3 = createSubnet('Servers', 30, 200);
-      planService.addSubnet(testPlan, subnet3);
+      const complexPlan = planService.addSubnet(testPlan, subnet3);
 
-      await repository.save(testPlan, 'complex-plan.json');
+      await repository.save(complexPlan, 'complex-plan.json');
 
       // Load and verify
       const loaded = await repository.load('complex-plan.json');

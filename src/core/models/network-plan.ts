@@ -9,12 +9,17 @@ import {
   isValidNameLength,
   isValidVlanRange,
 } from '../../infrastructure/config/validation-rules.js';
-import type { SubnetInfo } from '../calculators/subnet-calculator.js';
+import {
+  calculateAvailableSpace,
+  tryAllocateSubnetToAvailableSpace,
+} from '../calculators/availability-calculator.js';
+import type { OccupiedRange, SubnetInfo } from '../calculators/subnet-calculator.js';
 import {
   allocateSubnetAddresses,
   calculateSubnet,
   calculateSupernet,
   generateNetworkAddress,
+  ipToInt,
 } from '../calculators/subnet-calculator.js';
 
 // Re-export SubnetInfo for convenience
@@ -29,6 +34,83 @@ export interface Supernet {
   networkAddress: string;
 }
 
+/**
+ * Represents an IP block assigned to this network plan
+ * These are the blocks from which subnets can be allocated
+ */
+export interface AssignedBlock {
+  /** Unique identifier for this block */
+  id: string;
+  /** Network address in CIDR notation (e.g., "10.1.241.0/24") */
+  networkAddress: string;
+  /** CIDR prefix (8-30) */
+  cidrPrefix: number;
+  /** Total IP addresses in this block */
+  totalCapacity: number;
+  /** Starting IP as 32-bit integer (for range calculations) */
+  startInt: number;
+  /** Ending IP as 32-bit integer (inclusive) */
+  endInt: number;
+  /** Optional descriptive label (e.g., "Data Center A") */
+  label?: string;
+  /** When this block was assigned to the plan */
+  assignedAt: Date;
+}
+
+/**
+ * Represents a contiguous unallocated CIDR block within an AssignedBlock
+ */
+export interface AvailableFragment {
+  /** Reference to the parent AssignedBlock id */
+  parentBlockId: string;
+  /** Network address in optimal CIDR notation (e.g., "10.1.241.32/27") */
+  networkAddress: string;
+  /** Number of IP addresses in this fragment */
+  capacity: number;
+  /** Starting IP as 32-bit integer */
+  startInt: number;
+  /** Ending IP as 32-bit integer */
+  endInt: number;
+}
+
+/**
+ * Summary of allocation status for an AssignedBlock
+ */
+export interface BlockAllocationSummary {
+  /** Reference to AssignedBlock id */
+  blockId: string;
+  /** The assigned block */
+  block: AssignedBlock;
+  /** IDs of subnets allocated from this block */
+  allocatedSubnetIds: string[];
+  /** Total IP addresses used by allocations */
+  usedCapacity: number;
+  /** Total IP addresses available */
+  availableCapacity: number;
+  /** Utilization as percentage (usedCapacity / totalCapacity * 100) */
+  utilizationPercent: number;
+  /** Available fragments (unallocated contiguous regions) */
+  fragments: AvailableFragment[];
+}
+
+/**
+ * Complete report of space allocation across all assigned blocks
+ */
+export interface SpaceAllocationReport {
+  /** Report generation timestamp */
+  generatedAt: Date;
+  /** Total capacity across all assigned blocks */
+  totalAssignedCapacity: number;
+  /** Total used capacity across all blocks */
+  totalUsedCapacity: number;
+  /** Total available capacity across all blocks */
+  totalAvailableCapacity: number;
+  /** Overall utilization percentage */
+  overallUtilizationPercent: number;
+  /** Per-block allocation summaries */
+  blockSummaries: BlockAllocationSummary[];
+}
+
 export interface Subnet {
   id: string;
   name: string;
@@ -38,6 +120,8 @@ export interface Subnet {
   subnetInfo?: SubnetInfo;
   networkLocked: boolean;
   manualNetworkAddress?: string;
+  /** Reference to the AssignedBlock this subnet was allocated from (IPAM-lite) */
+  sourceBlockId?: string;
 }
 
 export interface NetworkPlan {
@@ -48,6 +132,10 @@ export interface NetworkPlan {
   supernet?: Supernet;
   createdAt: Date;
   updatedAt: Date;
+  /** IP blocks assigned to this plan by the network team (IPAM-lite) */
+  assignedBlocks?: AssignedBlock[];
+  /** Available space report (regenerated on plan changes, IPAM-lite) */
+  spaceReport?: SpaceAllocationReport;
 }
 
 /**
@@ -55,6 +143,13 @@ export interface NetworkPlan {
  */
 export function generateSubnetId(): string {
   return `subnet-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
+/**
+ * Generate a unique ID for an assigned block
+ */
+export function generateBlockId(): string {
+  return `block-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }
 
 /**
@@ -179,15 +274,56 @@ export function calculateSubnetRanges(plan: NetworkPlan): NetworkPlan {
     return sizeB - sizeA; // Descending order
   });
 
-  // Step 4: Allocate network addresses to unlocked subnets only
-  const unlockedSubnetInfos = sortedUnlocked
-    .map((s) => s.subnetInfo)
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime type guard
-    .filter((info): info is NonNullable<typeof info> => info !== undefined);
+  // Step 4: Build occupied ranges from locked subnets (sorted by start IP for deterministic allocation)
+  // This ensures unlocked subnets are allocated around (not over) locked ones
+  const occupiedRanges: OccupiedRange[] = lockedSubnets
+    .filter((s) => s.subnetInfo?.networkAddress)
+    .map((s) => {
+      const ip = s.subnetInfo!.networkAddress!.split('/')[0]!;
+      const start = ipToInt(ip);
+      const end = start + s.subnetInfo!.subnetSize - 1;
+      return { start, end };
+    })
+    .sort((a, b) => a.start - b.start);
 
-  const allocatedInfos = allocateSubnetAddresses(plan.baseIp, unlockedSubnetInfos);
+  // Step 5: Allocate network addresses to unlocked subnets
+  let allocatedInfos: SubnetInfo[];
 
-  // Step 5: Combine unlocked subnets with new addresses and locked subnets with preserved addresses
+  if (plan.assignedBlocks && plan.assignedBlocks.length > 0) {
+    // Step 5a: Fragment-based allocation for plans with assigned blocks
+    // This ensures subnets are allocated WITHIN assigned blocks only
+    // Track allocations incrementally to avoid overlapping addresses
+    const allocatedInThisBatch: Subnet[] = [];
+
+    allocatedInfos = sortedUnlocked.map((subnet) => {
+      // Recalculate available space including previously allocated subnets in this batch
+      const effectivelyLocked = [...lockedSubnets, ...allocatedInThisBatch];
+      const spaceReport = calculateAvailableSpace(plan.assignedBlocks, effectivelyLocked);
+
+      const result = tryAllocateSubnetToAvailableSpace(subnet, spaceReport);
+      if (result.success && result.networkAddress) {
+        // Track this allocation for subsequent iterations
+        const allocatedSubnet: Subnet = {
+          ...subnet,
+          subnetInfo: { ...subnet.subnetInfo, networkAddress: result.networkAddress },
+        };
+        allocatedInThisBatch.push(allocatedSubnet);
+        return { ...subnet.subnetInfo, networkAddress: result.networkAddress };
+      }
+      // Fallback: return subnet without address if no space available in blocks
+      return subnet.subnetInfo;
+    });
+  } else {
+    // Step 5b: Sequential allocation for plans without assigned blocks
+    const unlockedSubnetInfos = sortedUnlocked
+      .map((s) => s.subnetInfo)
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime type guard
+      .filter((info): info is NonNullable<typeof info> => info !== undefined);
+
+    allocatedInfos = allocateSubnetAddresses(plan.baseIp, unlockedSubnetInfos, occupiedRanges);
+  }
+
+  // Step 6: Combine unlocked subnets with new addresses and locked subnets with preserved addresses
   const unlockedWithAddresses = sortedUnlocked.map((subnet, index) => ({
     ...subnet,
     subnetInfo: allocatedInfos[index],
@@ -195,7 +331,7 @@ export function calculateSubnetRanges(plan: NetworkPlan): NetworkPlan {
 
   const finalSubnets = [...unlockedWithAddresses, ...lockedSubnets];
 
-  // Step 6: Calculate supernet from all allocated subnets
+  // Step 7: Calculate supernet from all allocated subnets
   const allSubnetInfos = finalSubnets
     .map((s) => s.subnetInfo)
     .filter((info): info is NonNullable<typeof info> => info !== undefined);

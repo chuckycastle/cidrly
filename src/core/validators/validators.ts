@@ -9,6 +9,7 @@ import {
   isBroadcastIp,
   isMulticastIp,
   isReservedIp,
+  isReservedVlan,
   isValidDeviceCountRange,
   isValidIpOctet,
   isValidNameLength,
@@ -74,6 +75,38 @@ export function validateVlanId(input: string): string | true {
 
   if (!isValidVlanRange(vlanId)) {
     return `VLAN ID must be between ${VLAN_RULES.MIN} and ${VLAN_RULES.MAX}. Got: ${vlanId}`;
+  }
+
+  // Check for reserved VLANs (universally blocked)
+  if (isReservedVlan(vlanId)) {
+    if (vlanId >= 1002 && vlanId <= 1005) {
+      return `VLAN ${vlanId} is reserved for Token Ring/FDDI`;
+    }
+    if (vlanId === 0 || vlanId === 4095) {
+      return `VLAN ${vlanId} is reserved by IEEE 802.1Q`;
+    }
+    return `VLAN ${vlanId} is reserved`;
+  }
+
+  return true;
+}
+
+/**
+ * Validates that a VLAN ID is unique within a plan
+ * @param vlanId - The VLAN ID to check
+ * @param existingVlans - Array of existing VLAN IDs in the plan
+ * @param excludeIndex - Optional index to exclude from check (for edit operations)
+ * @returns Validation error message or true if valid
+ */
+export function validateVlanIdUnique(
+  vlanId: number,
+  existingVlans: number[],
+  excludeIndex?: number,
+): string | true {
+  const isDuplicate = existingVlans.some((v, i) => v === vlanId && i !== excludeIndex);
+
+  if (isDuplicate) {
+    return `VLAN ${vlanId} is already in use`;
   }
 
   return true;

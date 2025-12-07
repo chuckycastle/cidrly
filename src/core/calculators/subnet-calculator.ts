@@ -397,11 +397,45 @@ export function generateNetworkAddress(baseIp: string, cidr: number): string {
 }
 
 /**
+ * Represents an occupied IP range (used by locked subnets)
+ */
+export interface OccupiedRange {
+  /** Starting IP address as 32-bit unsigned integer */
+  start: number;
+  /** Ending IP address as 32-bit unsigned integer (inclusive) */
+  end: number;
+}
+
+/**
+ * Convert IP string to 32-bit unsigned integer
+ */
+export function ipToInt(ip: string): number {
+  const octets = ip.split('.').map((octet) => parseInt(octet, 10));
+  if (octets.length !== 4) {
+    throw new Error(`Invalid IP address: ${ip}`);
+  }
+  const [oct1, oct2, oct3, oct4] = octets;
+  if (oct1 === undefined || oct2 === undefined || oct3 === undefined || oct4 === undefined) {
+    throw new Error(`Invalid IP address: ${ip}`);
+  }
+  return ((oct1 << 24) | (oct2 << 16) | (oct3 << 8) | oct4) >>> 0;
+}
+
+/**
+ * Convert 32-bit unsigned integer to IP string
+ */
+export function intToIp(ipInt: number): string {
+  return [(ipInt >>> 24) & 255, (ipInt >>> 16) & 255, (ipInt >>> 8) & 255, ipInt & 255].join('.');
+}
+
+/**
  * Allocate network addresses to subnets sequentially using VLSM (Variable Length Subnet Masking)
  * Ensures proper CIDR boundary alignment for each subnet to prevent overlaps
+ * Supports gap-aware allocation to avoid overlapping with occupied (locked) subnet ranges
  *
  * @param baseIp - Starting IP address (e.g., "10.0.0.0")
  * @param subnetInfos - Array of subnet specifications (should be pre-sorted largest to smallest)
+ * @param occupiedRanges - Optional array of IP ranges occupied by locked subnets
  * @returns Array of subnets with allocated network addresses
  *
  * @remarks
@@ -413,13 +447,18 @@ export function generateNetworkAddress(baseIp: string, cidr: number): string {
  * - /23 subnet (512 addresses) must align on 512-byte boundaries
  * - Misalignment causes invalid CIDR blocks and routing issues
  *
+ * **Gap-Aware Allocation:**
+ * When occupied ranges are provided, the algorithm skips over them to avoid overlaps.
+ * This enables incremental allocation where new subnets are placed in available gaps.
+ *
  * **Algorithm Steps:**
  * 1. Convert base IP to 32-bit integer
  * 2. For each subnet:
  *    a. Calculate alignment: `remainder = currentIp % subnetSize`
  *    b. If not aligned, skip forward: `currentIp += (subnetSize - remainder)`
- *    c. Assign network address at aligned boundary
- *    d. Advance pointer by subnet size
+ *    c. Check for overlap with occupied ranges; if overlap, skip past and retry
+ *    d. Assign network address at aligned boundary
+ *    e. Advance pointer by subnet size
  *
  * @example
  * ```typescript
@@ -443,38 +482,54 @@ export function generateNetworkAddress(baseIp: string, cidr: number): string {
  *
  * @see https://en.wikipedia.org/wiki/Variable-length_subnet_masking
  */
-export function allocateSubnetAddresses(baseIp: string, subnetInfos: SubnetInfo[]): SubnetInfo[] {
-  const octets = baseIp.split('.').map((octet) => parseInt(octet, 10));
-  if (octets.length !== 4) {
-    throw new Error(`Invalid IP address: ${baseIp}`);
-  }
-  const [oct1, oct2, oct3, oct4] = octets;
-  if (oct1 === undefined || oct2 === undefined || oct3 === undefined || oct4 === undefined) {
-    throw new Error(`Invalid IP address: ${baseIp}`);
-  }
-  let currentIp = ((oct1 << 24) | (oct2 << 16) | (oct3 << 8) | oct4) >>> 0;
+export function allocateSubnetAddresses(
+  baseIp: string,
+  subnetInfos: SubnetInfo[],
+  occupiedRanges: OccupiedRange[] = [],
+): SubnetInfo[] {
+  let currentIp = ipToInt(baseIp);
+
+  // Track all occupied ranges including newly allocated ones
+  const allOccupied = [...occupiedRanges];
 
   return subnetInfos.map((subnet) => {
-    // CRITICAL: Align to subnet boundary before allocation
-    // Each subnet must start at an address that is a multiple of its size
-    // Example: A /23 (512 addresses) must start at a 512-aligned boundary
-    // Without alignment: Invalid CIDR blocks and routing failures
-    const remainder = currentIp % subnet.subnetSize;
-    if (remainder !== 0) {
-      currentIp += subnet.subnetSize - remainder;
+    // Find next available position that doesn't overlap with occupied ranges
+    let allocated = false;
+    let networkAddress = '';
+
+    while (!allocated) {
+      // CRITICAL: Align to subnet boundary before allocation
+      // Each subnet must start at an address that is a multiple of its size
+      // Example: A /23 (512 addresses) must start at a 512-aligned boundary
+      // Without alignment: Invalid CIDR blocks and routing failures
+      const remainder = currentIp % subnet.subnetSize;
+      if (remainder !== 0) {
+        currentIp += subnet.subnetSize - remainder;
+      }
+
+      const proposedStart = currentIp;
+      const proposedEnd = currentIp + subnet.subnetSize - 1;
+
+      // Check for overlap with any occupied range
+      const overlap = allOccupied.find(
+        (range) => proposedStart <= range.end && proposedEnd >= range.start,
+      );
+
+      if (overlap) {
+        // Skip past the overlapping range and try again
+        currentIp = overlap.end + 1;
+      } else {
+        // No overlap - allocate here
+        networkAddress = `${intToIp(currentIp)}/${subnet.cidrPrefix}`;
+
+        // Mark this range as occupied for subsequent allocations
+        allOccupied.push({ start: proposedStart, end: proposedEnd });
+
+        // Move to next available address block
+        currentIp += subnet.subnetSize;
+        allocated = true;
+      }
     }
-
-    const networkOctets = [
-      (currentIp >>> 24) & 255,
-      (currentIp >>> 16) & 255,
-      (currentIp >>> 8) & 255,
-      currentIp & 255,
-    ];
-
-    const networkAddress = `${networkOctets.join('.')}/${subnet.cidrPrefix}`;
-
-    // Move to next available address block
-    currentIp += subnet.subnetSize;
 
     return {
       ...subnet,

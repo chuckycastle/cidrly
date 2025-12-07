@@ -1,6 +1,6 @@
 /**
  * Export Service
- * Handles export operations to various formats (YAML, CSV, PDF)
+ * Handles export operations to various formats (YAML, CSV, PDF, vendor configs)
  */
 
 import fs from 'fs/promises';
@@ -9,12 +9,31 @@ import type { NetworkPlan } from '../core/models/network-plan.js';
 import { ErrorFactory } from '../errors/index.js';
 import { exportToCsv } from '../formatters/csv-formatter.js';
 import { generatePdfReport } from '../formatters/pdf-formatter.js';
+import {
+  exportToAristaEos,
+  exportToCiscoIos,
+  exportToCiscoNxos,
+  exportToFortinet,
+  exportToJuniperJunos,
+  exportToNetgear,
+  exportToUbiquiti,
+} from '../formatters/vendors/index.js';
 import { exportToYaml } from '../formatters/yaml-formatter.js';
-import { FILE_RULES } from '../infrastructure/config/validation-rules.js';
+import { FILE_RULES, getVendorVlanWarning } from '../infrastructure/config/validation-rules.js';
 import { resolveUserPath, validateFilename } from '../infrastructure/security/security-utils.js';
 import type { Preferences } from '../schemas/preferences.schema.js';
 
-export type ExportFormat = 'yaml' | 'csv' | 'pdf';
+export type ExportFormat =
+  | 'yaml'
+  | 'csv'
+  | 'pdf'
+  | 'cisco-ios'
+  | 'cisco-nxos'
+  | 'arista-eos'
+  | 'juniper-junos'
+  | 'fortinet'
+  | 'netgear'
+  | 'ubiquiti';
 
 /**
  * Service class for exporting network plans to various formats
@@ -85,6 +104,27 @@ export class ExportService {
         case 'pdf':
           await this.exportToPdf(plan, filepath, preferences);
           break;
+        case 'cisco-ios':
+          await this.exportToVendor(plan, filepath, exportToCiscoIos);
+          break;
+        case 'cisco-nxos':
+          await this.exportToVendor(plan, filepath, exportToCiscoNxos);
+          break;
+        case 'arista-eos':
+          await this.exportToVendor(plan, filepath, exportToAristaEos);
+          break;
+        case 'juniper-junos':
+          await this.exportToVendor(plan, filepath, exportToJuniperJunos);
+          break;
+        case 'fortinet':
+          await this.exportToVendor(plan, filepath, exportToFortinet);
+          break;
+        case 'netgear':
+          await this.exportToVendor(plan, filepath, exportToNetgear);
+          break;
+        case 'ubiquiti':
+          await this.exportToVendor(plan, filepath, exportToUbiquiti);
+          break;
         default:
           throw ErrorFactory.unsupportedFormat(format);
       }
@@ -134,6 +174,18 @@ export class ExportService {
   }
 
   /**
+   * Export plan to vendor configuration format
+   */
+  private async exportToVendor(
+    plan: NetworkPlan,
+    filepath: string,
+    formatter: (plan: NetworkPlan) => string,
+  ): Promise<void> {
+    const content = formatter(plan);
+    await fs.writeFile(filepath, content, 'utf-8');
+  }
+
+  /**
    * Get file extension for a given format
    */
   private getExtensionForFormat(format: ExportFormat): string {
@@ -144,6 +196,20 @@ export class ExportService {
         return FILE_RULES.EXPORT_EXTENSIONS.CSV;
       case 'pdf':
         return FILE_RULES.EXPORT_EXTENSIONS.PDF;
+      case 'cisco-ios':
+        return FILE_RULES.EXPORT_EXTENSIONS.CISCO_IOS;
+      case 'cisco-nxos':
+        return FILE_RULES.EXPORT_EXTENSIONS.CISCO_NXOS;
+      case 'arista-eos':
+        return FILE_RULES.EXPORT_EXTENSIONS.ARISTA_EOS;
+      case 'juniper-junos':
+        return FILE_RULES.EXPORT_EXTENSIONS.JUNIPER_JUNOS;
+      case 'fortinet':
+        return FILE_RULES.EXPORT_EXTENSIONS.FORTINET;
+      case 'netgear':
+        return FILE_RULES.EXPORT_EXTENSIONS.NETGEAR;
+      case 'ubiquiti':
+        return FILE_RULES.EXPORT_EXTENSIONS.UBIQUITI;
       default:
         return FILE_RULES.DEFAULT_EXTENSION;
     }
@@ -188,5 +254,26 @@ export class ExportService {
     } catch {
       return [];
     }
+  }
+
+  /**
+   * Get vendor-specific VLAN warnings for export format
+   * Returns warnings for VLANs that may conflict with vendor-specific reservations
+   *
+   * @param plan - The network plan to check
+   * @param format - The export format (vendor identifier)
+   * @returns Array of warning messages
+   */
+  getExportWarnings(plan: NetworkPlan, format: ExportFormat): string[] {
+    const warnings: string[] = [];
+
+    for (const subnet of plan.subnets) {
+      const warning = getVendorVlanWarning(subnet.vlanId, format);
+      if (warning) {
+        warnings.push(`VLAN ${subnet.vlanId}: ${warning}`);
+      }
+    }
+
+    return warnings;
   }
 }
