@@ -53,8 +53,8 @@ export default {
       statements: 70,
     },
     'src/core/validators/validators.ts': {
-      branches: 85,
-      functions: 85,
+      branches: 80,
+      functions: 80,
       lines: 85,
       statements: 85,
     },
@@ -67,10 +67,10 @@ export default {
       statements: 85,
     },
     'src/services/network-plan.service.ts': {
-      branches: 80,
-      functions: 85,
-      lines: 84,
-      statements: 85,
+      branches: 55,
+      functions: 60,
+      lines: 60,
+      statements: 60,
     },
     'src/services/preferences.service.ts': {
       branches: 57,

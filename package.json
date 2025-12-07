@@ -32,7 +32,7 @@
     "lint:fix": "eslint . --fix",
     "security": "semgrep --config=.semgrep.yml --error",
     "security:verbose": "semgrep --config=.semgrep.yml --verbose",
-    "verify": "npm run format:check && npm run lint && npm run test && npm run security",
+    "verify": "npm run format:check && npm run lint && npm run test:coverage && npm run security",
     "profile:startup": "node --cpu-prof dist/cli.js --version",
     "profile:view": "node --cpu-prof dist/cli.js view --plan examples/example-campus-network.json",
     "bench:cold-start": "node scripts/benchmark.mjs cold-start",
