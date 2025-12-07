@@ -73,37 +73,6 @@ cidrly calculate --plan=my-network.json
 cidrly view --plan=my-network.json
 ```
 
-## Dashboard Shortcuts
-
-### Navigation
-
-- `↑/↓` - Navigate subnet rows (wraps around at boundaries)
-- `Tab` - Toggle header mode (for column sorting)
-- `←/→` - Navigate columns (header mode only)
-- `Escape` - Cancel dialog / Exit header mode
-
-### Actions
-
-- `Enter` - Show subnet details (row mode) / Sort column (header mode)
-- `Space` - Sort selected column (header mode only)
-- `a` - Add subnet
-- `e` - Edit subnet
-- `d` - Delete subnet
-- `m` - Modify subnet (lock network, edit network address)
-- `c` - Calculate network plan
-- `f` - Auto-fit subnets to IP blocks
-
-### File Operations
-
-- `s` - Save plan
-- `l` - Load plan
-- `n` - Create new plan
-- `x` - Export plan (YAML, CSV, PDF, Terraform, Vendor configs)
-- `i` - Import plan (CSV, YAML, Vendor configs)
-- `b` - Change base IP
-- `p` - Preferences (growth percentage, column configuration)
-- `q` - Quit
-
 ## Examples
 
 See [examples/](examples/) for sample network plans:
