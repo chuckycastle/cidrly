@@ -9,14 +9,30 @@ Network architecture and design planning CLI tool with automatic subnet calculat
 
 ## Features
 
-- **Terminal dashboard** with keyboard navigation
+- **Terminal dashboard** with keyboard navigation and row virtualization
 - **VLSM optimization** with "Largest First" allocation
 - **Dual efficiency metrics** (Supernet + Range)
 - **Configurable capacity planning** - Adjust growth percentage from 0-200% (default: 100%)
 - **Sortable table columns** - Sort by any column with Tab + arrow keys
 - **Automatic subnet and supernet calculation**
-- **VLAN management** with per-subnet tracking
+- **VLAN management** with per-subnet tracking (1-4094)
+- **Manual network locking** - Lock specific subnets to fixed addresses
+- **Auto-fit blocks** - Allocate subnets to specific IP blocks
 - **Save/load network plans** as JSON with per-plan preferences
+
+### Import
+
+- **CSV** - Import from spreadsheets
+- **YAML** - Import from IaC configurations
+- **Vendor configs** - Cisco IOS/NX-OS, Juniper JunOS, Arista EOS, FortiGate, Netgear, Ubiquiti
+
+### Export
+
+- **YAML** - Infrastructure as Code workflows
+- **CSV** - Spreadsheet compatibility with metadata headers
+- **PDF** - Documentation and reports
+- **Terraform** - AWS, Azure, GCP configurations
+- **Vendor configs** - Cisco IOS/NX-OS, Juniper JunOS, Arista EOS, FortiGate, Netgear, Ubiquiti
 
 ## Requirements
 
@@ -61,7 +77,7 @@ cidrly view --plan=my-network.json
 
 ### Navigation
 
-- `↑/↓` - Navigate subnet rows
+- `↑/↓` - Navigate subnet rows (wraps around at boundaries)
 - `Tab` - Toggle header mode (for column sorting)
 - `←/→` - Navigate columns (header mode only)
 - `Escape` - Cancel dialog / Exit header mode
@@ -73,15 +89,19 @@ cidrly view --plan=my-network.json
 - `a` - Add subnet
 - `e` - Edit subnet
 - `d` - Delete subnet
+- `m` - Modify subnet (lock network, edit network address)
 - `c` - Calculate network plan
+- `f` - Auto-fit subnets to IP blocks
 
 ### File Operations
 
 - `s` - Save plan
 - `l` - Load plan
 - `n` - Create new plan
+- `x` - Export plan (YAML, CSV, PDF, Terraform, Vendor configs)
+- `i` - Import plan (CSV, YAML, Vendor configs)
 - `b` - Change base IP
-- `p` - Preferences (adjust growth percentage)
+- `p` - Preferences (growth percentage, column configuration)
 - `q` - Quit
 
 ## Examples
