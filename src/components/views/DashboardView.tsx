@@ -15,8 +15,10 @@ import {
 } from '../../core/calculators/auto-fit.js';
 import {
   calculateAvailableSpace,
+  checkSubnetFit,
   tryAllocateSubnetToAvailableSpace,
 } from '../../core/calculators/availability-calculator.js';
+import { calculateSubnet } from '../../core/calculators/subnet-calculator.js';
 import type { NetworkPlan } from '../../core/models/network-plan.js';
 import { createNetworkPlan, createSubnet } from '../../core/models/network-plan.js';
 import {
@@ -344,12 +346,27 @@ export const DashboardView: React.FC = () => {
               );
               addSubnet(subnet);
               if (plan) {
-                const plannedDevices = Math.ceil(
-                  expectedDevices * (1 + plan.growthPercentage / 100),
-                );
-                notify.success(
-                  `Subnet "${name}" added! (Planning for ${plannedDevices} devices with ${plan.growthPercentage}% growth)`,
-                );
+                // Calculate subnet requirements for fit check
+                const subnetInfo = calculateSubnet(expectedDevices, plan.growthPercentage);
+
+                // Check if subnet would fit in IPAM-lite assigned blocks
+                if (plan.assignedBlocks && plan.assignedBlocks.length > 0 && plan.spaceReport) {
+                  const fitCheck = checkSubnetFit(
+                    subnetInfo.subnetSize,
+                    subnetInfo.cidrPrefix,
+                    plan.spaceReport,
+                  );
+
+                  if (!fitCheck.fits) {
+                    notify.warning(
+                      `"${name}" won't fit (needs /${subnetInfo.cidrPrefix}, largest /${fitCheck.largestAvailableCidr})`,
+                    );
+                  } else {
+                    notify.success(`"${name}" added (/${subnetInfo.cidrPrefix})`);
+                  }
+                } else {
+                  notify.success(`"${name}" added (/${subnetInfo.cidrPrefix})`);
+                }
               }
               setDialog({ type: 'none' });
             },
@@ -549,10 +566,13 @@ This cannot be undone.`,
     // Run normal calculation first (calculates subnet sizes)
     calculatePlan();
 
+    // Get fresh plan state after calculation (React state is stale until re-render)
+    const freshPlan = usePlanStore.getState().plan;
+
     // If assigned blocks exist, try to allocate unassigned subnets from available space
-    if (plan.assignedBlocks && plan.assignedBlocks.length > 0) {
+    if (freshPlan?.assignedBlocks && freshPlan.assignedBlocks.length > 0) {
       // Find subnets that have been calculated but not yet assigned to a block
-      const unassignedSubnets = plan.subnets.filter(
+      const unassignedSubnets = freshPlan.subnets.filter(
         (s) => s.subnetInfo && !s.sourceBlockId && !s.networkLocked,
       );
 
@@ -560,8 +580,8 @@ This cannot be undone.`,
         // Generate fresh space report, excluding subnets we're about to allocate
         // (otherwise their current addresses would be marked as occupied)
         const unassignedIds = new Set(unassignedSubnets.map((s) => s.id));
-        const alreadyAllocated = plan.subnets.filter((s) => !unassignedIds.has(s.id));
-        const report = calculateAvailableSpace(plan.assignedBlocks, alreadyAllocated);
+        const alreadyAllocated = freshPlan.subnets.filter((s) => !unassignedIds.has(s.id));
+        const report = calculateAvailableSpace(freshPlan.assignedBlocks, alreadyAllocated);
         const failures: string[] = [];
         let allocatedCount = 0;
 
@@ -584,6 +604,7 @@ This cannot be undone.`,
 
         if (failures.length > 0) {
           notify.warning(`Insufficient space for: ${failures.join(', ')}`);
+          return;
         } else if (allocatedCount > 0) {
           notify.success(`Allocated ${allocatedCount} subnet(s) to available space.`);
           return;
@@ -1865,8 +1886,8 @@ Unsaved changes will be lost.`}
       {dialog.type === 'preferences-base-ip' && (
         <Modal>
           <InputDialog
-            title="Default Base IP"
-            label="Enter default base IP for new plans:"
+            title="Default Base IP (Global)"
+            label="Pre-fills base IP when creating new plans:"
             defaultValue={preferences.baseIp}
             allowedChars={/[0-9.]/}
             onSubmit={(baseIp) => {

@@ -38,30 +38,103 @@ export const SubnetTable: React.FC<SubnetTableProps> = React.memo(
   }) => {
     const terminalWidth = useTerminalWidth();
 
-    // Base column widths (reduced to fit 106x31 terminal)
-    const baseColumns: Array<{
-      key: SortColumn;
-      label: string;
-      width: number;
-      minWidth: number; // Minimum width
-      flexible: boolean; // Can grow with available space
-      align: 'left' | 'right';
-    }> = [
-      { key: 'name', label: 'Name', width: 17, minWidth: 10, flexible: true, align: 'left' },
-      { key: 'vlan', label: 'VLAN', width: 4, minWidth: 4, flexible: false, align: 'right' },
-      { key: 'expected', label: 'Exp', width: 3, minWidth: 3, flexible: false, align: 'right' },
-      { key: 'planned', label: 'Plan', width: 4, minWidth: 4, flexible: false, align: 'right' },
-      { key: 'usable', label: 'Cap', width: 4, minWidth: 4, flexible: false, align: 'right' },
-      { key: 'network', label: 'Network', width: 19, minWidth: 19, flexible: false, align: 'left' },
-      {
-        key: 'description',
-        label: 'Description',
-        width: 30,
-        minWidth: 10,
-        flexible: true,
-        align: 'left',
+    // Calculate dynamic width for numeric columns based on max values
+    const getNumericColumnWidth = React.useCallback(
+      (columnKey: SortColumn, minWidth: number): number => {
+        if (subnets.length === 0) return minWidth;
+
+        let maxValue = 0;
+        for (const subnet of subnets) {
+          switch (columnKey) {
+            case 'vlan':
+              maxValue = Math.max(maxValue, subnet.vlanId);
+              break;
+            case 'expected':
+              maxValue = Math.max(maxValue, subnet.expectedDevices);
+              break;
+            case 'planned':
+              if (subnet.subnetInfo) {
+                maxValue = Math.max(maxValue, subnet.subnetInfo.plannedDevices);
+              }
+              break;
+            case 'usable':
+              if (subnet.subnetInfo) {
+                maxValue = Math.max(maxValue, subnet.subnetInfo.usableHosts);
+              }
+              break;
+          }
+        }
+
+        const valueWidth = maxValue > 0 ? maxValue.toString().length : minWidth;
+        return Math.max(minWidth, valueWidth);
       },
-    ];
+      [subnets],
+    );
+
+    // Base column widths with dynamic sizing for numeric columns
+    const baseColumns = React.useMemo<
+      Array<{
+        key: SortColumn;
+        label: string;
+        width: number;
+        minWidth: number;
+        flexible: boolean;
+        align: 'left' | 'right';
+      }>
+    >(
+      () => [
+        { key: 'name', label: 'Name', width: 17, minWidth: 10, flexible: true, align: 'left' },
+        {
+          key: 'vlan',
+          label: 'VLAN',
+          width: getNumericColumnWidth('vlan', 4),
+          minWidth: 4,
+          flexible: false,
+          align: 'right',
+        },
+        {
+          key: 'expected',
+          label: 'Exp',
+          width: getNumericColumnWidth('expected', 3),
+          minWidth: 3,
+          flexible: false,
+          align: 'right',
+        },
+        {
+          key: 'planned',
+          label: 'Plan',
+          width: getNumericColumnWidth('planned', 4),
+          minWidth: 4,
+          flexible: false,
+          align: 'right',
+        },
+        {
+          key: 'usable',
+          label: 'Cap',
+          width: getNumericColumnWidth('usable', 4),
+          minWidth: 4,
+          flexible: false,
+          align: 'right',
+        },
+        {
+          key: 'network',
+          label: 'Network',
+          width: 19,
+          minWidth: 19,
+          flexible: false,
+          align: 'left',
+        },
+        {
+          key: 'description',
+          label: 'Description',
+          width: 30,
+          minWidth: 10,
+          flexible: true,
+          align: 'left',
+        },
+      ],
+      [getNumericColumnWidth],
+    );
 
     // Filter columns based on preferences
     const filteredColumns =
@@ -117,7 +190,15 @@ export const SubnetTable: React.FC<SubnetTableProps> = React.memo(
             ? subnet.subnetInfo.usableHosts.toString().padStart(width)
             : '--'.padStart(width);
         case 'network': {
-          const baseValue = subnet.subnetInfo?.networkAddress ?? 'Not calculated';
+          let baseValue: string;
+          if (subnet.subnetInfo?.networkAddress) {
+            baseValue = subnet.subnetInfo.networkAddress;
+          } else if (subnet.subnetInfo) {
+            // Calculated but no address allocated (IPAM-lite space issue)
+            baseValue = 'No space';
+          } else {
+            baseValue = 'Not calculated';
+          }
           // Add lock indicator if network is locked
           const lockIndicator = subnet.networkLocked ? '*' : '';
           const displayValue = `${baseValue}${lockIndicator}`;

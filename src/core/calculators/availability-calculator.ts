@@ -446,3 +446,66 @@ export function tryAllocateSubnetToAvailableSpace(
     error: `No available space for ${subnetSize} addresses (/${cidrPrefix})`,
   };
 }
+
+/**
+ * Result of checking if a subnet would fit in available space
+ */
+export interface SubnetFitCheck {
+  /** Whether the subnet can be accommodated */
+  fits: boolean;
+  /** Required subnet size in addresses */
+  requiredSize: number;
+  /** Required CIDR prefix */
+  requiredCidr: number;
+  /** Largest available contiguous space in addresses */
+  largestAvailable: number;
+  /** Largest available CIDR prefix (smaller number = larger space) */
+  largestAvailableCidr: number;
+}
+
+/**
+ * Check if a subnet with given device count would fit in available space
+ * Used for early warning when adding subnets to IPAM-lite plans
+ *
+ * @param requiredSize - Required subnet size in addresses
+ * @param requiredCidr - Required CIDR prefix
+ * @param spaceReport - Current space allocation report
+ * @returns Fit check result with details
+ */
+export function checkSubnetFit(
+  requiredSize: number,
+  requiredCidr: number,
+  spaceReport: SpaceAllocationReport,
+): SubnetFitCheck {
+  // Find the largest available fragment across all blocks
+  let largestAvailable = 0;
+
+  for (const summary of spaceReport.blockSummaries) {
+    for (const fragment of summary.fragments) {
+      if (fragment.capacity > largestAvailable) {
+        largestAvailable = fragment.capacity;
+      }
+    }
+  }
+
+  // Calculate largest available CIDR (smaller prefix = more addresses)
+  // /24 = 256, /23 = 512, etc.
+  let largestAvailableCidr = 32;
+  if (largestAvailable > 0) {
+    const hostBits = Math.floor(Math.log2(largestAvailable));
+    largestAvailableCidr = 32 - hostBits;
+  }
+
+  // Check if any fragment can accommodate the required size
+  // Note: We check capacity, but actual fit depends on CIDR alignment
+  // This is a conservative check - actual allocation may still fail
+  const fits = largestAvailable >= requiredSize;
+
+  return {
+    fits,
+    requiredSize,
+    requiredCidr,
+    largestAvailable,
+    largestAvailableCidr,
+  };
+}

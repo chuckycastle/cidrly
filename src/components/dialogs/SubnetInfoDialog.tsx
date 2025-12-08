@@ -72,6 +72,79 @@ export const SubnetInfoDialog: React.FC<SubnetInfoDialogProps> = ({ subnet, onCl
     );
   }
 
+  // Handle case where subnet is calculated but network address not allocated (IPAM-lite failure)
+  if (!subnet.subnetInfo.networkAddress) {
+    return (
+      <Box
+        borderStyle="double"
+        borderColor="yellow"
+        paddingX={3}
+        paddingY={isVeryShort ? 1 : 2}
+        flexDirection="column"
+      >
+        <Box marginBottom={isVeryShort ? 0 : 1}>
+          <Text>{colors.warning(symbols.warning)}</Text>
+          <Text> </Text>
+          <Text bold>{colors.warning('Network Address Not Allocated')}</Text>
+        </Box>
+
+        {!isVeryShort && (
+          <Box marginBottom={1}>
+            <Text>{colors.dim('─'.repeat(40))}</Text>
+          </Box>
+        )}
+
+        <Box flexDirection="column" marginBottom={isVeryShort ? 0 : 1}>
+          <Box>
+            <Text>{colors.muted('Subnet    ')}</Text>
+            <Text>{colors.accent(subnet.name)}</Text>
+          </Box>
+          <Box>
+            <Text>{colors.muted('CIDR      ')}</Text>
+            <Text>{colors.slate(`/${subnet.subnetInfo.cidrPrefix}`)}</Text>
+          </Box>
+          <Box>
+            <Text>{colors.muted('Expected  ')}</Text>
+            <Text>{colors.slate(subnet.expectedDevices.toString())}</Text>
+            <Text> </Text>
+            <Text>{colors.dim('devices')}</Text>
+          </Box>
+          <Box>
+            <Text>{colors.muted('Capacity  ')}</Text>
+            <Text>{colors.slate(subnet.subnetInfo.usableHosts.toString())}</Text>
+            <Text> </Text>
+            <Text>{colors.dim('usable hosts')}</Text>
+          </Box>
+        </Box>
+
+        {!isVeryShort && (
+          <Box marginBottom={1}>
+            <Text>{colors.dim('─'.repeat(40))}</Text>
+          </Box>
+        )}
+
+        <Box marginBottom={isVeryShort ? 0 : 1}>
+          <Text>{colors.muted('Insufficient space in assigned blocks.')}</Text>
+        </Box>
+        <Box marginBottom={isVeryShort ? 0 : 1}>
+          <Text>{colors.muted('Add more blocks or reduce subnet size.')}</Text>
+        </Box>
+
+        {!isVeryShort && (
+          <Box marginBottom={1}>
+            <Text>{colors.dim('─'.repeat(40))}</Text>
+          </Box>
+        )}
+
+        <Box>
+          <Text>{colors.dim('Press ')}</Text>
+          <Text>{colors.muted('Esc')}</Text>
+          <Text>{colors.dim(' to close')}</Text>
+        </Box>
+      </Box>
+    );
+  }
+
   const details = getSubnetDetails(subnet.subnetInfo);
 
   return (

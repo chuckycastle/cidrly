@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 For planned features and enhancements, see [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) and [Milestones](https://github.com/chuckycastle/cidrly/milestones).
 
+## [0.5.1] - 2025-12-07
+
+### Added
+
+- **Early Warning for IPAM-lite Subnet Fit**
+  - Shows warning when adding a subnet that won't fit in assigned blocks
+  - Example: `"Server" won't fit (needs /21, largest /25)`
+
+### Fixed
+
+- **Stale Plan State in IPAM-lite Mode** ([#133](https://github.com/chuckycastle/cidrly/issues/133))
+  - Fixed stale React state after `calculatePlan()` in IPAM-lite allocation flow
+  - Uses `usePlanStore.getState().plan` for fresh state after store updates
+
+- **Success Notification After Allocation Failure** ([#132](https://github.com/chuckycastle/cidrly/issues/132))
+  - Fixed success notification appearing after allocation warning
+  - Added early return after warning notification
+
+- **Column Separator Misalignment** ([#131](https://github.com/chuckycastle/cidrly/issues/131))
+  - Fixed column separator misalignment with 4-digit device counts
+  - Numeric columns (VLAN, Exp, Plan, Cap) now calculate width dynamically based on max values
+  - Columns expand to accommodate large values while maintaining alignment
+
+- **SubnetInfoDialog Crash on Unallocated Subnet**
+  - Fixed crash when viewing subnet info for subnets with failed IPAM-lite allocation
+  - Shows informative "Network Address Not Allocated" dialog with subnet details
+
+- **Network Column Shows "No space" for Failed Allocations**
+  - Subnet table now shows "No space" instead of "Not calculated" when allocation fails
+  - Distinguishes between uncalculated subnets and space exhaustion
+
 ## [0.5.0] - 2025-12-07
 
 ### Performance Improvements
@@ -984,7 +1015,8 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
 - **PATCH** version for backwards-compatible bug fixes
 - **Pre-release** suffixes: `-alpha`, `-beta`, `-rc` for pre-release versions
 
-[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/chuckycastle/cidrly/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/chuckycastle/cidrly/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/chuckycastle/cidrly/compare/v0.4.5...v0.5.0
 [0.4.5]: https://github.com/chuckycastle/cidrly/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/chuckycastle/cidrly/compare/v0.4.3...v0.4.4
