@@ -75,7 +75,6 @@ For planned features and enhancements, see [GitHub Issues](https://github.com/ch
   - `npm run bench:cold-start` - Cold-start timing (10 iterations)
   - `npm run bench:large-plan` - Large plan calculation timing (100/250/500 subnets)
   - `npm run bench:all` - Run all benchmarks and save results
-  - Added docs/PERFORMANCE.md profiling guide
 
 - **esbuild Bundler Configuration** ([#124](https://github.com/chuckycastle/cidrly/issues/124))
   - Added esbuild.config.mjs for optional bundling

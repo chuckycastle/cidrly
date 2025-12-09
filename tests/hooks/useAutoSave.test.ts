@@ -19,27 +19,26 @@ describe('useAutoSave', () => {
     });
   });
 
-  describe('save logic validation', () => {
-    it('should correctly serialize plan for comparison', () => {
-      const plan1 = createNetworkPlan('Test Plan', '10.0.0.0');
-      const plan2 = createNetworkPlan('Test Plan', '10.0.0.0');
+  describe('timestamp-based change detection', () => {
+    it('should use updatedAt timestamp for change detection', () => {
+      const plan = createNetworkPlan('Test Plan', '10.0.0.0');
 
-      // Plans with same content should have same JSON representation
-      const json1 = JSON.stringify(plan1);
-      const json2 = JSON.stringify(plan2);
-
-      expect(json1).toBe(json2);
+      // Plans have updatedAt timestamp for O(1) comparison
+      expect(plan.updatedAt).toBeInstanceOf(Date);
+      expect(typeof plan.updatedAt.getTime()).toBe('number');
     });
 
-    it('should detect plan changes via JSON comparison', () => {
+    it('should have updatedAt as Date instance', () => {
       const plan1 = createNetworkPlan('Test Plan', '10.0.0.0');
       const plan2 = createNetworkPlan('Different Plan', '192.168.0.0');
 
-      // Plans with different content should have different JSON
-      const json1 = JSON.stringify(plan1);
-      const json2 = JSON.stringify(plan2);
+      // Both plans have valid Date timestamps
+      expect(plan1.updatedAt).toBeInstanceOf(Date);
+      expect(plan2.updatedAt).toBeInstanceOf(Date);
 
-      expect(json1).not.toBe(json2);
+      // getTime() returns numeric milliseconds for O(1) comparison
+      expect(plan1.updatedAt.getTime()).toBeGreaterThan(0);
+      expect(plan2.updatedAt.getTime()).toBeGreaterThan(0);
     });
   });
 

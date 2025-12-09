@@ -44,7 +44,6 @@ cidrly-plans/
 
 # Documentation (generated or local)
 docs/
-!docs/PERFORMANCE.md
 *.wiki/
 *.wiki.backup/
 cidrly.wiki/
