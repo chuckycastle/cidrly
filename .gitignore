@@ -43,7 +43,8 @@ saved-plans/
 cidrly-plans/
 
 # Documentation (generated or local)
-docs/
+docs/*
+!docs/ios/
 *.wiki/
 *.wiki.backup/
 cidrly.wiki/
