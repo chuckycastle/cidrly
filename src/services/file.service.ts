@@ -10,7 +10,7 @@ import type { NetworkPlan } from '../core/models/network-plan.js';
 import { ErrorFactory, isFileOperationError } from '../errors/index.js';
 import { ErrorCode, ValidationError } from '../errors/network-plan-errors.js';
 import { resolveUserPath, validateFilename } from '../infrastructure/security/security-utils.js';
-import { parseNetworkPlan } from '../schemas/network-plan.schema.js';
+import { CURRENT_SCHEMA_VERSION, parseNetworkPlan } from '../schemas/network-plan.schema.js';
 import { isErrnoException } from '../utils/error-helpers.js';
 
 export interface SavedPlanFile {
@@ -103,8 +103,11 @@ export class FileService {
         }
       }
 
-      // Write the file
-      await fs.writeFile(filepath, JSON.stringify(plan, null, 2), 'utf-8');
+      // Write the file. Stamp the schema version first so other cidrly clients
+      // (the iOS and macOS apps) know which format they are reading.
+      const serializable = { schemaVersion: CURRENT_SCHEMA_VERSION, ...plan };
+      serializable.schemaVersion = CURRENT_SCHEMA_VERSION;
+      await fs.writeFile(filepath, JSON.stringify(serializable, null, 2), 'utf-8');
 
       // Invalidate cache after modifying filesystem
       this.invalidateCache();

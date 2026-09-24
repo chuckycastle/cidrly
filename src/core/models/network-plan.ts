@@ -125,6 +125,8 @@ export interface Subnet {
 }
 
 export interface NetworkPlan {
+  /** Plan file schema version (absent on files written before v0.6.0, meaning v1) */
+  schemaVersion?: number;
   name: string;
   baseIp: string;
   subnets: Subnet[];
@@ -338,8 +340,10 @@ export function calculateSubnetRanges(plan: NetworkPlan): NetworkPlan {
 
   const supernet = calculateSupernet(allSubnetInfos);
 
-  // Generate supernet network address
-  const supernetAddress = generateNetworkAddress(plan.baseIp, supernet.cidrPrefix);
+  // Prefer the block that actually contains the allocated subnets. Anchoring at the
+  // base IP is only a fallback for the (theoretical) case where nothing has an address.
+  const supernetAddress =
+    supernet.networkAddress ?? generateNetworkAddress(plan.baseIp, supernet.cidrPrefix);
 
   return {
     ...plan,

@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Vendor export gateway** - SVI gateway is now the network address + 1. Subnets that do not
+  start on a `.0` boundary (for example `10.0.0.128/25`) previously got a gateway inside a
+  different subnet (`10.0.0.1` instead of `10.0.0.129`).
+- **Supernet containment** - The supernet is now the smallest CIDR-aligned block that contains
+  every allocated subnet. Plans whose base IP was not aligned to the total size could report a
+  supernet that excluded some subnets.
+- **IPAM-lite blocks at or above 128.0.0.0** - Block bounds are now unsigned. Blocks in
+  `172.16/12` and `192.168/16` had negative bounds, so utilization stayed at 0% and allocations
+  were not attributed to their block.
+- **/0 masks** - `calculateNetmask(0)` and `calculateWildcard(0)` return `0.0.0.0` and
+  `255.255.255.255`.
+- **CSV import of cidrly's own export** - The CSV parser now skips the `# Plan Metadata` comment
+  block before the header row.
+
+### Added
+
+- **Plan file schema version 2** - Saved plans carry `schemaVersion: 2`. Unknown fields written
+  by other cidrly clients (the iOS and macOS apps) are preserved when a plan is loaded and saved.
+- **Conformance fixtures** - `npm run fixtures -- <dir>` serializes engine inputs and outputs;
+  `npm run conformance` diffs them against the `cidrly-spec` version pinned in `.spec-version`.
+  CI runs the conformance check.
+
 For planned features and enhancements, see [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) and [Milestones](https://github.com/chuckycastle/cidrly/milestones).
 
 ## [0.5.1] - 2025-12-07

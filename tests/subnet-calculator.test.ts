@@ -134,9 +134,7 @@ describe('Subnet Calculator', () => {
     });
 
     it('should handle edge case CIDRs', () => {
-      // Note: /0 edge case has bitwise quirk (1 << 32 wraps to 1)
-      // Result is technically incorrect but /0 is rarely used in practice
-      expect(calculateNetmask(0)).toBe('255.255.255.255');
+      expect(calculateNetmask(0)).toBe('0.0.0.0');
       expect(calculateNetmask(32)).toBe('255.255.255.255');
     });
 
@@ -160,9 +158,7 @@ describe('Subnet Calculator', () => {
     });
 
     it('should handle edge case CIDRs', () => {
-      // Note: /0 edge case has bitwise quirk (1 << 32 wraps to 1)
-      // Result is technically incorrect but /0 is rarely used in practice
-      expect(calculateWildcard(0)).toBe('0.0.0.0');
+      expect(calculateWildcard(0)).toBe('255.255.255.255');
       expect(calculateWildcard(32)).toBe('0.0.0.0');
     });
 

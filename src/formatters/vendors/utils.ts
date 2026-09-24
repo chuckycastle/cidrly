@@ -21,9 +21,22 @@ export function calculateGatewayIp(networkAddress: string): string {
     return ip;
   }
 
+  // First usable address is network address + 1, computed on the full 32-bit value
+  // so subnets that do not start on a .0 boundary (e.g. 10.0.0.128/25) get the
+  // correct gateway (10.0.0.129), not a gateway inside a different subnet.
   const octets = ip.split('.').map(Number);
-  octets[3] = 1; // First usable address
-  return octets.join('.');
+  if (octets.length !== 4 || octets.some((o) => isNaN(o) || o < 0 || o > 255)) {
+    return '';
+  }
+  const [o1, o2, o3, o4] = octets as [number, number, number, number];
+  const networkInt = ((o1 << 24) | (o2 << 16) | (o3 << 8) | o4) >>> 0;
+  const gatewayInt = (networkInt + 1) >>> 0;
+  return [
+    (gatewayInt >>> 24) & 255,
+    (gatewayInt >>> 16) & 255,
+    (gatewayInt >>> 8) & 255,
+    gatewayInt & 255,
+  ].join('.');
 }
 
 /**

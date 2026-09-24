@@ -50,8 +50,10 @@ export class CsvParser implements ImportParser {
       };
     }
 
-    // Parse header row
-    const headerLine = lines[0];
+    // Parse header row: the first line that is not a "#" comment. cidrly's own CSV
+    // export starts with "# Plan Metadata" comment lines, so the header is not always line 0.
+    const headerIndex = lines.findIndex((line) => !line.trim().startsWith('#'));
+    const headerLine = headerIndex === -1 ? undefined : lines[headerIndex];
     if (!headerLine) {
       return {
         success: false,
@@ -80,7 +82,7 @@ export class CsvParser implements ImportParser {
     }
 
     // Parse data rows
-    for (let i = 1; i < lines.length; i++) {
+    for (let i = headerIndex + 1; i < lines.length; i++) {
       const line = lines[i];
       if (!line || line.trim().startsWith('#')) continue;
 
