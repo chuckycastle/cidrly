@@ -122,7 +122,7 @@ export function calculateNetmask(cidr: number): string {
     throw new Error(`Invalid CIDR prefix: ${cidr}. Must be between 0 and 32.`);
   }
 
-  const mask = ~((1 << (32 - cidr)) - 1);
+  const mask = prefixToMask(cidr);
   return [(mask >>> 24) & 255, (mask >>> 16) & 255, (mask >>> 8) & 255, mask & 255].join('.');
 }
 
@@ -138,8 +138,55 @@ export function calculateWildcard(cidr: number): string {
     throw new Error(`Invalid CIDR prefix: ${cidr}. Must be between 0 and 32.`);
   }
 
-  const mask = (1 << (32 - cidr)) - 1;
+  const mask = ~prefixToMask(cidr) >>> 0;
   return [(mask >>> 24) & 255, (mask >>> 16) & 255, (mask >>> 8) & 255, mask & 255].join('.');
+}
+
+/**
+ * Convert a CIDR prefix (0-32) to an unsigned 32-bit netmask integer
+ * Handles /0 explicitly because `1 << 32` wraps to 1 in JavaScript.
+ */
+function prefixToMask(cidr: number): number {
+  if (cidr <= 0) {
+    return 0;
+  }
+  return ~((1 << (32 - cidr)) - 1) >>> 0;
+}
+
+/**
+ * Calculate the smallest CIDR-aligned block that contains every given range
+ *
+ * @param ranges - Inclusive address ranges as 32-bit unsigned integers
+ * @returns The containing block, or undefined if no ranges were given
+ *
+ * @remarks
+ * A supernet must actually contain its subnets. Summing subnet sizes and anchoring at the
+ * plan's base IP is not enough: base 10.0.1.0 with two /24s yields 10.0.1.0/24 and
+ * 10.0.2.0/24, whose smallest common container is 10.0.0.0/22, not 10.0.0.0/23.
+ */
+export function calculateContainingBlock(
+  ranges: Array<{ start: number; end: number }>,
+): { networkAddress: string; cidrPrefix: number; size: number } | undefined {
+  if (ranges.length === 0) {
+    return undefined;
+  }
+
+  const minStart = Math.min(...ranges.map((r) => r.start));
+  const maxEnd = Math.max(...ranges.map((r) => r.end));
+
+  for (let prefix = 32; prefix >= 0; prefix--) {
+    const size = pow2(32 - prefix);
+    const alignedStart = Math.floor(minStart / size) * size;
+    if (alignedStart + size - 1 >= maxEnd) {
+      return {
+        networkAddress: `${ipIntToString(alignedStart)}/${prefix}`,
+        cidrPrefix: prefix,
+        size,
+      };
+    }
+  }
+
+  return { networkAddress: '0.0.0.0/0', cidrPrefix: 0, size: pow2(32) };
 }
 
 /**
@@ -307,6 +354,8 @@ export function calculateSupernet(subnetInfos: SubnetInfo[]): {
   usedSize: number;
   utilization: number;
   rangeEfficiency: number;
+  /** Containing block in CIDR notation; only present once subnets have addresses */
+  networkAddress?: string;
 } {
   if (subnetInfos.length === 0) {
     throw new Error('Cannot calculate supernet for empty subnet list');
@@ -315,31 +364,40 @@ export function calculateSupernet(subnetInfos: SubnetInfo[]): {
   // Calculate total addresses needed
   const totalAddresses = subnetInfos.reduce((sum, subnet) => sum + subnet.subnetSize, 0);
 
-  // Find the smallest power of 2 that can fit all addresses
+  // Size estimate before allocation: smallest power of 2 that can fit all addresses.
+  // Once subnets have addresses this is replaced by the block that actually contains them.
   let hostBits = 0;
   while (pow2(hostBits) < totalAddresses) {
     hostBits++;
   }
 
-  const cidrPrefix = calculateCIDR(hostBits);
-  const totalSize = calculateSubnetSize(cidrPrefix);
-  const utilization = (totalAddresses / totalSize) * 100;
+  let cidrPrefix = calculateCIDR(hostBits);
+  let totalSize = calculateSubnetSize(cidrPrefix);
+  let networkAddress: string | undefined;
 
   // Calculate range efficiency (how efficiently addresses are packed in allocated range)
   let rangeEfficiency = 100; // Default to 100% if no addresses allocated yet
 
-  // Only calculate range efficiency if subnets have network addresses
-  const firstSubnet = subnetInfos[0];
-  if (subnetInfos.length > 0 && firstSubnet?.networkAddress) {
-    // Parse all network addresses to find actual min/max (don't assume array order)
-    const addressData = subnetInfos
-      .filter((subnet): subnet is SubnetInfo & { networkAddress: string } =>
-        Boolean(subnet.networkAddress),
-      ) // Type guard ensures networkAddress is string
-      .map((subnet) => ({
-        subnet,
-        ipInt: parseNetworkAddress(subnet.networkAddress).ipInt, // No assertion needed
-      }));
+  // Only calculate containment and range efficiency if subnets have network addresses
+  const addressData = subnetInfos
+    .filter((subnet): subnet is SubnetInfo & { networkAddress: string } =>
+      Boolean(subnet.networkAddress),
+    ) // Type guard ensures networkAddress is string
+    .map((subnet) => ({
+      subnet,
+      ipInt: parseNetworkAddress(subnet.networkAddress).ipInt, // No assertion needed
+    }));
+
+  if (addressData.length > 0) {
+    // The supernet is the smallest CIDR-aligned block that contains every allocated subnet
+    const containing = calculateContainingBlock(
+      addressData.map((d) => ({ start: d.ipInt, end: d.ipInt + d.subnet.subnetSize - 1 })),
+    );
+    if (containing) {
+      cidrPrefix = containing.cidrPrefix;
+      totalSize = containing.size;
+      networkAddress = containing.networkAddress;
+    }
 
     // Find minimum IP address (first allocated subnet)
     const firstIp = Math.min(...addressData.map((d) => d.ipInt));
@@ -357,12 +415,15 @@ export function calculateSupernet(subnetInfos: SubnetInfo[]): {
     rangeEfficiency = (totalAddresses / rangeUsed) * 100;
   }
 
+  const utilization = (totalAddresses / totalSize) * 100;
+
   return {
     cidrPrefix,
     totalSize,
     usedSize: totalAddresses,
     utilization,
     rangeEfficiency,
+    ...(networkAddress !== undefined && { networkAddress }),
   };
 }
 
@@ -379,8 +440,8 @@ export function generateNetworkAddress(baseIp: string, cidr: number): string {
     throw new Error(`Invalid IP address: ${baseIp}`);
   }
 
-  // Calculate subnet mask
-  const mask = ~((1 << (32 - cidr)) - 1);
+  // Calculate subnet mask (unsigned, /0 safe)
+  const mask = prefixToMask(cidr);
 
   // Convert octets to 32-bit unsigned integer
   let ipInt = ((oct1 << 24) | (oct2 << 16) | (oct3 << 8) | oct4) >>> 0;

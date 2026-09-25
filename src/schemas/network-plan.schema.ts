@@ -135,32 +135,47 @@ const SupernetSchema = z
   });
 
 /**
- * NetworkPlan schema - validates complete network plan
+ * Plan file schema version written by this version of cidrly.
+ * - absent / 1: original format
+ * - 2: adds schemaVersion; unknown fields are preserved on round-trip
+ * See the cidrly-spec repository for the authoritative schema and fixtures.
  */
-const NetworkPlanSchema = z.object({
-  name: z.string().min(PLAN_NAME_RULES.MIN_LENGTH).max(PLAN_NAME_RULES.MAX_LENGTH),
-  baseIp: IpAddressSchema,
-  subnets: z.array(SubnetSchema),
-  growthPercentage: z
-    .number()
-    .int()
-    .min(PREFERENCES_RULES.GROWTH_PERCENTAGE_MIN)
-    .max(PREFERENCES_RULES.GROWTH_PERCENTAGE_MAX)
-    .default(100), // Default to 100% for old plans
-  allocationMode: z.enum(['vlsm', 'flsm']).optional().default('vlsm'),
-  minimumSubnetMask: z
-    .number()
-    .int()
-    .min(CIDR_RULES.ABSOLUTE_MIN)
-    .max(CIDR_RULES.ABSOLUTE_MAX)
-    .optional(),
-  supernet: SupernetSchema.optional(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-  // IPAM-lite fields
-  assignedBlocks: z.array(AssignedBlockSchema).optional(),
-  spaceReport: SpaceAllocationReportSchema.optional(),
-});
+export const CURRENT_SCHEMA_VERSION = 2;
+
+/**
+ * NetworkPlan schema - validates complete network plan
+ *
+ * `.passthrough()` keeps fields this version does not know about (for example fields
+ * written by the cidrly apps for iOS and macOS) so that loading and re-saving a plan
+ * with the CLI never silently drops data.
+ */
+const NetworkPlanSchema = z
+  .object({
+    schemaVersion: z.number().int().positive().optional(),
+    name: z.string().min(PLAN_NAME_RULES.MIN_LENGTH).max(PLAN_NAME_RULES.MAX_LENGTH),
+    baseIp: IpAddressSchema,
+    subnets: z.array(SubnetSchema),
+    growthPercentage: z
+      .number()
+      .int()
+      .min(PREFERENCES_RULES.GROWTH_PERCENTAGE_MIN)
+      .max(PREFERENCES_RULES.GROWTH_PERCENTAGE_MAX)
+      .default(100), // Default to 100% for old plans
+    allocationMode: z.enum(['vlsm', 'flsm']).optional().default('vlsm'),
+    minimumSubnetMask: z
+      .number()
+      .int()
+      .min(CIDR_RULES.ABSOLUTE_MIN)
+      .max(CIDR_RULES.ABSOLUTE_MAX)
+      .optional(),
+    supernet: SupernetSchema.optional(),
+    createdAt: z.coerce.date(),
+    updatedAt: z.coerce.date(),
+    // IPAM-lite fields
+    assignedBlocks: z.array(AssignedBlockSchema).optional(),
+    spaceReport: SpaceAllocationReportSchema.optional(),
+  })
+  .passthrough();
 
 /**
  * Quick check if data looks like a cidrly plan (without full validation)
