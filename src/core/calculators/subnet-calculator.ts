@@ -560,8 +560,19 @@ export function allocateSubnetAddresses(
     // Find next available position that doesn't overlap with occupied ranges
     let allocated = false;
     let networkAddress = '';
+    let lastCurrentIp = -1;
 
     while (!allocated) {
+      // Progress guard: every iteration must advance currentIp and stay inside the
+      // IPv4 space. A file-supplied occupied range near 2^53 makes `end + 1 === end`
+      // in double precision, which would otherwise spin this loop forever.
+      if (currentIp === lastCurrentIp || currentIp > 0xffffffff) {
+        throw new Error(
+          'Subnet allocation did not make progress or exceeded the IPv4 address space; check locked subnet sizes',
+        );
+      }
+      lastCurrentIp = currentIp;
+
       // CRITICAL: Align to subnet boundary before allocation
       // Each subnet must start at an address that is a multiple of its size
       // Example: A /23 (512 addresses) must start at a 512-aligned boundary

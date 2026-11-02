@@ -14,6 +14,52 @@ import {
   SUBNET_NAME_RULES,
   VLAN_RULES,
 } from '../infrastructure/config/validation-rules.js';
+import { hasNoControlChars } from '../infrastructure/security/security-utils.js';
+
+/**
+ * IPv4 address-space bounds. File-supplied sizes and range integers are capped
+ * here so that a plan file cannot drive the allocators with values the IPv4
+ * arithmetic cannot represent (which otherwise stalls or exhausts memory).
+ */
+const IPV4_MAX_ADDRESSES = 2 ** 32;
+const IPV4_MAX_INT = IPV4_MAX_ADDRESSES - 1;
+
+/** Address count: 1 .. 2^32 */
+const addressCount = (): z.ZodNumber => z.number().int().positive().max(IPV4_MAX_ADDRESSES);
+/** Address count that may be zero: 0 .. 2^32 */
+const addressCountOrZero = (): z.ZodNumber =>
+  z.number().int().nonnegative().max(IPV4_MAX_ADDRESSES);
+/** 32-bit address as an integer: 0 .. 2^32 - 1 */
+const addressInt = (): z.ZodNumber => z.number().int().nonnegative().max(IPV4_MAX_INT);
+
+/**
+ * Free text from a plan file (names, descriptions, labels).
+ * Length-bounded and free of terminal control characters, so the value cannot
+ * drive the terminal when rendered or start a new line in an exported config.
+ */
+const safeText = (min: number, max: number) =>
+  z.string().min(min).max(max).refine(hasNoControlChars, 'Control characters are not allowed');
+
+/**
+ * CIDR notation (x.x.x.x/n) with octet and prefix range checks.
+ * Address fields are interpolated into vendor configs, Terraform and CSV, so
+ * they must hold nothing but an address and prefix.
+ */
+const CIDR_REGEX = /^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/;
+const isValidCidrParts = (value: string): boolean => {
+  const [ip, prefix] = value.split('/');
+  const octets = (ip ?? '').split('.').map(Number);
+  return (
+    octets.length === 4 &&
+    octets.every((o) => o >= 0 && o <= 255) &&
+    Number(prefix) >= CIDR_RULES.ABSOLUTE_MIN &&
+    Number(prefix) <= CIDR_RULES.ABSOLUTE_MAX
+  );
+};
+const CidrStringSchema = z
+  .string()
+  .regex(CIDR_REGEX, 'Invalid CIDR notation')
+  .refine(isValidCidrParts, 'Invalid CIDR notation');
 
 /**
  * SubnetInfo schema - validates subnet calculation results
@@ -25,11 +71,11 @@ const SubnetInfoSchema = z.object({
     .int()
     .min(DEVICE_COUNT_RULES.MIN)
     .max(DEVICE_COUNT_RULES.MAX * 2),
-  requiredHosts: z.number().int().positive(),
-  subnetSize: z.number().int().positive(),
+  requiredHosts: addressCount(),
+  subnetSize: addressCount(),
   cidrPrefix: z.number().int().min(CIDR_RULES.ABSOLUTE_MIN).max(CIDR_RULES.ABSOLUTE_MAX),
-  usableHosts: z.number().int().nonnegative(),
-  networkAddress: z.string().optional(),
+  usableHosts: addressCountOrZero(),
+  networkAddress: CidrStringSchema.optional(),
 });
 
 /**
@@ -37,40 +83,50 @@ const SubnetInfoSchema = z.object({
  */
 const SubnetSchema = z.object({
   id: z.string().min(1),
-  name: z.string().min(SUBNET_NAME_RULES.MIN_LENGTH).max(SUBNET_NAME_RULES.MAX_LENGTH),
+  name: safeText(SUBNET_NAME_RULES.MIN_LENGTH, SUBNET_NAME_RULES.MAX_LENGTH),
   vlanId: z.number().int().min(VLAN_RULES.MIN).max(VLAN_RULES.MAX),
   expectedDevices: z.number().int().min(DEVICE_COUNT_RULES.MIN).max(DEVICE_COUNT_RULES.MAX),
-  description: z.string().max(SUBNET_DESCRIPTION_RULES.MAX_LENGTH).optional(),
+  description: safeText(0, SUBNET_DESCRIPTION_RULES.MAX_LENGTH).optional(),
   subnetInfo: SubnetInfoSchema.optional(),
   networkLocked: z.boolean().optional().default(false),
-  manualNetworkAddress: z.string().optional(),
+  manualNetworkAddress: CidrStringSchema.optional(),
   sourceBlockId: z.string().optional(), // IPAM-lite: Reference to AssignedBlock
 });
 
 /**
  * AssignedBlock schema - validates IP blocks assigned to the plan (IPAM-lite)
  */
-const AssignedBlockSchema = z.object({
-  id: z.string().min(1),
-  networkAddress: z.string().regex(/^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/, 'Invalid CIDR notation'),
-  cidrPrefix: z.number().int().min(CIDR_RULES.ABSOLUTE_MIN).max(CIDR_RULES.ABSOLUTE_MAX),
-  totalCapacity: z.number().int().positive(),
-  startInt: z.number().int().nonnegative(),
-  endInt: z.number().int().nonnegative(),
-  label: z.string().max(100).optional(),
-  assignedAt: z.coerce.date(),
-});
+const AssignedBlockSchema = z
+  .object({
+    id: z.string().min(1),
+    networkAddress: CidrStringSchema,
+    cidrPrefix: z.number().int().min(CIDR_RULES.ABSOLUTE_MIN).max(CIDR_RULES.ABSOLUTE_MAX),
+    totalCapacity: addressCount(),
+    startInt: addressInt(),
+    endInt: addressInt(),
+    label: safeText(0, 100).optional(),
+    assignedAt: z.coerce.date(),
+  })
+  .refine((block) => block.endInt >= block.startInt, {
+    message: 'endInt must be greater than or equal to startInt',
+    path: ['endInt'],
+  });
 
 /**
  * AvailableFragment schema - validates unallocated CIDR ranges (IPAM-lite)
  */
-const AvailableFragmentSchema = z.object({
-  parentBlockId: z.string().min(1),
-  networkAddress: z.string().regex(/^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/, 'Invalid CIDR notation'),
-  capacity: z.number().int().positive(),
-  startInt: z.number().int().nonnegative(),
-  endInt: z.number().int().nonnegative(),
-});
+const AvailableFragmentSchema = z
+  .object({
+    parentBlockId: z.string().min(1),
+    networkAddress: CidrStringSchema,
+    capacity: addressCount(),
+    startInt: addressInt(),
+    endInt: addressInt(),
+  })
+  .refine((fragment) => fragment.endInt >= fragment.startInt, {
+    message: 'endInt must be greater than or equal to startInt',
+    path: ['endInt'],
+  });
 
 /**
  * BlockAllocationSummary schema - validates per-block allocation summary (IPAM-lite)
@@ -79,8 +135,8 @@ const BlockAllocationSummarySchema = z.object({
   blockId: z.string().min(1),
   block: AssignedBlockSchema,
   allocatedSubnetIds: z.array(z.string()),
-  usedCapacity: z.number().int().nonnegative(),
-  availableCapacity: z.number().int().nonnegative(),
+  usedCapacity: addressCountOrZero(),
+  availableCapacity: addressCountOrZero(),
   utilizationPercent: z.number().min(0).max(100),
   fragments: z.array(AvailableFragmentSchema),
 });
@@ -90,9 +146,9 @@ const BlockAllocationSummarySchema = z.object({
  */
 const SpaceAllocationReportSchema = z.object({
   generatedAt: z.coerce.date(),
-  totalAssignedCapacity: z.number().int().nonnegative(),
-  totalUsedCapacity: z.number().int().nonnegative(),
-  totalAvailableCapacity: z.number().int().nonnegative(),
+  totalAssignedCapacity: addressCountOrZero(),
+  totalUsedCapacity: addressCountOrZero(),
+  totalAvailableCapacity: addressCountOrZero(),
   overallUtilizationPercent: z.number().min(0).max(100),
   blockSummaries: z.array(BlockAllocationSummarySchema),
 });
@@ -118,12 +174,12 @@ const IpAddressSchema = z
 const SupernetSchema = z
   .object({
     cidrPrefix: z.number().int().min(CIDR_RULES.ABSOLUTE_MIN).max(CIDR_RULES.ABSOLUTE_MAX),
-    totalSize: z.number().int().positive(),
-    usedSize: z.number().int().positive(),
+    totalSize: addressCount(),
+    usedSize: addressCount(),
     utilization: z.number().min(0).optional(), // New field (can exceed 100%)
     efficiency: z.number().min(0).optional(), // Legacy field for backward compatibility
     rangeEfficiency: z.number().min(0).max(100).default(100), // Default to 100% for old plans
-    networkAddress: z.string(),
+    networkAddress: CidrStringSchema,
   })
   .transform((data) => {
     // Migration: if old 'efficiency' exists but 'utilization' doesn't, copy it over
@@ -152,7 +208,7 @@ export const CURRENT_SCHEMA_VERSION = 2;
 const NetworkPlanSchema = z
   .object({
     schemaVersion: z.number().int().positive().optional(),
-    name: z.string().min(PLAN_NAME_RULES.MIN_LENGTH).max(PLAN_NAME_RULES.MAX_LENGTH),
+    name: safeText(PLAN_NAME_RULES.MIN_LENGTH, PLAN_NAME_RULES.MAX_LENGTH),
     baseIp: IpAddressSchema,
     subnets: z.array(SubnetSchema),
     growthPercentage: z

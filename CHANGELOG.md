@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+Findings from a source audit of the plan-file and export boundaries. A plan file or import file
+is authored outside the process, so its content is validated at the schema and escaped at every
+output.
+
+- **Plan schema** - `supernet.networkAddress`, `subnetInfo.networkAddress` and
+  `manualNetworkAddress` must be CIDR notation with valid octets and prefix. Names, descriptions
+  and labels reject terminal control characters (C0, DEL, C1). `subnetSize`, `requiredHosts`,
+  `usableHosts`, `totalSize`, `usedSize`, capacities, `startInt` and `endInt` are bounded to the
+  IPv4 address space, and block ranges require `endInt >= startInt`. Plans that violate these
+  rules fail to load with a validation message.
+- **Terraform export** - Plan values inside HCL string literals are escaped (`hclString`), and
+  values in comment lines are folded to one line. A plan address or name can no longer close a
+  literal or start a new resource block in `main.tf`. The `PlanName` tag is escaped for AWS and
+  Azure as it already was for GCP.
+- **Vendor config export** - `calculateGatewayIp` validates octets before the `/31` and `/32`
+  shortcut, and header and skipped-subnet lines fold line breaks, so a plan value cannot add a
+  line to a generated device configuration.
+- **CSV export** - Every column and header value goes through `escapeCsvValue`, which folds line
+  breaks and prefixes cells starting with `=`, `+`, `-`, `@` or TAB with a single quote so
+  spreadsheets treat them as text. The CSV importer removes that prefix on read, so round-trips
+  stay lossless.
+- **Terminal rendering** - File-sourced text is passed through `stripControlChars` at the render
+  sinks (`cidrly view`, dashboard header and table, subnet info, import preview), and the CSV and
+  YAML importers drop control characters from names and descriptions.
+- **Allocators** - `allocateSubnetAddresses` throws if an iteration does not advance or leaves the
+  IPv4 space, and `rangeToOptimalCIDRBlocks` throws instead of allocating an unbounded fragment
+  list. Out-of-range values in a plan file previously hung `cidrly calculate` or exhausted memory.
+
 ### Fixed
 
 - **Vendor export gateway** - SVI gateway is now the network address + 1. Subnets that do not

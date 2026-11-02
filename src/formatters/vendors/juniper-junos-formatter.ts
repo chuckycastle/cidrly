@@ -10,6 +10,7 @@ import {
   getInterfaceDescription,
   getSubnetsWithAddresses,
   sanitizeVlanName,
+  singleLine,
 } from './utils.js';
 
 /**
@@ -19,11 +20,11 @@ function generateHeader(plan: NetworkPlan): string {
   const lines: string[] = [];
   lines.push('#');
   lines.push('# cidrly Network Configuration');
-  lines.push(`# Plan: ${plan.name}`);
+  lines.push(`# Plan: ${singleLine(plan.name)}`);
   lines.push(`# Generated: ${new Date().toISOString()}`);
   lines.push(`# Base IP: ${plan.baseIp}`);
   if (plan.supernet?.networkAddress) {
-    lines.push(`# Supernet: ${plan.supernet.networkAddress}`);
+    lines.push(`# Supernet: ${singleLine(plan.supernet.networkAddress)}`);
   }
   lines.push('#');
   lines.push('');

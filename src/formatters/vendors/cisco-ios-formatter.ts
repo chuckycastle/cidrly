@@ -11,6 +11,7 @@ import {
   getInterfaceDescription,
   getSubnetsWithAddresses,
   sanitizeVlanName,
+  singleLine,
 } from './utils.js';
 
 /**
@@ -20,11 +21,11 @@ function generateHeader(plan: NetworkPlan): string {
   const lines: string[] = [];
   lines.push('!');
   lines.push('! cidrly Network Configuration');
-  lines.push(`! Plan: ${plan.name}`);
+  lines.push(`! Plan: ${singleLine(plan.name)}`);
   lines.push(`! Generated: ${new Date().toISOString()}`);
   lines.push(`! Base IP: ${plan.baseIp}`);
   if (plan.supernet?.networkAddress) {
-    lines.push(`! Supernet: ${plan.supernet.networkAddress}`);
+    lines.push(`! Supernet: ${singleLine(plan.supernet.networkAddress)}`);
   }
   lines.push('!');
   return lines.join('\n');
@@ -46,7 +47,7 @@ function formatVlanDefinition(subnet: Subnet): string {
  */
 function formatSviConfig(subnet: Subnet): string {
   if (!subnet.subnetInfo?.networkAddress) {
-    return `! Skipped: ${subnet.name} (VLAN ${subnet.vlanId}) - no network address calculated`;
+    return `! Skipped: ${singleLine(subnet.name)} (VLAN ${subnet.vlanId}) - no network address calculated`;
   }
 
   const gateway = calculateGatewayIp(subnet.subnetInfo.networkAddress);

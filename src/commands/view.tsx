@@ -9,6 +9,7 @@ import React from 'react';
 import { z as zod } from 'zod';
 import type { NetworkPlan, Subnet } from '../core/models/network-plan.js';
 import { FILE_RULES } from '../infrastructure/config/validation-rules.js';
+import { stripControlChars } from '../infrastructure/security/security-utils.js';
 import { FileSystemRepository } from '../repositories/index.js';
 import { FileService } from '../services/file.service.js';
 
@@ -29,7 +30,7 @@ function SubnetRow({ subnet, isLast }: { subnet: Subnet; isLast: boolean }): Rea
     <Box flexDirection="column">
       <Box>
         <Box width={20}>
-          <Text bold>{subnet.name}</Text>
+          <Text bold>{stripControlChars(subnet.name)}</Text>
         </Box>
         <Box width={8}>
           <Text color="cyan">VLAN {subnet.vlanId}</Text>
@@ -38,7 +39,9 @@ function SubnetRow({ subnet, isLast }: { subnet: Subnet; isLast: boolean }): Rea
           <Text>{subnet.expectedDevices} devices</Text>
         </Box>
         <Box width={18}>
-          <Text color={ipRange ? 'green' : 'yellow'}>{ipRange ?? 'Not calculated'}</Text>
+          <Text color={ipRange ? 'green' : 'yellow'}>
+            {ipRange ? stripControlChars(ipRange) : 'Not calculated'}
+          </Text>
         </Box>
         <Box width={6}>
           <Text dimColor>/{cidr ?? '?'}</Text>
@@ -66,7 +69,7 @@ function PlanView({ plan }: { plan: NetworkPlan }): React.ReactElement {
             <Text bold color="cyan">
               Network Plan:{' '}
             </Text>
-            <Text bold>{plan.name}</Text>
+            <Text bold>{stripControlChars(plan.name)}</Text>
           </Text>
           <Text>
             <Text dimColor>Base IP: </Text>

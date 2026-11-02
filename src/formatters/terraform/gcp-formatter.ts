@@ -4,7 +4,13 @@
  */
 
 import type { NetworkPlan, Subnet } from '../../core/models/network-plan.js';
-import { BaseTerraformFormatter, generateHeader, sanitizeResourceName } from './base-formatter.js';
+import {
+  BaseTerraformFormatter,
+  generateHeader,
+  hclString,
+  sanitizeResourceName,
+  singleLine,
+} from './base-formatter.js';
 import type { TerraformExportOptions, TerraformOutput } from './types.js';
 import { DEFAULT_OPTIONS } from './types.js';
 
@@ -108,10 +114,10 @@ export class GcpTerraformFormatter extends BaseTerraformFormatter {
     const name = sanitizeResourceName(subnet.name);
     const cidr = subnet.subnetInfo!.networkAddress!;
     const lines: string[] = [];
-    lines.push(`# Subnetwork: ${subnet.name} (VLAN ${subnet.vlanId})`);
+    lines.push(`# Subnetwork: ${singleLine(subnet.name)} (VLAN ${subnet.vlanId})`);
     lines.push(`resource "google_compute_subnetwork" "${name}" {`);
     lines.push(`  name          = "${name}"`);
-    lines.push(`  ip_cidr_range = "${cidr}"`);
+    lines.push(`  ip_cidr_range = "${hclString(cidr)}"`);
     lines.push('  region        = var.region');
     lines.push('  network       = google_compute_network.main.id');
     lines.push('');
@@ -156,7 +162,7 @@ export class GcpTerraformFormatter extends BaseTerraformFormatter {
     this.validSubnets.forEach((subnet, index) => {
       const cidr = subnet.subnetInfo!.networkAddress!;
       const comma = index < this.validSubnets.length - 1 ? ',' : '';
-      lines.push(`    "${cidr}"${comma}`);
+      lines.push(`    "${hclString(cidr)}"${comma}`);
     });
     lines.push('  ]');
     lines.push('}');

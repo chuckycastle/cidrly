@@ -185,6 +185,34 @@ export function resolveUserPath(userPath: string, baseDir: string): string {
 }
 
 /**
+ * Terminal control characters: C0 controls except TAB, DEL, and the C1 range.
+ * Text from plan or import files that contains these can drive the terminal
+ * emulator (OSC title/clipboard writes, CSI cursor and erase sequences, bare CR
+ * row overwrites) when rendered through Ink, and can start new lines in
+ * generated configuration files.
+ */
+// eslint-disable-next-line no-control-regex
+const CONTROL_CHARS = /[\u0000-\u0008\u000a-\u001f\u007f-\u009f]/g;
+
+/**
+ * Remove terminal control characters from text before rendering or emitting it
+ * @param value - Text sourced from a file or import
+ * @returns The text with control characters removed
+ */
+export function stripControlChars(value: string): string {
+  return value.replace(CONTROL_CHARS, '');
+}
+
+/**
+ * Check that text contains no terminal control characters (Zod refinement helper)
+ * @param value - Text to check
+ * @returns true when the text has no control characters
+ */
+export function hasNoControlChars(value: string): boolean {
+  return !new RegExp(CONTROL_CHARS.source).test(value);
+}
+
+/**
  * Validates that a filename is safe and doesn't contain dangerous characters
  * Enhanced with URL-encoding detection
  * @param filename - The filename to validate

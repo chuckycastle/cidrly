@@ -42,7 +42,7 @@ function formatSupernetHeaders(plan: NetworkPlan): string[] {
 
   headers.push('');
   headers.push('# Supernet Summary');
-  headers.push(`# supernet.networkAddress: ${supernet.networkAddress}`);
+  headers.push(`# supernet.networkAddress: ${escapeCsvValue(supernet.networkAddress)}`);
   headers.push(`# supernet.cidrPrefix: ${supernet.cidrPrefix}`);
   headers.push(`# supernet.totalSize: ${supernet.totalSize}`);
   headers.push(`# supernet.usedSize: ${supernet.usedSize}`);
@@ -79,17 +79,31 @@ function formatAvailableSpaceHeaders(plan: NetworkPlan): string[] {
 }
 
 /**
- * Escape CSV values that contain commas, quotes, or newlines
+ * Characters that make a spreadsheet treat a cell as a formula (CWE-1236)
+ */
+const FORMULA_PREFIX = /^[=+\-@\t]/;
+
+/**
+ * Escape a CSV value
+ *
+ * Line breaks are folded to a space so every record stays on one physical line
+ * (the plan schema already rejects them in text fields; this covers header lines
+ * and any value that bypasses the schema). Values that contain a comma or quote
+ * are quoted with doubled quotes. Values that start with a formula character
+ * (= + - @ TAB) are prefixed with a single quote and quoted, so a spreadsheet
+ * shows them as text. The CSV importer removes that prefix on read (see
+ * csv.parser.ts).
  *
  * @param value - Value to escape
  * @returns Escaped value
  */
-function escapeCsvValue(value: string): string {
-  // If value contains comma, quote, or newline, wrap in quotes and escape existing quotes
-  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-    return `"${value.replace(/"/g, '""')}"`;
+export function escapeCsvValue(value: string): string {
+  const folded = value.replace(/\r?\n|\r/g, ' ');
+  const neutralized = FORMULA_PREFIX.test(folded) ? `'${folded}` : folded;
+  if (neutralized !== folded || /[",]/.test(neutralized)) {
+    return `"${neutralized.replace(/"/g, '""')}"`;
   }
-  return value;
+  return neutralized;
 }
 
 /**
@@ -116,7 +130,7 @@ const COLUMN_FIELD_MAPPING = {
     header: 'network_address',
     getValue: (subnet: Subnet) => {
       if (!subnet.subnetInfo?.networkAddress) return '';
-      return subnet.subnetInfo.networkAddress.split('/')[0];
+      return escapeCsvValue(subnet.subnetInfo.networkAddress.split('/')[0] ?? '');
     },
   },
   cidr: {
@@ -138,7 +152,7 @@ const EXTRA_CSV_FIELDS = {
   subnet_size: (subnet: Subnet) => subnet.subnetInfo?.subnetSize.toString() ?? '',
   required_hosts: (subnet: Subnet) => subnet.subnetInfo?.requiredHosts.toString() ?? '',
   network_locked: (subnet: Subnet) => (subnet.networkLocked ? 'true' : 'false'),
-  manual_network_address: (subnet: Subnet) => subnet.manualNetworkAddress ?? '',
+  manual_network_address: (subnet: Subnet) => escapeCsvValue(subnet.manualNetworkAddress ?? ''),
 } as const;
 
 type ColumnKey = keyof typeof COLUMN_FIELD_MAPPING;

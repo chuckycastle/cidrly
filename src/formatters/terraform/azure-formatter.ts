@@ -4,7 +4,13 @@
  */
 
 import type { NetworkPlan, Subnet } from '../../core/models/network-plan.js';
-import { BaseTerraformFormatter, generateHeader, sanitizeResourceName } from './base-formatter.js';
+import {
+  BaseTerraformFormatter,
+  generateHeader,
+  hclString,
+  sanitizeResourceName,
+  singleLine,
+} from './base-formatter.js';
 import type { TerraformExportOptions, TerraformOutput } from './types.js';
 import { DEFAULT_OPTIONS } from './types.js';
 
@@ -78,10 +84,10 @@ export class AzureTerraformFormatter extends BaseTerraformFormatter {
     const lines: string[] = [];
     lines.push('locals {');
     lines.push(`  plan_name = "${planName}"`);
-    lines.push(`  base_cidr = "${baseCidr}"`);
+    lines.push(`  base_cidr = "${hclString(baseCidr)}"`);
     lines.push('  tags = {');
     lines.push('    ManagedBy = "cidrly"');
-    lines.push(`    PlanName  = "${this.plan.name}"`);
+    lines.push(`    PlanName  = "${hclString(this.plan.name)}"`);
     lines.push('  }');
     lines.push('}');
     lines.push('');
@@ -124,12 +130,12 @@ export class AzureTerraformFormatter extends BaseTerraformFormatter {
     const name = sanitizeResourceName(subnet.name);
     const cidr = subnet.subnetInfo!.networkAddress!;
     const lines: string[] = [];
-    lines.push(`# Subnet: ${subnet.name} (VLAN ${subnet.vlanId})`);
+    lines.push(`# Subnet: ${singleLine(subnet.name)} (VLAN ${subnet.vlanId})`);
     lines.push(`resource "azurerm_subnet" "${name}" {`);
     lines.push(`  name                 = "${name}"`);
     lines.push('  resource_group_name  = azurerm_resource_group.main.name');
     lines.push('  virtual_network_name = azurerm_virtual_network.main.name');
-    lines.push(`  address_prefixes     = ["${cidr}"]`);
+    lines.push(`  address_prefixes     = ["${hclString(cidr)}"]`);
     lines.push('}');
     lines.push('');
     return lines.join('\n');
