@@ -4,8 +4,10 @@
  */
 
 import { Box, Text } from 'ink';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useCurrentView } from '../hooks/useUI.js';
+import { PreferencesService } from '../services/preferences.service.js';
+import { usePreferencesStore } from '../store/preferencesStore.js';
 import { ErrorBoundary } from './ErrorBoundary.js';
 import { Layout } from './layout/Layout.js';
 import { DashboardView } from './views/DashboardView.js';
@@ -13,6 +15,23 @@ import { WelcomeView } from './views/WelcomeView.js';
 
 const DashboardAppContent: React.FC = () => {
   const currentView = useCurrentView();
+  const setPreferences = usePreferencesStore.use.setPreferences();
+  const setLoaded = usePreferencesStore.use.setLoaded();
+
+  // Load persisted preferences once at startup. Without this the dashboard ran on
+  // defaults every launch and saved directories, auto-save and column settings were lost.
+  useEffect(() => {
+    let cancelled = false;
+    void new PreferencesService().loadPreferences().then((loaded) => {
+      if (!cancelled) {
+        setPreferences(loaded);
+        setLoaded(true);
+      }
+    });
+    return (): void => {
+      cancelled = true;
+    };
+  }, [setPreferences, setLoaded]);
 
   // Welcome view (no layout)
   if (currentView === 'welcome') {

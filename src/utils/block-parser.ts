@@ -27,7 +27,10 @@ function ipToInt(ip: string): number {
   if (parts.some(isNaN)) {
     throw new Error(`Invalid IP address format: ${ip}`);
   }
-  return (parts[0]! << 24) | (parts[1]! << 16) | (parts[2]! << 8) | parts[3]!;
+  // `>>> 0` converts to an unsigned 32-bit integer. Without it, any address at or
+  // above 128.0.0.0 (including 172.16/12 and 192.168/16) becomes negative and no
+  // longer compares correctly with the unsigned ranges used by the allocators.
+  return ((parts[0]! << 24) | (parts[1]! << 16) | (parts[2]! << 8) | parts[3]!) >>> 0;
 }
 
 /**
@@ -75,8 +78,8 @@ function parseBlock(blockStr: string, lineNumber: number): AvailableBlock | stri
 
   // Check network boundary alignment
   const ipInt = ipToInt(ipAddress);
-  const subnetMask = ~((1 << (32 - cidrPrefix)) - 1);
-  const networkInt = ipInt & subnetMask;
+  const subnetMask = ~((1 << (32 - cidrPrefix)) - 1) >>> 0;
+  const networkInt = (ipInt & subnetMask) >>> 0;
 
   if (ipInt !== networkInt) {
     const correctNetwork = [

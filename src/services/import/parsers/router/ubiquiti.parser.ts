@@ -62,12 +62,22 @@ export class UbiquitiParser extends BaseRouterParser implements ImportParser {
 
     const interfacesBlock = interfacesMatch[1];
 
-    const vifRegex = /vif\s+(\d+)\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}/g;
+    // Find each "vif N {" and take its body by balanced-brace matching (linear time)
+    const vifStartRegex = /vif\s+(\d+)\s*\{/g;
     let match;
 
-    while ((match = vifRegex.exec(interfacesBlock)) !== null) {
+    while ((match = vifStartRegex.exec(interfacesBlock)) !== null) {
       const vlanId = parseInt(match[1] ?? '0', 10);
-      const body = match[2] ?? '';
+      const startIdx = match.index + match[0].length;
+      let depth = 1;
+      let endIdx = startIdx;
+      while (depth > 0 && endIdx < interfacesBlock.length) {
+        if (interfacesBlock[endIdx] === '{') depth++;
+        if (interfacesBlock[endIdx] === '}') depth--;
+        endIdx++;
+      }
+      const body = interfacesBlock.slice(startIdx, endIdx - 1);
+      vifStartRegex.lastIndex = endIdx;
 
       const addressMatch = body.match(/address\s+(\d+\.\d+\.\d+\.\d+)\/(\d+)/);
       if (!addressMatch?.[1] || !addressMatch[2]) continue;

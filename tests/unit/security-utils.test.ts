@@ -1,79 +1,79 @@
 /**
  * Security Utilities Tests
- * Enhanced tests for path traversal protection
+ * Path resolution, filename validation and control-character handling
  */
 
 import { describe, expect, it } from '@jest/globals';
 import os from 'os';
 import path from 'path';
 import {
-  createPathWhitelist,
-  isPathSafe,
-  sanitizeFilePath,
+  hasNoControlChars,
+  resolveUserPath,
+  stripControlChars,
   validateFilename,
 } from '../../src/infrastructure/security/security-utils.js';
 
-describe('sanitizeFilePath', () => {
-  const baseDir = path.resolve(os.tmpdir(), 'test-base');
+describe('resolveUserPath', () => {
+  const baseDir = path.join(os.tmpdir(), 'cidrly-test-base');
 
-  it('should accept valid relative paths', () => {
-    const result = sanitizeFilePath('test.json', baseDir);
-    expect(result).toBe(path.join(baseDir, 'test.json'));
+  it('should resolve a bare filename against the base directory', () => {
+    expect(resolveUserPath('test.json', baseDir)).toBe(path.join(baseDir, 'test.json'));
   });
 
-  it('should reject path traversal with ..', () => {
-    expect(() => sanitizeFilePath('../outside.json', baseDir)).toThrow(
-      /Security violation.*Parent directory reference/i,
+  it('should resolve a relative path with directories against the working directory', () => {
+    expect(resolveUserPath('sub/test.json', baseDir)).toBe(
+      path.resolve(process.cwd(), 'sub/test.json'),
+    );
+    expect(resolveUserPath('./test.json', baseDir)).toBe(path.resolve(process.cwd(), 'test.json'));
+  });
+
+  it('should keep absolute paths', () => {
+    const absolute = path.join(os.tmpdir(), 'elsewhere', 'plan.cidr');
+    expect(resolveUserPath(absolute, baseDir)).toBe(absolute);
+  });
+
+  it('should expand ~ and ~/ to the home directory', () => {
+    expect(resolveUserPath('~', baseDir)).toBe(os.homedir());
+    expect(resolveUserPath('~/plans/x.cidr', baseDir)).toBe(
+      path.join(os.homedir(), 'plans', 'x.cidr'),
     );
   });
 
-  it('should reject path traversal with multiple ..', () => {
-    expect(() => sanitizeFilePath('../../outside.json', baseDir)).toThrow(
-      /Security violation.*Parent directory reference/i,
+  it('should treat a name that merely starts with ~ as a filename', () => {
+    expect(resolveUserPath('~backup.json', baseDir)).toBe(path.join(baseDir, '~backup.json'));
+  });
+
+  it('should reject parent directory segments', () => {
+    expect(() => resolveUserPath('../outside.json', baseDir)).toThrow('Parent directory');
+    expect(() => resolveUserPath('a/../../outside.json', baseDir)).toThrow('Parent directory');
+    expect(() => resolveUserPath('~/../outside.json', baseDir)).toThrow('Parent directory');
+    expect(() => resolveUserPath('..\\outside.json', baseDir)).toThrow('Parent directory');
+  });
+
+  it('should reject URL-encoded and double-encoded parent directory segments', () => {
+    expect(() => resolveUserPath('%2e%2e%2foutside.json', baseDir)).toThrow('Parent directory');
+    expect(() => resolveUserPath('%252e%252e%252foutside.json', baseDir)).toThrow(
+      'Parent directory',
     );
+    expect(() => resolveUserPath('..%2fx.json', baseDir)).toThrow('Parent directory');
   });
 
-  it('should reject URL-encoded path traversal (%2e%2e%2f)', () => {
-    expect(() => sanitizeFilePath('%2e%2e%2foutside.json', baseDir)).toThrow();
+  it('should reject null bytes, raw and encoded', () => {
+    expect(() => resolveUserPath('test\0.json', baseDir)).toThrow('Null byte');
+    expect(() => resolveUserPath('test%00.json', baseDir)).toThrow('Null byte');
   });
 
-  it('should reject double URL-encoded path traversal', () => {
-    expect(() => sanitizeFilePath('%252e%252e%252foutside.json', baseDir)).toThrow();
+  it('should allow names that contain two dots without being a parent segment', () => {
+    expect(resolveUserPath('plan..json', baseDir)).toBe(path.join(baseDir, 'plan..json'));
+    expect(resolveUserPath('v1..2.cidr', baseDir)).toBe(path.join(baseDir, 'v1..2.cidr'));
   });
 
-  it('should reject null bytes', () => {
-    expect(() => sanitizeFilePath('test\0.json', baseDir)).toThrow(
-      /Security violation.*Null byte/i,
+  it('should resolve percent sequences as typed, not decoded', () => {
+    expect(resolveUserPath('%41.json', baseDir)).toBe(path.join(baseDir, '%41.json'));
+    expect(resolveUserPath('%2Fetc%2Fhosts.json', baseDir)).toBe(
+      path.join(baseDir, '%2Fetc%2Fhosts.json'),
     );
-  });
-
-  it('should reject absolute paths', () => {
-    expect(() => sanitizeFilePath('/etc/passwd', baseDir)).toThrow(
-      /Security violation.*Absolute paths not allowed/i,
-    );
-  });
-
-  it('should reject Windows absolute paths', () => {
-    // On non-Windows, this might not be detected as absolute
-    // So we just verify it doesn't escape the baseDir
-    try {
-      const result = sanitizeFilePath('C:\\Windows\\System32', baseDir);
-      // If it doesn't throw, verify it's still within baseDir
-      expect(result.startsWith(baseDir)).toBe(true);
-    } catch (error) {
-      // If it throws, that's also acceptable
-      expect(error).toBeDefined();
-    }
-  });
-
-  it('should accept nested paths within baseDir', () => {
-    const result = sanitizeFilePath('subdir/test.json', baseDir);
-    expect(result).toBe(path.join(baseDir, 'subdir', 'test.json'));
-  });
-
-  it('should normalize paths with . and ..', () => {
-    const result = sanitizeFilePath('./test.json', baseDir);
-    expect(result).toBe(path.join(baseDir, 'test.json'));
+    expect(resolveUserPath('100%.json', baseDir)).toBe(path.join(baseDir, '100%.json'));
   });
 });
 
@@ -82,6 +82,7 @@ describe('validateFilename', () => {
     expect(validateFilename('test.json')).toBe(true);
     expect(validateFilename('my-plan.json')).toBe(true);
     expect(validateFilename('plan_2024.json')).toBe(true);
+    expect(validateFilename('plan..json')).toBe(true);
   });
 
   it('should reject empty filenames', () => {
@@ -100,17 +101,15 @@ describe('validateFilename', () => {
   });
 
   it('should reject parent directory references', () => {
-    const result1 = validateFilename('../test.json');
-    const result2 = validateFilename('..\\test.json');
-    // Either path separator or parent directory error is acceptable
-    expect(typeof result1 === 'string').toBe(true);
-    expect(typeof result2 === 'string').toBe(true);
+    expect(typeof validateFilename('../test.json')).toBe('string');
+    expect(typeof validateFilename('..\\test.json')).toBe('string');
+    expect(validateFilename('..')).toContain('parent directory');
+    expect(validateFilename('.')).toContain('parent directory');
+    expect(validateFilename('%2e%2e')).toContain('parent directory');
   });
 
   it('should reject URL-encoded parent directory references', () => {
-    const result = validateFilename('%2e%2e%2ftest.json');
-    // Either path separator or parent directory error is acceptable
-    expect(typeof result === 'string').toBe(true);
+    expect(typeof validateFilename('%2e%2e%2ftest.json')).toBe('string');
   });
 
   it('should reject null bytes', () => {
@@ -132,89 +131,20 @@ describe('validateFilename', () => {
   });
 });
 
-describe('isPathSafe', () => {
-  const allowedDir = path.resolve(os.tmpdir(), 'allowed');
-
-  it('should return true for safe paths', () => {
-    expect(isPathSafe(path.join(allowedDir, 'test.json'), allowedDir)).toBe(true);
+describe('control character helpers', () => {
+  it('should strip C0, DEL and C1 characters but keep tab', () => {
+    expect(stripControlChars('a\u001b[2Jb\u0007c\u007fd\u009be\tf')).toBe('a[2Jbcde\tf');
+    expect(stripControlChars('line1\r\nline2')).toBe('line1line2');
   });
 
-  it('should return false for paths with ..', () => {
-    expect(isPathSafe('../outside.json', allowedDir)).toBe(false);
+  it('should leave plain and unicode text unchanged', () => {
+    expect(stripControlChars('Büro Etage 2')).toBe('Büro Etage 2');
   });
 
-  it('should return false for paths with null bytes', () => {
-    expect(isPathSafe('test\0.json', allowedDir)).toBe(false);
-  });
-
-  it('should handle edge case empty path', () => {
-    // Empty path resolves to current directory, which may or may not be safe
-    const result = isPathSafe('', allowedDir);
-    expect(typeof result).toBe('boolean');
-  });
-});
-
-describe('createPathWhitelist', () => {
-  const allowedDir1 = path.resolve(os.tmpdir(), 'allowed1');
-  const allowedDir2 = path.resolve(os.tmpdir(), 'allowed2');
-  const whitelist = createPathWhitelist([allowedDir1, allowedDir2]);
-
-  it('should allow paths in whitelisted directories', () => {
-    expect(whitelist(path.join(allowedDir1, 'test.json'))).toBe(true);
-    expect(whitelist(path.join(allowedDir2, 'test.json'))).toBe(true);
-  });
-
-  it('should reject paths outside whitelisted directories', () => {
-    const outsideDir = path.resolve(os.tmpdir(), 'outside');
-    expect(whitelist(path.join(outsideDir, 'test.json'))).toBe(false);
-  });
-
-  it('should reject path traversal attempts', () => {
-    expect(whitelist('../outside.json')).toBe(false);
-  });
-});
-
-describe('Edge cases and attack vectors', () => {
-  const baseDir = path.resolve(os.tmpdir(), 'test-edge');
-
-  it('should handle mixed encoding attacks', () => {
-    expect(() => sanitizeFilePath('%2e%2e/test.json', baseDir)).toThrow();
-    expect(() => sanitizeFilePath('..%2ftest.json', baseDir)).toThrow();
-  });
-
-  it('should handle Unicode homoglyph attacks', () => {
-    // Using Unicode lookalike characters
-    const result = sanitizeFilePath('test.json', baseDir);
-    expect(result).toBe(path.join(baseDir, 'test.json'));
-  });
-
-  it('should handle very long paths', () => {
-    const longPath = 'a/'.repeat(100) + 'test.json';
-    const result = sanitizeFilePath(longPath, baseDir);
-    expect(result.startsWith(baseDir)).toBe(true);
-  });
-
-  it('should handle special Windows device names', () => {
-    // Windows reserved names like CON, PRN, AUX, NUL, COM1, LPT1
-    const result = validateFilename('CON.json');
-    // Should pass validation (OS will handle it)
-    expect(result).toBe(true);
-  });
-
-  it('should handle paths with trailing slashes', () => {
-    const result = sanitizeFilePath('subdir/', baseDir);
-    expect(result.startsWith(baseDir)).toBe(true);
-  });
-
-  it('should validate filename with URL-encoded dangerous characters', () => {
-    // Test URL-encoded forbidden characters
-    const result = validateFilename('test%3C%3E.json'); // < and >
-    expect(typeof result === 'string').toBe(true);
-    expect(result).toContain('invalid characters');
-  });
-
-  it('should handle double-encoded null bytes in filenames', () => {
-    const result = validateFilename('test%2500.json'); // Double-encoded null
-    expect(typeof result === 'string').toBe(true);
+  it('should report whether text contains control characters', () => {
+    expect(hasNoControlChars('plain text')).toBe(true);
+    expect(hasNoControlChars('tab\tok')).toBe(true);
+    expect(hasNoControlChars('with\nnewline')).toBe(false);
+    expect(hasNoControlChars('esc\u001b')).toBe(false);
   });
 });

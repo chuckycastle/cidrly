@@ -10,7 +10,7 @@ import type { NetworkPlan } from '../core/models/network-plan.js';
 import { ErrorFactory, isFileOperationError } from '../errors/index.js';
 import { ErrorCode, ValidationError } from '../errors/network-plan-errors.js';
 import { resolveUserPath, validateFilename } from '../infrastructure/security/security-utils.js';
-import { parseNetworkPlan } from '../schemas/network-plan.schema.js';
+import { CURRENT_SCHEMA_VERSION, parseNetworkPlan } from '../schemas/network-plan.schema.js';
 import { isErrnoException } from '../utils/error-helpers.js';
 
 export interface SavedPlanFile {
@@ -103,8 +103,11 @@ export class FileService {
         }
       }
 
-      // Write the file
-      await fs.writeFile(filepath, JSON.stringify(plan, null, 2), 'utf-8');
+      // Write the file. Stamp the schema version first so other cidrly clients
+      // (the iOS and macOS apps) know which format they are reading.
+      const serializable = { schemaVersion: CURRENT_SCHEMA_VERSION, ...plan };
+      serializable.schemaVersion = CURRENT_SCHEMA_VERSION;
+      await fs.writeFile(filepath, JSON.stringify(serializable, null, 2), 'utf-8');
 
       // Invalidate cache after modifying filesystem
       this.invalidateCache();
@@ -126,22 +129,33 @@ export class FileService {
       throw ErrorFactory.invalidFilename('', 'Filename cannot be empty');
     }
 
-    // Add .json extension if not present
-    const finalFilename = filename.endsWith('.json') ? filename : `${filename}.json`;
+    // A name with a known extension is used as given. A bare name is tried as
+    // .json first (legacy default) and then as .cidr (current save default).
+    const hasKnownExtension = filename.endsWith('.json') || filename.endsWith('.cidr');
+    const candidates = hasKnownExtension ? [filename] : [`${filename}.json`, `${filename}.cidr`];
+    const finalFilename = candidates[0] ?? filename;
 
     try {
       // Resolve user path (supports filenames, relative paths, absolute paths, ~ paths)
-      const filepath = resolveUserPath(finalFilename, this.baseDirectory);
+      const candidatePaths = candidates.map((name) => resolveUserPath(name, this.baseDirectory));
+      let filepath = candidatePaths[0] ?? '';
 
-      // Read the file
-      let fileContent: string;
-      try {
-        fileContent = await fs.readFile(filepath, 'utf-8');
-      } catch (error) {
-        if (isErrnoException(error) && error.code === 'ENOENT') {
-          throw ErrorFactory.fileNotFound(filepath);
+      // Read the first candidate that exists
+      let fileContent: string | undefined;
+      for (const candidatePath of candidatePaths) {
+        try {
+          fileContent = await fs.readFile(candidatePath, 'utf-8');
+          filepath = candidatePath;
+          break;
+        } catch (error) {
+          if (isErrnoException(error) && error.code === 'ENOENT') {
+            continue;
+          }
+          throw error;
         }
-        throw error;
+      }
+      if (fileContent === undefined) {
+        throw ErrorFactory.fileNotFound(candidatePaths[0] ?? finalFilename);
       }
 
       // Parse and validate using Zod schema

@@ -6,6 +6,7 @@
 import { Box, Text, useInput } from 'ink';
 import React from 'react';
 import type { NetworkPlan } from '../../core/models/network-plan.js';
+import { stripControlChars } from '../../infrastructure/security/security-utils.js';
 import { colors } from '../../themes/colors.js';
 
 export interface ImportPreviewDialogProps {
@@ -44,7 +45,7 @@ export const ImportPreviewDialog: React.FC<ImportPreviewDialogProps> = ({
       <Box marginBottom={1} flexDirection="column">
         <Text>
           {colors.muted('Plan: ')}
-          {colors.accent(plan.name)}
+          {colors.accent(stripControlChars(plan.name))}
         </Text>
         <Text>
           {colors.muted('Base IP: ')}
@@ -66,7 +67,7 @@ export const ImportPreviewDialog: React.FC<ImportPreviewDialogProps> = ({
         <Box marginBottom={1} flexDirection="column">
           <Text>{colors.warning('Warnings:')}</Text>
           {warnings.slice(0, 3).map((warning, i) => (
-            <Text key={i}>{colors.dim(`  • ${warning}`)}</Text>
+            <Text key={i}>{colors.dim(`  • ${stripControlChars(warning)}`)}</Text>
           ))}
           {warnings.length > 3 && (
             <Text>{colors.dim(`  ... and ${warnings.length - 3} more`)}</Text>

@@ -1,192 +1,113 @@
 /**
  * Security Utilities
- * Provides security-related helper functions with enhanced path traversal protection
+ * Path and filename validation for user-supplied paths, and control-character
+ * handling for text that comes from plan and import files.
  */
 
-import fs from 'fs';
+import os from 'os';
 import path from 'path';
-import { isErrnoException } from '../../utils/error-helpers.js';
 import { FILENAME_RULES } from '../config/validation-rules.js';
 
 /**
- * Decode URL-encoded characters to prevent bypassing validation
+ * Decode URL-encoded characters (twice, to catch double encoding).
+ * Used for detection only: a path is rejected when its decoded form contains a
+ * dangerous pattern, but the path is always resolved exactly as typed.
  * @param input - String that may contain URL-encoded characters
- * @returns Decoded string
+ * @returns Decoded string, or the input when it is not valid percent-encoding
  */
 function decodePathSafe(input: string): string {
   try {
-    // Decode URL-encoded characters (e.g., %2e%2e%2f -> ../)
-    let decoded = decodeURIComponent(input);
-    // Double-decode to catch double-encoding attacks
-    decoded = decodeURIComponent(decoded);
-    return decoded;
+    return decodeURIComponent(decodeURIComponent(input));
   } catch {
-    // If decoding fails, return original to let other checks catch it
     return input;
   }
 }
 
 /**
- * Normalize path and check for dangerous patterns
- * @param filePath - Path to normalize
- * @returns Normalized path
+ * Check whether a path has a parent-directory segment (`..`).
+ * Compares whole segments, so names such as `plan..json` are allowed.
  */
-function normalizePath(filePath: string): string {
-  // Decode URL encoding first
-  const decoded = decodePathSafe(filePath);
-
-  // Normalize the path (resolve ., .., etc.)
-  const normalized = path.normalize(decoded);
-
-  return normalized;
+function hasParentSegment(value: string): boolean {
+  return value.split(/[\\/]/).some((segment) => segment === '..');
 }
 
 /**
- * Checks if a path is a symbolic link or contains symbolic links in its path
- * @param filePath - The file path to check
- * @returns true if path is or contains a symlink, false otherwise
- */
-function isSymbolicLink(filePath: string): boolean {
-  try {
-    // Check if the file itself is a symlink
-    try {
-      const stats = fs.lstatSync(filePath);
-      if (stats.isSymbolicLink()) {
-        return true;
-      }
-    } catch (error) {
-      // If file doesn't exist, check parent paths
-      if (isErrnoException(error) && error.code !== 'ENOENT') {
-        throw error;
-      }
-    }
-
-    // Check each component of the path for symlinks
-    const parts = filePath.split(path.sep);
-    let currentPath = '';
-
-    for (const part of parts) {
-      if (!part) continue; // Skip empty parts (like leading slash)
-
-      currentPath = currentPath ? path.join(currentPath, part) : part;
-
-      try {
-        const stats = fs.lstatSync(currentPath);
-        if (stats.isSymbolicLink()) {
-          return true;
-        }
-      } catch (error) {
-        // Path component doesn't exist, continue checking
-        if (isErrnoException(error) && error.code !== 'ENOENT') {
-          throw error;
-        }
-      }
-    }
-
-    return false;
-  } catch {
-    // If we can't check, assume it's safe (file may not exist yet)
-    return false;
-  }
-}
-
-/**
- * Validates and sanitizes a file path to prevent path traversal attacks
- * Enhanced with multiple layers of protection including symlink detection
- * @param filePath - The file path to validate
- * @param baseDir - The base directory to restrict access to
- * @returns Sanitized absolute path
- * @throws Error if path is invalid or attempts to escape base directory
- */
-export function sanitizeFilePath(filePath: string, baseDir: string): string {
-  // Normalize both paths to prevent path traversal
-  const normalizedBase = path.resolve(baseDir);
-
-  // Decode and normalize input path
-  const decodedPath = normalizePath(filePath);
-
-  // Check for null bytes (path traversal technique)
-  if (filePath.includes('\0') || decodedPath.includes('\0')) {
-    throw new Error('Security violation: Null byte detected in file path');
-  }
-
-  // Check for dangerous patterns even after decoding
-  if (decodedPath.includes('..') || filePath.includes('..')) {
-    throw new Error('Security violation: Parent directory reference detected');
-  }
-
-  // Check for absolute paths (should be relative to baseDir)
-  if (path.isAbsolute(filePath)) {
-    throw new Error('Security violation: Absolute paths not allowed');
-  }
-
-  // Resolve the final path
-  const normalizedPath = path.resolve(normalizedBase, decodedPath);
-
-  // Check if the resolved path is within the base directory
-  if (!normalizedPath.startsWith(normalizedBase + path.sep) && normalizedPath !== normalizedBase) {
-    throw new Error('Security violation: Path traversal attempt detected');
-  }
-
-  // Check for symbolic links (can be used to bypass directory restrictions)
-  if (isSymbolicLink(normalizedPath)) {
-    throw new Error('Security violation: Symbolic links not allowed');
-  }
-
-  return normalizedPath;
-}
-
-/**
- * Resolves a user-provided path (can be filename, relative path, or absolute path)
+ * Resolves a user-provided path (filename, relative path, home path, or absolute path)
  * Supports: filename.json, ./path/file.json, ~/path/file.json, /absolute/path/file.json
+ *
+ * The path is resolved as typed. Percent-encoded forms are decoded only to
+ * reject encoded NUL bytes and parent-directory segments.
+ *
  * @param userPath - User-provided path
  * @param baseDir - Default base directory if only filename provided
  * @returns Resolved absolute path
- * @throws Error if path contains dangerous patterns
+ * @throws Error if path contains a NUL byte or a parent-directory segment
  */
 export function resolveUserPath(userPath: string, baseDir: string): string {
-  // Decode and normalize input path
-  const decodedPath = normalizePath(userPath);
+  const decodedPath = decodePathSafe(userPath);
 
-  // Check for null bytes
   if (userPath.includes('\0') || decodedPath.includes('\0')) {
     throw new Error('Invalid file path: Null byte detected');
   }
 
-  // Check for parent directory references (security risk)
-  if (decodedPath.includes('..') || userPath.includes('..')) {
+  if (hasParentSegment(userPath) || hasParentSegment(decodedPath)) {
     throw new Error('Invalid file path: Parent directory reference (..) not allowed');
   }
 
-  // Determine path type and resolve accordingly
-  let resolvedPath: string;
-
-  // Check if it's an absolute path or contains directory separators
   if (path.isAbsolute(userPath)) {
     // Absolute path: /path/to/file.json
-    resolvedPath = path.resolve(decodedPath);
-  } else if (userPath.startsWith('~')) {
+    return path.resolve(userPath);
+  }
+
+  if (userPath === '~' || userPath.startsWith('~/')) {
     // Home directory path: ~/path/to/file.json
-    const homeDir = process.env['HOME'] ?? process.env['USERPROFILE'] ?? '';
+    const homeDir = os.homedir();
     if (!homeDir) {
       throw new Error('Cannot resolve home directory');
     }
-    const pathWithoutTilde = userPath.slice(1); // Remove ~
-    resolvedPath = path.resolve(homeDir, pathWithoutTilde);
-  } else if (userPath.includes('/') || userPath.includes(path.sep)) {
-    // Relative path with directories: ./path/to/file.json or path/to/file.json
-    resolvedPath = path.resolve(process.cwd(), decodedPath);
-  } else {
-    // Just a filename: file.json -> use baseDir
-    resolvedPath = path.resolve(baseDir, decodedPath);
+    return path.resolve(homeDir, userPath.slice(2));
   }
 
-  return resolvedPath;
+  if (userPath.includes('/') || userPath.includes(path.sep)) {
+    // Relative path with directories: ./path/to/file.json or path/to/file.json
+    return path.resolve(process.cwd(), userPath);
+  }
+
+  // Just a filename: file.json -> use baseDir
+  return path.resolve(baseDir, userPath);
+}
+
+/**
+ * Terminal control characters: C0 controls except TAB, DEL, and the C1 range.
+ * Text from plan or import files that contains these can drive the terminal
+ * emulator (OSC title/clipboard writes, CSI cursor and erase sequences, bare CR
+ * row overwrites) when rendered through Ink, and can start new lines in
+ * generated configuration files.
+ */
+// eslint-disable-next-line no-control-regex
+const CONTROL_CHARS = /[\u0000-\u0008\u000a-\u001f\u007f-\u009f]/g;
+
+/**
+ * Remove terminal control characters from text before rendering or emitting it
+ * @param value - Text sourced from a file or import
+ * @returns The text with control characters removed
+ */
+export function stripControlChars(value: string): string {
+  return value.replace(CONTROL_CHARS, '');
+}
+
+/**
+ * Check that text contains no terminal control characters (Zod refinement helper)
+ * @param value - Text to check
+ * @returns true when the text has no control characters
+ */
+export function hasNoControlChars(value: string): boolean {
+  return !new RegExp(CONTROL_CHARS.source).test(value);
 }
 
 /**
  * Validates that a filename is safe and doesn't contain dangerous characters
- * Enhanced with URL-encoding detection
+ * Checks both the typed and the URL-decoded form
  * @param filename - The filename to validate
  * @returns true if valid, error message otherwise
  */
@@ -208,8 +129,8 @@ export function validateFilename(filename: string): string | true {
     return 'Filename cannot contain path separators';
   }
 
-  // Check for parent directory references in both original and decoded
-  if (filename.includes('..') || decoded.includes('..')) {
+  // A filename is one segment, so only the exact names `.` and `..` refer to a directory
+  if (['.', '..'].includes(filename.trim()) || ['.', '..'].includes(decoded.trim())) {
     return 'Filename cannot contain parent directory references';
   }
 
@@ -232,54 +153,4 @@ export function validateFilename(filename: string): string | true {
   }
 
   return true;
-}
-
-/**
- * Checks if a path is within an allowed directory
- * Enhanced with additional security checks
- * @param filePath - The file path to check
- * @param allowedDir - The allowed base directory
- * @returns true if path is safe, false otherwise
- */
-export function isPathSafe(filePath: string, allowedDir: string): boolean {
-  try {
-    const normalizedBase = path.resolve(allowedDir);
-
-    // Normalize and decode the input path
-    const decodedPath = normalizePath(filePath);
-    const normalizedPath = path.resolve(normalizedBase, decodedPath);
-
-    // Check for dangerous patterns
-    if (filePath.includes('\0') || filePath.includes('..')) {
-      return false;
-    }
-
-    return (
-      normalizedPath.startsWith(normalizedBase + path.sep) || normalizedPath === normalizedBase
-    );
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Create a whitelist validator for allowed directories
- * @param allowedDirs - Array of allowed base directories
- * @returns Function that validates if a path is within allowed directories
- */
-export function createPathWhitelist(allowedDirs: string[]): (filePath: string) => boolean {
-  const normalizedAllowed = allowedDirs.map((dir) => path.resolve(dir));
-
-  return (filePath: string): boolean => {
-    try {
-      const decoded = normalizePath(filePath);
-      const normalized = path.resolve(decoded);
-
-      return normalizedAllowed.some(
-        (allowedDir) => normalized.startsWith(allowedDir + path.sep) || normalized === allowedDir,
-      );
-    } catch {
-      return false;
-    }
-  };
 }

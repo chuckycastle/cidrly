@@ -8,7 +8,9 @@ import {
   BaseTerraformFormatter,
   generateHeader,
   generateLocals,
+  hclString,
   sanitizeResourceName,
+  singleLine,
 } from './base-formatter.js';
 import type { TerraformExportOptions, TerraformOutput } from './types.js';
 import { DEFAULT_OPTIONS } from './types.js';
@@ -121,10 +123,10 @@ export class AwsTerraformFormatter extends BaseTerraformFormatter {
     const name = sanitizeResourceName(subnet.name);
     const cidr = subnet.subnetInfo!.networkAddress!;
     const lines: string[] = [];
-    lines.push(`# Subnet: ${subnet.name} (VLAN ${subnet.vlanId})`);
+    lines.push(`# Subnet: ${singleLine(subnet.name)} (VLAN ${subnet.vlanId})`);
     lines.push(`resource "aws_subnet" "${name}" {`);
     lines.push(`  vpc_id            = aws_vpc.main.id`);
-    lines.push(`  cidr_block        = "${cidr}"`);
+    lines.push(`  cidr_block        = "${hclString(cidr)}"`);
     lines.push(`  availability_zone = "\${var.aws_region}a"`);
     lines.push('');
     lines.push('  tags = merge(local.tags, {');

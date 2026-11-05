@@ -3,6 +3,7 @@
  * Parses YAML files containing subnet data (cidrly format or generic)
  */
 
+import { stripControlChars } from '../../../infrastructure/security/security-utils.js';
 import type {
   ImportFormat,
   ImportedSubnet,
@@ -51,7 +52,7 @@ export class YamlParser implements ImportParser {
 
         if (name && baseIp) {
           // cidrly format
-          detectedPlanName = name;
+          detectedPlanName = stripControlChars(name);
           detectedBaseIp = baseIp;
 
           if (Array.isArray(subnetsArray)) {
@@ -65,7 +66,7 @@ export class YamlParser implements ImportParser {
         } else if (Array.isArray(subnetsArray)) {
           // Generic format with subnets key
           if (basIpAlt) detectedBaseIp = basIpAlt;
-          if (planNameAlt) detectedPlanName = planNameAlt;
+          if (planNameAlt) detectedPlanName = stripControlChars(planNameAlt);
 
           for (const item of subnetsArray) {
             const subnet = this.parseSubnetObject(item, warnings);
@@ -210,11 +211,20 @@ export class YamlParser implements ImportParser {
     if (value === 'true') return true;
     if (value === 'false') return false;
 
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
+    if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
+      // Double-quoted scalar: same escapes as a JSON string (\" \\ \n \uXXXX),
+      // which is what cidrly's YAML export writes. Fall back to the raw inner text.
+      try {
+        const unescaped: unknown = JSON.parse(value);
+        if (typeof unescaped === 'string') return unescaped;
+      } catch {
+        // not a JSON-compatible string
+      }
       return value.slice(1, -1);
+    }
+    if (value.length >= 2 && value.startsWith("'") && value.endsWith("'")) {
+      // Single-quoted scalar: the only escape is a doubled quote
+      return value.slice(1, -1).replace(/''/g, "'");
     }
 
     const num = Number(value);
@@ -235,7 +245,7 @@ export class YamlParser implements ImportParser {
     const item = obj as Record<string, unknown>;
 
     const nameValue = item['name'] ?? item['subnet_name'];
-    const name = (typeof nameValue === 'string' ? nameValue : '').trim();
+    const name = stripControlChars(typeof nameValue === 'string' ? nameValue : '').trim();
     if (!name) {
       warnings.push({ message: 'Skipping subnet with empty name' });
       return null;
@@ -282,7 +292,7 @@ export class YamlParser implements ImportParser {
 
     const desc = item['description'];
     if (typeof desc === 'string') {
-      subnet.description = desc;
+      subnet.description = stripControlChars(desc);
     }
 
     const gw = item['gateway'] ?? item['gatewayIp'];

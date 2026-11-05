@@ -7,6 +7,112 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+Findings from a source audit of the plan-file and export boundaries. A plan file or import file
+is authored outside the process, so its content is validated at the schema and escaped at every
+output.
+
+- **Plan schema** - `supernet.networkAddress`, `subnetInfo.networkAddress` and
+  `manualNetworkAddress` must be CIDR notation with valid octets and prefix. Names, descriptions
+  and labels reject terminal control characters (C0, DEL, C1). `subnetSize`, `requiredHosts`,
+  `usableHosts`, `totalSize`, `usedSize`, capacities, `startInt` and `endInt` are bounded to the
+  IPv4 address space, and block ranges require `endInt >= startInt`. Plans that violate these
+  rules fail to load with a validation message.
+- **Terraform export** - Plan values inside HCL string literals are escaped (`hclString`), and
+  values in comment lines are folded to one line. A plan address or name can no longer close a
+  literal or start a new resource block in `main.tf`. The `PlanName` tag is escaped for AWS and
+  Azure as it already was for GCP.
+- **Vendor config export** - `calculateGatewayIp` validates octets before the `/31` and `/32`
+  shortcut, and header and skipped-subnet lines fold line breaks, so a plan value cannot add a
+  line to a generated device configuration.
+- **CSV export** - Every column and header value goes through `escapeCsvValue`, which folds line
+  breaks and prefixes cells starting with `=`, `+`, `-`, `@` or TAB with a single quote so
+  spreadsheets treat them as text. The CSV importer removes that prefix on read, so round-trips
+  stay lossless.
+- **Terminal rendering** - File-sourced text is passed through `stripControlChars` at the render
+  sinks (`cidrly view`, dashboard header and table, subnet info, import preview), and the CSV and
+  YAML importers drop control characters from names and descriptions.
+- **Allocators** - `allocateSubnetAddresses` throws if an iteration does not advance or leaves the
+  IPv4 space, and `rangeToOptimalCIDRBlocks` throws instead of allocating an unbounded fragment
+  list. Out-of-range values in a plan file previously hung `cidrly calculate` or exhausted memory.
+
+- **Path resolution** - `resolveUserPath` resolves a path as typed. Percent-encoded forms are
+  decoded only to reject encoded NUL bytes and `..` segments, so `%41.json` is no longer rewritten
+  to `A.json`. `..` is matched by path segment, so names such as `plan..json` are accepted.
+- **Install script** - `postinstall.cjs` checks each destination with `lstat` and skips symbolic
+  links, including dangling ones, instead of hashing or writing through them.
+- **Release workflow** - The tag name is passed as data, checked against a semantic-version
+  pattern and required to equal the `package.json` version. Installs use `npm ci
+--ignore-scripts`, the Semgrep step is removed from the job that holds publish credentials,
+  publishing uses `--provenance` and a prerelease dist-tag, the downloaded tarball is checked
+  against the registry checksum before its SHA-256 is written to the Homebrew formula, and the tap
+  is checked out with a token instead of a credential in the clone URL. The job declares a
+  `release` environment and requests `contents: write` and `id-token: write` only.
+- **CI workflow** - Actions are pinned to commit SHAs, installs use `npm ci --ignore-scripts`,
+  Semgrep is version-pinned and blocking, and `npm audit --omit=dev --audit-level=high` is
+  blocking. The full-tree audit stays informational.
+- **Dependencies** - `zod` 4.6.7, `yaml` 2.9.1 and `ws` 8.22.1 (production-tree advisories).
+- **Spec pin** - `.spec-commit` records the commit that the `.spec-version` tag must resolve to;
+  `npm run conformance` fails if the tag has moved.
+- **Package contents** - The npm package ships `scripts/postinstall.cjs` only, not the
+  development scripts. `@types/react` moved to `devDependencies`.
+
+### Changed
+
+- **Dashboard export default filename** - Built from a sanitized plan name (same rule as
+  `cidrly export`), so an imported plan name cannot propose a path outside the exports directory.
+- **Terraform export directory** - Resolved with the same path rules as other exports: `~/` is
+  expanded and a bare directory name is created under the exports directory.
+- **Plan subnet limit** - A plan file may hold at most 4094 subnets.
+
+### Removed
+
+- Unused path helpers `sanitizeFilePath`, `isPathSafe` and `createPathWhitelist`.
+- `CODE_REVIEW_SUMMARY.md` is no longer tracked.
+
+### Fixed
+
+- **Home paths** - `~/plans/x.cidr` resolved to `/plans/x.cidr`. `~` and `~/` now expand to the
+  home directory in save, load and export paths and in directory preferences.
+- **Loading `.cidr` plans** - `cidrly view --plan x.cidr` looked for `x.cidr.json`. A name with a
+  `.cidr` or `.json` extension is used as given; a bare name is tried as `.json`, then `.cidr`.
+- **Preferences at startup** - Saved preferences (directories, auto-save, growth, columns) were
+  never loaded by the dashboard and reset on every launch.
+- **Auto-save target** - Auto-save wrote to the saved-plans directory under the file's basename.
+  It now writes back to the file that was loaded or saved.
+- **Default directories without `HOME`** - Saved-plans and exports directories are derived from
+  `os.homedir()` instead of becoming relative to the working directory.
+- **VLAN names in vendor exports** - A subnet name with no usable characters exported an empty
+  VLAN name; it now falls back to `VLAN<id>`.
+- **YAML import of quoted names** - Escaped quotes in double-quoted and single-quoted scalars are
+  unescaped, so cidrly's own YAML export round-trips.
+- **Ubiquiti import** - `vif` blocks are read with a balanced-brace scan (linear time, nested
+  blocks supported).
+- **Preference load message** - A missing preferences file no longer prints a warning under the
+  dashboard.
+- **Vendor export gateway** - SVI gateway is now the network address + 1. Subnets that do not
+  start on a `.0` boundary (for example `10.0.0.128/25`) previously got a gateway inside a
+  different subnet (`10.0.0.1` instead of `10.0.0.129`).
+- **Supernet containment** - The supernet is now the smallest CIDR-aligned block that contains
+  every allocated subnet. Plans whose base IP was not aligned to the total size could report a
+  supernet that excluded some subnets.
+- **IPAM-lite blocks at or above 128.0.0.0** - Block bounds are now unsigned. Blocks in
+  `172.16/12` and `192.168/16` had negative bounds, so utilization stayed at 0% and allocations
+  were not attributed to their block.
+- **/0 masks** - `calculateNetmask(0)` and `calculateWildcard(0)` return `0.0.0.0` and
+  `255.255.255.255`.
+- **CSV import of cidrly's own export** - The CSV parser now skips the `# Plan Metadata` comment
+  block before the header row.
+
+### Added
+
+- **Plan file schema version 2** - Saved plans carry `schemaVersion: 2`. Unknown fields written
+  by other cidrly clients (the iOS and macOS apps) are preserved when a plan is loaded and saved.
+- **Conformance fixtures** - `npm run fixtures -- <dir>` serializes engine inputs and outputs;
+  `npm run conformance` diffs them against the `cidrly-spec` version pinned in `.spec-version`.
+  CI runs the conformance check.
+
 For planned features and enhancements, see [GitHub Issues](https://github.com/chuckycastle/cidrly/issues) and [Milestones](https://github.com/chuckycastle/cidrly/milestones).
 
 ## [0.5.1] - 2025-12-07

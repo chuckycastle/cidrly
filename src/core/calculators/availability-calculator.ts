@@ -99,7 +99,14 @@ export function rangeToOptimalCIDRBlocks(
   const fragments: AvailableFragment[] = [];
   let currentStart = startInt;
 
+  // A range inside the IPv4 space splits into at most 2 * 32 aligned blocks;
+  // anything beyond this means the inputs are out of range.
+  const MAX_FRAGMENTS = 1024;
+
   while (currentStart <= endInt) {
+    if (fragments.length >= MAX_FRAGMENTS || endInt > 0xffffffff) {
+      throw new Error('Address range exceeds the IPv4 address space; check assigned block bounds');
+    }
     const remainingCapacity = endInt - currentStart + 1;
     const prefix = findLargestValidPrefix(currentStart, remainingCapacity);
     const blockSize = pow2(32 - prefix);

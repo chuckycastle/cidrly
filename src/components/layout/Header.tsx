@@ -8,6 +8,7 @@ import React from 'react';
 import packageJson from '../../../package.json' with { type: 'json' };
 import type { NetworkPlan } from '../../core/models/network-plan.js';
 import { useTerminalWidth } from '../../hooks/useTerminalWidth.js';
+import { stripControlChars } from '../../infrastructure/security/security-utils.js';
 import { usePreferencesStore } from '../../store/preferencesStore.js';
 import { colors, symbols } from '../../themes/colors.js';
 import { EfficiencyBar } from '../widgets/EfficiencyBar.js';
@@ -55,7 +56,7 @@ export const Header: React.FC<HeaderProps> = React.memo(({ plan }) => {
             <Text> </Text>
             <Text>{colors.dim('›')}</Text>
             <Text> </Text>
-            <Text>{colors.slate(plan.name)}</Text>
+            <Text>{colors.slate(stripControlChars(plan.name))}</Text>
           </Box>
           <Box>{getAutoSaveStatus()}</Box>
         </Box>
@@ -68,7 +69,7 @@ export const Header: React.FC<HeaderProps> = React.memo(({ plan }) => {
             <Text> </Text>
             <Text>{colors.dim('›')}</Text>
             <Text> </Text>
-            <Text>{colors.slate(plan.name)}</Text>
+            <Text>{colors.slate(stripControlChars(plan.name))}</Text>
           </Box>
           <Box>{getAutoSaveStatus()}</Box>
         </Box>

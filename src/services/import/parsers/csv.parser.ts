@@ -3,6 +3,7 @@
  * Parses CSV files containing subnet data
  */
 
+import { stripControlChars } from '../../../infrastructure/security/security-utils.js';
 import type {
   ImportFormat,
   ImportedSubnet,
@@ -11,6 +12,15 @@ import type {
   ParseWarning,
 } from '../import.types.js';
 import type { ImportParser } from './parser.interface.js';
+
+/**
+ * Undo the formula-prefix neutralization applied by the CSV exporter
+ * (a leading single quote before = + - @ TAB CR) and drop control characters.
+ */
+function cleanImportedText(value: string): string {
+  const unprefixed = /^'[=+\-@\t\r]/.test(value) ? value.slice(1) : value;
+  return stripControlChars(unprefixed).trim();
+}
 
 /**
  * Expected CSV column headers (case-insensitive)
@@ -50,8 +60,10 @@ export class CsvParser implements ImportParser {
       };
     }
 
-    // Parse header row
-    const headerLine = lines[0];
+    // Parse header row: the first line that is not a "#" comment. cidrly's own CSV
+    // export starts with "# Plan Metadata" comment lines, so the header is not always line 0.
+    const headerIndex = lines.findIndex((line) => !line.trim().startsWith('#'));
+    const headerLine = headerIndex === -1 ? undefined : lines[headerIndex];
     if (!headerLine) {
       return {
         success: false,
@@ -80,7 +92,7 @@ export class CsvParser implements ImportParser {
     }
 
     // Parse data rows
-    for (let i = 1; i < lines.length; i++) {
+    for (let i = headerIndex + 1; i < lines.length; i++) {
       const line = lines[i];
       if (!line || line.trim().startsWith('#')) continue;
 
@@ -191,9 +203,9 @@ export class CsvParser implements ImportParser {
     const vlanValue = columnMap.vlanId >= 0 ? row[columnMap.vlanId] : undefined;
     const devicesValue = columnMap.devices >= 0 ? row[columnMap.devices] : undefined;
 
-    const name = nameValue?.trim() ?? '';
-    const vlanStr = vlanValue?.trim() ?? '';
-    const devicesStr = devicesValue?.trim() ?? '';
+    const name = cleanImportedText(nameValue ?? '');
+    const vlanStr = stripControlChars(vlanValue ?? '').trim();
+    const devicesStr = stripControlChars(devicesValue ?? '').trim();
 
     if (!name) {
       warnings.push({ line: lineNum, message: 'Skipping row with empty name' });
@@ -230,7 +242,7 @@ export class CsvParser implements ImportParser {
     if (columnMap.network >= 0) {
       const networkValue = row[columnMap.network];
       if (networkValue) {
-        subnet.networkAddress = networkValue.trim();
+        subnet.networkAddress = cleanImportedText(networkValue);
         const cidrMatch = subnet.networkAddress.match(/\/(\d+)$/);
         if (cidrMatch?.[1]) {
           subnet.cidrPrefix = parseInt(cidrMatch[1], 10);
@@ -241,14 +253,14 @@ export class CsvParser implements ImportParser {
     if (columnMap.description >= 0) {
       const descValue = row[columnMap.description];
       if (descValue) {
-        subnet.description = descValue.trim();
+        subnet.description = cleanImportedText(descValue);
       }
     }
 
     if (columnMap.gateway >= 0) {
       const gwValue = row[columnMap.gateway];
       if (gwValue) {
-        subnet.gatewayIp = gwValue.trim();
+        subnet.gatewayIp = cleanImportedText(gwValue);
       }
     }
 

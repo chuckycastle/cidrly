@@ -165,7 +165,7 @@ export const PREFERENCES_RULES = {
  */
 
 // Compute default saved plans directory in user's home directory
-const homeDir = process.env['HOME'] ?? process.env['USERPROFILE'] ?? '';
+const homeDir = os.homedir();
 const SAVED_PLANS_DIR = path.join(homeDir, 'cidrly', 'saved-plans');
 const EXPORTS_DIR = path.join(homeDir, 'cidrly', 'exports');
 
@@ -220,7 +220,8 @@ export const FILE_RULES = {
 export function getDirectory(type: 'saved' | 'exports', customPath?: string): string {
   if (customPath) {
     // Expand ~ to home directory
-    return customPath.replace(/^~/, os.homedir());
+    // Only a leading `~` or `~/` is the home directory; `~name` stays as typed
+    return customPath.replace(/^~(?=\/|$)/, os.homedir());
   }
 
   // Use defaults

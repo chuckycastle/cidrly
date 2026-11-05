@@ -8,6 +8,7 @@ import React from 'react';
 import { getSubnetDetails } from '../../core/calculators/subnet-calculator.js';
 import type { Subnet } from '../../core/models/network-plan.js';
 import { useTerminalHeight } from '../../hooks/useTerminalHeight.js';
+import { stripControlChars } from '../../infrastructure/security/security-utils.js';
 import { colors, symbols } from '../../themes/colors.js';
 import { EfficiencyBar } from '../widgets/EfficiencyBar.js';
 
@@ -97,7 +98,7 @@ export const SubnetInfoDialog: React.FC<SubnetInfoDialogProps> = ({ subnet, onCl
         <Box flexDirection="column" marginBottom={isVeryShort ? 0 : 1}>
           <Box>
             <Text>{colors.muted('Subnet    ')}</Text>
-            <Text>{colors.accent(subnet.name)}</Text>
+            <Text>{colors.accent(stripControlChars(subnet.name))}</Text>
           </Box>
           <Box>
             <Text>{colors.muted('CIDR      ')}</Text>
@@ -159,13 +160,13 @@ export const SubnetInfoDialog: React.FC<SubnetInfoDialogProps> = ({ subnet, onCl
       {/* Title and Subnet Name combined */}
       <Box marginBottom={isShort ? 0 : 1} flexDirection="column">
         <Box>
-          <Text bold>{colors.accent(subnet.name)}</Text>
+          <Text bold>{colors.accent(stripControlChars(subnet.name))}</Text>
           <Text> </Text>
           <Text>{colors.dim(`(VLAN ${subnet.vlanId})`)}</Text>
         </Box>
         {subnet.description && (
           <Box>
-            <Text>{colors.muted(subnet.description)}</Text>
+            <Text>{colors.muted(stripControlChars(subnet.description))}</Text>
           </Box>
         )}
       </Box>

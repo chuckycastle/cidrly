@@ -14,11 +14,12 @@ import { validateIpAddress } from '../../core/validators/validators.js';
 import { isFileOperationError } from '../../errors/index.js';
 import { usePlanActions } from '../../hooks/usePlan.js';
 import { useNavigation, useNotify } from '../../hooks/useUI.js';
-import { FILE_RULES } from '../../infrastructure/config/validation-rules.js';
+import { getDirectory } from '../../infrastructure/config/validation-rules.js';
 import { parseNetworkPlan } from '../../schemas/network-plan.schema.js';
 import { importService } from '../../services/import/import.service.js';
 import type { ImportFormat } from '../../services/import/import.types.js';
 import { usePlanStore } from '../../store/planStore.js';
+import { usePreferencesStore } from '../../store/preferencesStore.js';
 import { colors } from '../../themes/colors.js';
 import { getErrorMessage, isErrnoException } from '../../utils/error-helpers.js';
 import { unescapeShellPath } from '../../utils/path-helpers.js';
@@ -55,6 +56,7 @@ export const WelcomeView: React.FC = () => {
   const [state, setState] = useState<WelcomeState>({ type: 'initial' });
   const { loadPlan } = usePlanActions();
   const setCurrentFilename = usePlanStore.use.setCurrentFilename();
+  const preferences = usePreferencesStore.use.preferences();
   const { goToDashboard } = useNavigation();
   const notify = useNotify();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -70,7 +72,7 @@ export const WelcomeView: React.FC = () => {
 
   // Get saved plans from specified directory or default
   const getSavedPlans = (directoryPath?: string): Array<{ label: string; value: string }> => {
-    const targetPath = directoryPath ?? path.resolve(process.cwd(), FILE_RULES.SAVED_PLANS_DIR);
+    const targetPath = directoryPath ?? getDirectory('saved', preferences.savedPlansDir);
 
     try {
       const files = fs.readdirSync(targetPath);
@@ -267,7 +269,8 @@ export const WelcomeView: React.FC = () => {
       plan.name = planName;
       loadPlan(plan);
 
-      setCurrentFilename(filename);
+      // Track the full path so auto-save writes back to the file that was loaded
+      setCurrentFilename(path.resolve(filepath));
 
       notify.success(`Plan "${planName}" loaded successfully!`);
       goToDashboard();

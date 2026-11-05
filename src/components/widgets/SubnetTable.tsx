@@ -7,6 +7,7 @@ import { Box, Text } from 'ink';
 import React from 'react';
 import type { Subnet } from '../../core/models/network-plan.js';
 import { useTerminalWidth } from '../../hooks/useTerminalWidth.js';
+import { stripControlChars } from '../../infrastructure/security/security-utils.js';
 import type { SortColumn, SortDirection } from '../../store/uiStore.js';
 import { colors, symbols } from '../../themes/colors.js';
 
@@ -176,7 +177,7 @@ export const SubnetTable: React.FC<SubnetTableProps> = React.memo(
     const getColumnValue = (subnet: Subnet, columnKey: SortColumn, width: number): string => {
       switch (columnKey) {
         case 'name':
-          return subnet.name.substring(0, width).padEnd(width);
+          return stripControlChars(subnet.name).substring(0, width).padEnd(width);
         case 'vlan':
           return subnet.vlanId.toString().padStart(width);
         case 'expected':
@@ -192,7 +193,7 @@ export const SubnetTable: React.FC<SubnetTableProps> = React.memo(
         case 'network': {
           let baseValue: string;
           if (subnet.subnetInfo?.networkAddress) {
-            baseValue = subnet.subnetInfo.networkAddress;
+            baseValue = stripControlChars(subnet.subnetInfo.networkAddress);
           } else if (subnet.subnetInfo) {
             // Calculated but no address allocated (IPAM-lite space issue)
             baseValue = 'No space';
@@ -205,7 +206,9 @@ export const SubnetTable: React.FC<SubnetTableProps> = React.memo(
           return displayValue.substring(0, width).padEnd(width);
         }
         case 'description':
-          return (subnet.description ?? '').substring(0, width).padEnd(width);
+          return stripControlChars(subnet.description ?? '')
+            .substring(0, width)
+            .padEnd(width);
         default:
           return '';
       }

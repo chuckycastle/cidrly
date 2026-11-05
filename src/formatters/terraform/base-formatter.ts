@@ -20,13 +20,35 @@ export function sanitizeResourceName(name: string): string {
 }
 
 /**
+ * Escape a value for use inside a double-quoted HCL string literal.
+ * Escapes backslash and double quote, neutralizes `${` and `%{` template
+ * sequences, and folds line breaks so a plan value cannot close the literal
+ * or start a new attribute or block.
+ */
+export function hclString(value: string): string {
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\$\{/g, '$$$${')
+    .replace(/%\{/g, '%%{')
+    .replace(/\r?\n|\r/g, ' ');
+}
+
+/**
+ * Fold line breaks so a value stays on one line (comments and headers)
+ */
+export function singleLine(value: string): string {
+  return value.replace(/\r?\n|\r/g, ' ');
+}
+
+/**
  * Generate header comment for Terraform files
  */
 export function generateHeader(plan: NetworkPlan, provider: string): string {
   const lines: string[] = [];
   lines.push('#');
   lines.push('# cidrly Network Configuration');
-  lines.push(`# Plan: ${plan.name}`);
+  lines.push(`# Plan: ${singleLine(plan.name)}`);
   lines.push(`# Provider: ${provider}`);
   lines.push(`# Generated: ${new Date().toISOString()}`);
   lines.push('#');
@@ -41,10 +63,10 @@ export function generateLocals(plan: NetworkPlan): string {
   const lines: string[] = [];
   lines.push('locals {');
   lines.push(`  plan_name = "${sanitizeResourceName(plan.name)}"`);
-  lines.push(`  base_cidr = "${plan.supernet?.networkAddress ?? `${plan.baseIp}/16`}"`);
+  lines.push(`  base_cidr = "${hclString(plan.supernet?.networkAddress ?? `${plan.baseIp}/16`)}"`);
   lines.push('  tags = {');
   lines.push('    ManagedBy = "cidrly"');
-  lines.push(`    PlanName  = "${plan.name}"`);
+  lines.push(`    PlanName  = "${hclString(plan.name)}"`);
   lines.push('  }');
   lines.push('}');
   lines.push('');

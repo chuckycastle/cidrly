@@ -36,6 +36,18 @@ export type ExportFormat =
   | 'ubiquiti';
 
 /**
+ * Reduce a plan name to a filename stem: lowercase letters, digits, `-` and `_`.
+ * Plan names can come from import files, so they never reach the filesystem as typed.
+ */
+export function sanitizePlanName(planName: string): string {
+  return planName
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/**
  * Service class for exporting network plans to various formats
  */
 export class ExportService {
@@ -76,7 +88,7 @@ export class ExportService {
     const extension = this.getExtensionForFormat(format);
     const finalFilename = filename
       ? this.ensureExtension(filename, extension)
-      : `${this.sanitizePlanName(plan.name)}${extension}`;
+      : `${sanitizePlanName(plan.name) || 'plan'}${extension}`;
 
     // Only validate filename portion (not full paths)
     // If it contains path separators, extract just the filename for validation
@@ -225,17 +237,6 @@ export class ExportService {
     // Remove any existing extension
     const baseName = filename.replace(/\.[^.]+$/, '');
     return `${baseName}${extension}`;
-  }
-
-  /**
-   * Sanitize plan name for use as filename
-   */
-  private sanitizePlanName(planName: string): string {
-    return planName
-      .toLowerCase()
-      .replace(/[^a-z0-9-_]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
   }
 
   /**

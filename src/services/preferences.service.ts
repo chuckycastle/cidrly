@@ -50,7 +50,7 @@ export class PreferencesService {
    * Expands ~ to home directory
    */
   private async validateAndCreateDirectory(dirPath: string): Promise<void> {
-    const expandedPath = dirPath.replace(/^~/, os.homedir());
+    const expandedPath = dirPath.replace(/^~(?=\/|$)/, os.homedir());
     try {
       await fs.mkdir(expandedPath, { recursive: true });
     } catch (error) {
@@ -72,9 +72,9 @@ export class PreferencesService {
 
       // Validate and return (with fallback to defaults on error)
       return safeParsePreferences(data);
-    } catch (error) {
-      // On any error, return defaults and optionally log
-      console.warn('Failed to load preferences, using defaults:', error);
+    } catch {
+      // A missing or unreadable file means defaults. Nothing is written to the
+      // terminal here: this runs underneath the Ink UI on every start.
       return defaultPreferences;
     }
   }

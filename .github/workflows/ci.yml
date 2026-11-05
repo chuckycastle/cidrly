@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Test on Node.js ${{ matrix.node-version }}
@@ -19,15 +22,18 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: ${{ matrix.node-version }}
 
+      # Lockfile-exact install without dependency lifecycle scripts
       - name: Install dependencies
-        run: npm install
+        run: npm ci --ignore-scripts
 
       - name: Run linter
         run: npm run lint
@@ -39,7 +45,7 @@ jobs:
         run: npm run test:coverage
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
         if: matrix.node-version == '24.x'
         with:
           file: ./coverage/lcov.info
@@ -55,45 +61,77 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '24.x'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci --ignore-scripts
 
       - name: Install Semgrep
-        run: pip install semgrep
+        run: pip install semgrep==1.176.0
 
+      # Blocking: the custom rule set must stay at zero findings
       - name: Run Semgrep security scan
         run: npm run security
-        continue-on-error: true
 
-      - name: Run npm audit
+      # Blocking: no high or critical advisory in what ships to users
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      # Informational: development tooling advisories do not ship in the package
+      - name: Audit all dependencies (informational)
         run: npm audit --audit-level=high
         continue-on-error: true
 
-  build:
-    name: Build
+  conformance:
+    name: Spec conformance
     runs-on: ubuntu-latest
-    needs: [test, security]
     permissions:
       contents: read
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '24.x'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci --ignore-scripts
+
+      - name: Compare engine fixtures with the pinned cidrly-spec version
+        run: npm run conformance
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [test, security, conformance]
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24.x'
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
 
       - name: Build production
         run: npm run build:prod
@@ -106,7 +144,7 @@ jobs:
           echo "Build artifacts verified successfully"
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: dist-${{ github.sha }}
           path: dist/
