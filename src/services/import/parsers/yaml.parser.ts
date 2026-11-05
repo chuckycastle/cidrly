@@ -211,11 +211,20 @@ export class YamlParser implements ImportParser {
     if (value === 'true') return true;
     if (value === 'false') return false;
 
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
+    if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
+      // Double-quoted scalar: same escapes as a JSON string (\" \\ \n \uXXXX),
+      // which is what cidrly's YAML export writes. Fall back to the raw inner text.
+      try {
+        const unescaped: unknown = JSON.parse(value);
+        if (typeof unescaped === 'string') return unescaped;
+      } catch {
+        // not a JSON-compatible string
+      }
       return value.slice(1, -1);
+    }
+    if (value.length >= 2 && value.startsWith("'") && value.endsWith("'")) {
+      // Single-quoted scalar: the only escape is a doubled quote
+      return value.slice(1, -1).replace(/''/g, "'");
     }
 
     const num = Number(value);

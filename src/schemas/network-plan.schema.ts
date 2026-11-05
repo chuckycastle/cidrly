@@ -210,7 +210,8 @@ const NetworkPlanSchema = z
     schemaVersion: z.number().int().positive().optional(),
     name: safeText(PLAN_NAME_RULES.MIN_LENGTH, PLAN_NAME_RULES.MAX_LENGTH),
     baseIp: IpAddressSchema,
-    subnets: z.array(SubnetSchema),
+    // One subnet per usable VLAN ID at most; the cap also bounds per-subnet passes
+    subnets: z.array(SubnetSchema).max(VLAN_RULES.MAX),
     growthPercentage: z
       .number()
       .int()
@@ -254,6 +255,21 @@ export function looksLikeCidrlyPlan(data: unknown): boolean {
 }
 
 /**
+ * Drop an own `__proto__` key before validation. JSON.parse creates it as a plain
+ * own property, and `.passthrough()` would otherwise assign it onto the parsed plan,
+ * replacing that object's prototype with file-supplied data.
+ */
+function withoutProtoKey(data: unknown): unknown {
+  if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+    return data;
+  }
+  if (!Object.prototype.hasOwnProperty.call(data, '__proto__')) {
+    return data;
+  }
+  return Object.fromEntries(Object.entries(data).filter(([key]) => key !== '__proto__'));
+}
+
+/**
  * Parse and validate a network plan from unknown data
  * @param data - Unknown data to parse (typically from JSON.parse)
  * @param filepath - Optional filepath for error context
@@ -261,7 +277,7 @@ export function looksLikeCidrlyPlan(data: unknown): boolean {
  * @throws FileOperationError if validation fails
  */
 export function parseNetworkPlan(data: unknown, filepath?: string): NetworkPlan {
-  const result = NetworkPlanSchema.safeParse(data);
+  const result = NetworkPlanSchema.safeParse(withoutProtoKey(data));
 
   if (!result.success) {
     const errorDetails = result.error.issues

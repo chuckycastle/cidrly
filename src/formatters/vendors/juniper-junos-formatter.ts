@@ -39,7 +39,7 @@ function formatVlanDefinitions(subnets: Subnet[]): string {
   lines.push('vlans {');
 
   subnets.forEach((subnet) => {
-    const name = sanitizeVlanName(subnet.name);
+    const name = sanitizeVlanName(subnet.name, 32, `VLAN${subnet.vlanId}`);
     lines.push(`    ${name} {`);
     lines.push(`        vlan-id ${subnet.vlanId};`);
     lines.push(`        l3-interface irb.${subnet.vlanId};`);

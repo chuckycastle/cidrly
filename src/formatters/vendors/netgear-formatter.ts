@@ -36,7 +36,7 @@ function generateHeader(plan: NetworkPlan): string {
  * Format VLAN database entry
  */
 function formatVlanDatabaseEntry(subnet: Subnet): string {
-  const name = sanitizeVlanName(subnet.name, 32);
+  const name = sanitizeVlanName(subnet.name, 32, `VLAN${subnet.vlanId}`);
   return `vlan ${subnet.vlanId} name "${name}"`;
 }
 

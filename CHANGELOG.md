@@ -37,8 +37,60 @@ output.
   IPv4 space, and `rangeToOptimalCIDRBlocks` throws instead of allocating an unbounded fragment
   list. Out-of-range values in a plan file previously hung `cidrly calculate` or exhausted memory.
 
+- **Path resolution** - `resolveUserPath` resolves a path as typed. Percent-encoded forms are
+  decoded only to reject encoded NUL bytes and `..` segments, so `%41.json` is no longer rewritten
+  to `A.json`. `..` is matched by path segment, so names such as `plan..json` are accepted.
+- **Install script** - `postinstall.cjs` checks each destination with `lstat` and skips symbolic
+  links, including dangling ones, instead of hashing or writing through them.
+- **Release workflow** - The tag name is passed as data, checked against a semantic-version
+  pattern and required to equal the `package.json` version. Installs use `npm ci
+--ignore-scripts`, the Semgrep step is removed from the job that holds publish credentials,
+  publishing uses `--provenance` and a prerelease dist-tag, the downloaded tarball is checked
+  against the registry checksum before its SHA-256 is written to the Homebrew formula, and the tap
+  is checked out with a token instead of a credential in the clone URL. The job declares a
+  `release` environment and requests `contents: write` and `id-token: write` only.
+- **CI workflow** - Actions are pinned to commit SHAs, installs use `npm ci --ignore-scripts`,
+  Semgrep is version-pinned and blocking, and `npm audit --omit=dev --audit-level=high` is
+  blocking. The full-tree audit stays informational.
+- **Dependencies** - `zod` 4.6.7, `yaml` 2.9.1 and `ws` 8.22.1 (production-tree advisories).
+- **Spec pin** - `.spec-commit` records the commit that the `.spec-version` tag must resolve to;
+  `npm run conformance` fails if the tag has moved.
+- **Package contents** - The npm package ships `scripts/postinstall.cjs` only, not the
+  development scripts. `@types/react` moved to `devDependencies`.
+
+### Changed
+
+- **Dashboard export default filename** - Built from a sanitized plan name (same rule as
+  `cidrly export`), so an imported plan name cannot propose a path outside the exports directory.
+- **Terraform export directory** - Resolved with the same path rules as other exports: `~/` is
+  expanded and a bare directory name is created under the exports directory.
+- **Plan subnet limit** - A plan file may hold at most 4094 subnets.
+
+### Removed
+
+- Unused path helpers `sanitizeFilePath`, `isPathSafe` and `createPathWhitelist`.
+- `CODE_REVIEW_SUMMARY.md` is no longer tracked.
+
 ### Fixed
 
+- **Home paths** - `~/plans/x.cidr` resolved to `/plans/x.cidr`. `~` and `~/` now expand to the
+  home directory in save, load and export paths and in directory preferences.
+- **Loading `.cidr` plans** - `cidrly view --plan x.cidr` looked for `x.cidr.json`. A name with a
+  `.cidr` or `.json` extension is used as given; a bare name is tried as `.json`, then `.cidr`.
+- **Preferences at startup** - Saved preferences (directories, auto-save, growth, columns) were
+  never loaded by the dashboard and reset on every launch.
+- **Auto-save target** - Auto-save wrote to the saved-plans directory under the file's basename.
+  It now writes back to the file that was loaded or saved.
+- **Default directories without `HOME`** - Saved-plans and exports directories are derived from
+  `os.homedir()` instead of becoming relative to the working directory.
+- **VLAN names in vendor exports** - A subnet name with no usable characters exported an empty
+  VLAN name; it now falls back to `VLAN<id>`.
+- **YAML import of quoted names** - Escaped quotes in double-quoted and single-quoted scalars are
+  unescaped, so cidrly's own YAML export round-trips.
+- **Ubiquiti import** - `vif` blocks are read with a balanced-brace scan (linear time, nested
+  blocks supported).
+- **Preference load message** - A missing preferences file no longer prints a warning under the
+  dashboard.
 - **Vendor export gateway** - SVI gateway is now the network address + 1. Subnets that do not
   start on a `.0` boundary (for example `10.0.0.128/25`) previously got a gateway inside a
   different subnet (`10.0.0.1` instead of `10.0.0.129`).

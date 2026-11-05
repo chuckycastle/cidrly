@@ -15,6 +15,7 @@
  */
 
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { autoFitSubnets, convertToAssignedBlocks } from '../src/core/calculators/auto-fit.js';
@@ -81,7 +82,19 @@ function parseArgs(): { out: string } {
     console.error('Usage: tsx scripts/generate-fixtures.ts --out <dir>');
     process.exit(1);
   }
-  return { out: path.resolve(out) };
+  const resolved = path.resolve(out);
+  // The output directory is deleted recursively before writing. Refuse a target
+  // that is the repository, one of its ancestors, or the home directory.
+  const home = os.homedir();
+  const isAncestorOrSelf = (dir: string, target: string): boolean =>
+    target === dir || target.startsWith(dir.endsWith(path.sep) ? dir : dir + path.sep);
+  if (isAncestorOrSelf(resolved, ROOT) || isAncestorOrSelf(resolved, home)) {
+    console.error(
+      `Refusing to use ${resolved} as --out: it contains the repository or home directory`,
+    );
+    process.exit(1);
+  }
+  return { out: resolved };
 }
 
 function writeJson(file: string, data: unknown): void {

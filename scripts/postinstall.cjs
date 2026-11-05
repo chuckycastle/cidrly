@@ -85,6 +85,19 @@ function getExamplesSourceDir() {
 }
 
 /**
+ * Check whether a path entry is a symbolic link (including a dangling one).
+ * existsSync follows links and reports a dangling link as missing, and
+ * copyFileSync writes through a link, so each destination is checked with lstat.
+ */
+function isSymbolicLink(entryPath) {
+  try {
+    return fs.lstatSync(entryPath).isSymbolicLink();
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
  * Create directory if it doesn't exist
  */
 function ensureDirectoryExists(dirPath) {
@@ -117,6 +130,19 @@ function smartCopyExample(sourceDir, destDir, filename) {
     (key) => OLD_TO_NEW_FILENAMES[key] === filename,
   );
   const oldDestPath = oldFilename ? path.join(destDir, oldFilename) : null;
+
+  // Leave symbolic links alone: do not hash, replace or write through them
+  for (const [entryName, entryPath] of [
+    [filename, destPath],
+    [oldFilename, oldDestPath],
+  ]) {
+    if (entryPath && isSymbolicLink(entryPath)) {
+      console.log(
+        `${colors.dim}  ↳ ${entryName} is a symbolic link, skipping example setup for it${colors.reset}`,
+      );
+      return false;
+    }
+  }
 
   // Check for old unprefixed file first
   if (oldDestPath && fs.existsSync(oldDestPath)) {

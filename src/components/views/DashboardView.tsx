@@ -6,6 +6,7 @@
 import fs from 'fs';
 import { Box, Text, useApp } from 'ink';
 import Spinner from 'ink-spinner';
+import path from 'path';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AutoFitResult } from '../../core/calculators/auto-fit.js';
 import {
@@ -37,14 +38,14 @@ import { usePlan, usePlanActions, useSubnets } from '../../hooks/usePlan.js';
 import { useTerminalHeight } from '../../hooks/useTerminalHeight.js';
 import { useNotify, useSelection } from '../../hooks/useUI.js';
 import {
-  FILE_RULES,
   getDirectory,
   isConfirmationRequiredVlan,
 } from '../../infrastructure/config/validation-rules.js';
+import { resolveUserPath } from '../../infrastructure/security/security-utils.js';
 import { FileSystemRepository } from '../../repositories/index.js';
 import { parseNetworkPlan } from '../../schemas/network-plan.schema.js';
 import type { ExportFormat } from '../../services/export.service.js';
-import { ExportService } from '../../services/export.service.js';
+import { ExportService, sanitizePlanName } from '../../services/export.service.js';
 import type { SavedPlanFile } from '../../services/file.service.js';
 import { FileService } from '../../services/file.service.js';
 import { importService } from '../../services/import/import.service.js';
@@ -762,7 +763,9 @@ This cannot be undone.`,
   const handleSavePlan = (directoryPath?: string): void => {
     if (!plan?.supernet) return;
     // Use current filename if available, otherwise "untitled"
-    const baseName = currentFilename ? currentFilename.replace(/\.(cidr|json)$/, '') : 'untitled';
+    const baseName = currentFilename
+      ? path.basename(currentFilename).replace(/\.(cidr|json)$/, '')
+      : 'untitled';
     const defaultFilename = directoryPath ? baseName : `${baseName}.cidr`;
     const label = directoryPath
       ? `Filename (empty = ${baseName}):`
@@ -821,7 +824,7 @@ This cannot be undone.`,
             const planName = savedFilename.replace(/\.(cidr|json)$/, '');
             setPlanName(planName);
 
-            setCurrentFilename(savedFilename); // Track filename for auto-save
+            setCurrentFilename(filepath); // Track the full path so auto-save writes back to it
             notify.success(`Plan saved to ${filepath}`);
             setDialog({ type: 'none' });
           } catch (error) {
@@ -962,7 +965,8 @@ This cannot be undone.`,
       loadedPlan.name = planName;
       loadPlan(loadedPlan);
 
-      setCurrentFilename(filename);
+      // Track the full path so auto-save writes back to the file that was loaded
+      setCurrentFilename(path.resolve(filepath));
 
       notify.success(`Plan "${planName}" loaded successfully!`);
       setDialog({ type: 'none' });
@@ -994,7 +998,9 @@ This cannot be undone.`,
     }
 
     // Use current filename if available, otherwise "untitled"
-    const baseName = currentFilename ? currentFilename.replace(/\.(cidr|json)$/, '') : 'untitled';
+    const baseName = currentFilename
+      ? path.basename(currentFilename).replace(/\.(cidr|json)$/, '')
+      : 'untitled';
     const defaultFilename = `${baseName}.cidr`;
     const label = directoryPath
       ? `Filename (empty = ${baseName}):`
@@ -1040,7 +1046,7 @@ This cannot be undone.`,
             const planName = savedFilename.replace(/\.(cidr|json)$/, '');
             setPlanName(planName);
 
-            setCurrentFilename(savedFilename); // Track filename for auto-save
+            setCurrentFilename(filepath); // Track the full path so auto-save writes back to it
             notify.success(`Plan saved to ${filepath}`);
             // Continue to new plan creation
             setDialog({ type: 'new-plan-name' });
@@ -1160,7 +1166,9 @@ This cannot be undone.`,
         // Handle Terraform exports (create directory structure)
         if (format.startsWith('terraform-')) {
           const provider = format.replace('terraform-', '') as 'aws' | 'azure' | 'gcp';
-          const baseDir = filename && filename !== '.' ? filename : FILE_RULES.EXPORTS_DIR;
+          const exportsDir = getDirectory('exports', preferences.exportsDir);
+          const baseDir =
+            filename && filename !== '.' ? resolveUserPath(filename, exportsDir) : exportsDir;
           const result = await terraformExportService.exportToDirectory(plan, baseDir, {
             provider,
           });
@@ -2141,7 +2149,7 @@ Edit another preference?`}
         plan &&
         (() => {
           const isTerraform = dialog.format.startsWith('terraform-');
-          const defaultName = `${plan.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}`;
+          const defaultName = `${sanitizePlanName(plan.name) || 'plan'}-${new Date().toISOString().split('T')[0]}`;
           const defaultWithExt = isTerraform ? '.' : `${defaultName}.${dialog.format}`;
 
           if (isTerraform) {

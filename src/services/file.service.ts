@@ -129,22 +129,33 @@ export class FileService {
       throw ErrorFactory.invalidFilename('', 'Filename cannot be empty');
     }
 
-    // Add .json extension if not present
-    const finalFilename = filename.endsWith('.json') ? filename : `${filename}.json`;
+    // A name with a known extension is used as given. A bare name is tried as
+    // .json first (legacy default) and then as .cidr (current save default).
+    const hasKnownExtension = filename.endsWith('.json') || filename.endsWith('.cidr');
+    const candidates = hasKnownExtension ? [filename] : [`${filename}.json`, `${filename}.cidr`];
+    const finalFilename = candidates[0] ?? filename;
 
     try {
       // Resolve user path (supports filenames, relative paths, absolute paths, ~ paths)
-      const filepath = resolveUserPath(finalFilename, this.baseDirectory);
+      const candidatePaths = candidates.map((name) => resolveUserPath(name, this.baseDirectory));
+      let filepath = candidatePaths[0] ?? '';
 
-      // Read the file
-      let fileContent: string;
-      try {
-        fileContent = await fs.readFile(filepath, 'utf-8');
-      } catch (error) {
-        if (isErrnoException(error) && error.code === 'ENOENT') {
-          throw ErrorFactory.fileNotFound(filepath);
+      // Read the first candidate that exists
+      let fileContent: string | undefined;
+      for (const candidatePath of candidatePaths) {
+        try {
+          fileContent = await fs.readFile(candidatePath, 'utf-8');
+          filepath = candidatePath;
+          break;
+        } catch (error) {
+          if (isErrnoException(error) && error.code === 'ENOENT') {
+            continue;
+          }
+          throw error;
         }
-        throw error;
+      }
+      if (fileContent === undefined) {
+        throw ErrorFactory.fileNotFound(candidatePaths[0] ?? finalFilename);
       }
 
       // Parse and validate using Zod schema

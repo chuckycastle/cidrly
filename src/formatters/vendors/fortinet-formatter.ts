@@ -53,7 +53,7 @@ function formatVlanInterface(subnet: Subnet): string {
   lines.push('        set type vlan');
   lines.push(`        set vlanid ${subnet.vlanId}`);
   lines.push('        set interface "internal"');
-  lines.push(`        set alias "${sanitizeVlanName(subnet.name)}"`);
+  lines.push(`        set alias "${sanitizeVlanName(subnet.name, 32, `VLAN${subnet.vlanId}`)}"`);
   lines.push(`        set description "${description}"`);
   lines.push('    next');
   return lines.join('\n');

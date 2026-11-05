@@ -36,7 +36,7 @@ function generateHeader(plan: NetworkPlan): string {
 function formatVlanDefinition(subnet: Subnet): string {
   const lines: string[] = [];
   lines.push(`vlan ${subnet.vlanId}`);
-  lines.push(`   name ${sanitizeVlanName(subnet.name)}`);
+  lines.push(`   name ${sanitizeVlanName(subnet.name, 32, `VLAN${subnet.vlanId}`)}`);
   lines.push('!');
   return lines.join('\n');
 }

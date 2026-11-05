@@ -56,14 +56,17 @@ export function cidrToSubnetMask(cidr: number): string {
 
 /**
  * Sanitize VLAN name for device compatibility
- * Replaces spaces and special characters with underscores
+ * Replaces spaces and special characters with underscores. A name made only of
+ * such characters would sanitize to an empty string, which is not a valid VLAN
+ * name on any vendor, so the fallback is used instead.
  */
-export function sanitizeVlanName(name: string, maxLength = 32): string {
-  return name
+export function sanitizeVlanName(name: string, maxLength = 32, fallback = 'VLAN'): string {
+  const sanitized = name
     .replace(/[^a-zA-Z0-9_-]/g, '_')
     .replace(/_+/g, '_')
     .replace(/^_|_$/g, '')
     .slice(0, maxLength);
+  return sanitized || fallback;
 }
 
 /**
