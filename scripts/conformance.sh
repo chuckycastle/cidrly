@@ -6,6 +6,11 @@
 #   - this change alters engine behavior and needs a spec PR first, or
 #   - the spec pin needs bumping to a version that already contains the change.
 #
+# The pin is two files: .spec-version holds the tag and .spec-commit holds the commit
+# that tag must resolve to. A tag can be moved; the commit check makes a moved tag fail
+# instead of silently changing what this checkout is compared against. Update both
+# files together when bumping the spec.
+#
 # Usage:
 #   npm run conformance                 # clones cidrly-spec at the pinned tag
 #   SPEC_DIR=../cidrly-spec npm run conformance   # uses a local checkout instead
@@ -24,6 +29,15 @@ else
   echo "Cloning $SPEC_REPO at $SPEC_VERSION"
   git clone --quiet --depth 1 --branch "$SPEC_VERSION" "$SPEC_REPO" "$WORK/spec"
   SPEC_PATH="$WORK/spec"
+  if [[ -f "$ROOT/.spec-commit" ]]; then
+    SPEC_COMMIT="$(tr -d '[:space:]' < "$ROOT/.spec-commit")"
+    ACTUAL_COMMIT="$(git -C "$SPEC_PATH" rev-parse HEAD)"
+    if [[ "$ACTUAL_COMMIT" != "$SPEC_COMMIT" ]]; then
+      echo "Conformance FAILED: $SPEC_VERSION resolves to $ACTUAL_COMMIT, expected $SPEC_COMMIT" >&2
+      echo "The spec tag moved, or .spec-commit was not updated with .spec-version." >&2
+      exit 1
+    fi
+  fi
 fi
 
 echo "Generating fixtures from this checkout"
